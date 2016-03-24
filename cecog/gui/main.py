@@ -127,8 +127,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         self.version = version
         self.appname = appname
 
-        self.environ = CecogEnvironment(version=version, redirect=redirect,
-                                        debug=False)
+        self.environ = CecogEnvironment(version=version, redirect=redirect)
 
         self._is_initialized = False
         self._imagecontainer = None

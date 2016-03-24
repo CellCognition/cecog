@@ -101,6 +101,7 @@ class BatteryPackage(object):
     def package_path(self):
         del self._path
 
+
 class CecogEnvironment(object):
 
     __metaclass__ = Singleton
@@ -119,8 +120,9 @@ class CecogEnvironment(object):
     # XXX want this away from class level
     naming_schema = ConfigParser(NAMING_SCHEMA, 'naming_schemas')
 
-    def __init__(self, version=version.version, redirect=False, debug=False):
+    def __init__(self, version=version.version, redirect=False, *args, **kw):
         super(CecogEnvironment, self).__init__()
+
         self._user_config_dir = None
         self.version = version
         self._copy_config(self)
@@ -134,8 +136,6 @@ class CecogEnvironment(object):
 
         fontfile = join(self.user_config_dir, self.FONT12)
         ccore.Config.strFontFilepath = realpath(fontfile)
-        if debug:
-            print 'ccore.Config.strFontFilepath(%s) called' %self.FONT12
 
     @property
     def demo_settings(self):

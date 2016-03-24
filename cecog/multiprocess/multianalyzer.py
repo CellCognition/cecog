@@ -24,7 +24,6 @@ from PyQt5 import QtCore
 
 from cecog.version import version
 from cecog.util.stopwatch import StopWatch
-from cecog.threads.link_hdf import link_hdf5_files
 from cecog.analyzer.plate import PlateAnalyzer
 from cecog.threads.analyzer import AnalyzerThread
 from cecog.multiprocess import mplogging as lg
@@ -38,30 +37,32 @@ class MultiProcessingError(Exception):
 
 
 def core_helper(plate, settings_dict, imagecontainer, position, version,
-                redirect=True, debug=False):
-    """Embeds analysis of a positon in a single function"""
+                mode="r+", redirect=True):
+    """Embedds analysis of a positon in a single function"""
     # see http://stackoverflow.com/questions/3288595/
     # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
     logger =  logging.getLogger(str(os.getpid()))
     import numpy
     reload(numpy.core._dotblas)
+
     try:
         settings = ConfigSettings()
         settings.from_dict(settings_dict)
         settings.set('General', 'constrain_positions', True)
         settings.set('General', 'positions', position)
 
-        environ = CecogEnvironment(version, redirect=redirect, debug=debug)
+        environ = CecogEnvironment(version, redirect=redirect)
 
-        analyzer = PlateAnalyzer(plate, settings, imagecontainer)
-        post_hdf5_link_list = analyzer()
-        return plate, position, copy.deepcopy(post_hdf5_link_list)
+        analyzer = PlateAnalyzer(plate, settings, imagecontainer, mode=mode)
+        analyzer()
+        return plate, position
+
     except Exception as e:
-        errortxt = "plate: %s, position: %s\n" %(plate, position)
+        errortxt = "Plate: %s, Site: %s\n" %(plate, position)
         errortxt = "".join([errortxt] + \
                                traceback.format_exception(*sys.exc_info()))
         logger.error(errortxt)
-        raise e.__class__(errortxt)
+        raise type(e)(errortxt)
 
 
 class ProgressCallback(QtCore.QObject):
@@ -74,16 +75,15 @@ class ProgressCallback(QtCore.QObject):
         self.njobs = njobs
         self._timer = StopWatch(start=True)
 
-    def __call__(self, (plate, pos, hdf_files)):
-
+    def __call__(self, (plate, position)):
 
         self.count += 1
         self.thread.increment.emit()
         self.thread.statusUpdate(
-            text = '%d/%d - last finished site: %s' %(self.count, self.njobs, pos))
+            text = '%d/%d - last finished site: %s' %(self.count, self.njobs, position))
 
         self._timer.reset(start=True)
-        return plate, pos, hdf_files
+        return plate, position
 
 
 # XXX should not be a child of QThread!
@@ -126,16 +126,13 @@ class MultiAnalyzerThread(AnalyzerThread):
         self.pool.close()
         self.pool.join()
 
-        hdf5_link_list = list()
         try:
             exceptions = []
             if not self.is_aborted():
                 for r in self.job_result:
                     if r.successful():
                         try:
-                            plate, pos, hdf_files = r.get()
-                            if len(hdf_files) > 0:
-                                hdf5_link_list.append(hdf_files)
+                            plate, pos  = r.get()
                         except Exception, e:
                             exceptions.append(e)
 
@@ -145,9 +142,6 @@ class MultiAnalyzerThread(AnalyzerThread):
                 raise MultiProcessingError(msg)
         finally:
             self.close_logreceiver()
-            if len(hdf5_link_list) > 0:
-                hdf5_link_list = reduce(lambda x, y: x + y, hdf5_link_list)
-            link_hdf5_files(sorted(hdf5_link_list))
 
     def abort(self, wait=False):
         self._mutex.lock()
@@ -179,9 +173,10 @@ class MultiAnalyzerThread(AnalyzerThread):
             else:
                 _positions = meta_data.positions
 
-            for pos in _positions:
+            modes = ["w"] + ["r+"]*len(_positions)
+            for mode, pos in zip(modes, _positions):
                 jobs.append((plate, self._settings.to_dict() , self._imagecontainer, pos,
-                             version))
+                             version, mode))
 
         self.statusUpdate(min=0, max=len(jobs),
             text = 'Parallel processing %d /  %d positions '

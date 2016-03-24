@@ -103,9 +103,11 @@ class CellAnalyzer(LoggerObject):
                                                        secondary_channel)
                 elif channel.NAME == MergedChannel.NAME:
                     channel.meta_image = primary_channel.meta_image
-                    self.timeholder.apply_segmentation(channel, self._channel_registry)
+                    self.timeholder.apply_segmentation(
+                        channel, self._channel_registry)
                 else:
-                    raise ValueError("Channel with name '%s' not supported." % channel.NAME)
+                    raise ValueError(
+                        "Channel with name '%s' not supported." % channel.NAME)
 
                 if extract_features:
                     self.timeholder.apply_features(channel)

@@ -15,10 +15,9 @@ __all__ = ("PositionCore", "PositionAnalyzer")
 
 
 import os
-import shutil
 import numpy as np
 
-from os.path import join, basename, isdir, dirname
+from os.path import join, basename, dirname
 from collections import OrderedDict, defaultdict
 
 from PyQt5.QtCore import QThread
@@ -45,7 +44,6 @@ from cecog.classifier import GMM
 from cecog.export import TC3Exporter
 from cecog.logging import LoggerObject
 from cecog.util.stopwatch import StopWatch
-from cecog.util.util import makedirs
 from cecog.util.ctuple import COrderedDict
 
 from cecog.features import FEATURE_MAP
@@ -65,13 +63,12 @@ class PositionCore(LoggerObject):
     CHANNELS['tertiary'] = TertiaryChannel
     CHANNELS['merged'] = MergedChannel
 
-
-    def __init__(self, plate_id, position, out_dir, settings, frames,
+    def __init__(self, plate_id, position, datafile, settings, frames,
                  sample_readers, sample_positions, learner,
                  image_container):
         super(PositionCore, self).__init__()
 
-        self._out_dir = out_dir
+        self.datafile = datafile
         self.settings = settings
         self._imagecontainer = image_container
         self.plate_id = plate_id
@@ -357,7 +354,6 @@ class PositionCore(LoggerObject):
         return chreg
 
 
-
 class PositionAnalyzer(PositionCore):
 
     def __init__(self, *args, **kw):
@@ -366,32 +362,11 @@ class PositionAnalyzer(PositionCore):
         if not self.has_timelapse:
             self.settings.set('Processing', 'tracking', False)
 
-        self._makedirs()
+        # self._makedirs()
+        self._log_dir = join(dirname(dirname(self.datafile)), "log")
+        self._finished_dir = join(self._log_dir, "_finished")
         self.add_file_handler(join(self._log_dir, "%s.log" %self.position),
                               self.Levels.DEBUG)
-
-    def _makedirs(self):
-        assert isinstance(self.position, basestring)
-        assert isinstance(self._out_dir, basestring)
-
-        if self.has_timelapse:
-            self._position_dir = join(self._out_dir, self.position)
-        else:
-            self._position_dir = self._out_dir
-
-        odirs = (join(self._out_dir, "log"),
-                 join(self._out_dir, "log", "_finished"),
-                 join(self._out_dir, "tc3"),
-                 join(self._out_dir, "cellh5"))
-
-        for odir in odirs:
-            try:
-                makedirs(odir)
-            except os.error: # no permissions
-                self.logger.error("mkdir %s: failed" %odir)
-            else:
-                self.logger.info("mkdir %s: ok" %odir)
-            setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
     def setup_classifiers(self):
         sttg = self.settings
@@ -550,7 +525,7 @@ class PositionAnalyzer(PositionCore):
         thread = QThread.currentThread()
 
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
-                                     join(self._cellh5_dir, '%s.ch5' % self.position),
+                                     self.datafile,
                                      self.meta_data, self.settings,
                                      self._frames,
                                      self.plate_id,
@@ -634,10 +609,6 @@ class PositionAnalyzer(PositionCore):
         self.clear()
         return n_images
 
-    @property
-    def hdf5_filename(self):
-        return self.timeholder.hdf5_filename
-
     def touch_finished(self, times=None):
         """Writes an empty file to mark this position as finished"""
         fname = join(self._finished_dir, '%s__finished.txt' % self.position)
@@ -720,7 +691,7 @@ class PositionAnalyzer(PositionCore):
 
             cellanalyzer.purge(features=self.export_features)
             self.logger.debug(" - Frame %d, duration (ms): %3d" \
-                                 %(frame, stopwatch.interim()*1000))
+                              %(frame, stopwatch.interim()*1000))
 
 
         return n_images

@@ -22,7 +22,7 @@ from os.path import join, basename, isdir
 
 from PyQt5.QtCore import QThread
 
-from cecog.io.hdf import Ch5File
+from cecog.io import ch5open
 from cecog.classifier import AnnotationsFile
 from cecog.analyzer.position import PositionAnalyzer
 from cecog.analyzer.position import PositionAnalyzerForBrowser
@@ -30,6 +30,7 @@ from cecog.analyzer.position import PosTrainer
 from cecog.io.imagecontainer import MetaImage
 from cecog.logging import LoggerObject
 
+from cecog.util.util import makedirs
 
 class Analyzer(LoggerObject):
 
@@ -48,7 +49,7 @@ class Analyzer(LoggerObject):
         self._imagecontainer.set_plate(plate)
 
     @property
-    def _out_dir(self):
+    def _outdir(self):
         return self._imagecontainer.get_path_out(self.plate)
 
     @property
@@ -93,14 +94,40 @@ class Analyzer(LoggerObject):
 
 
 class PlateAnalyzer(Analyzer):
-    def __init__(self, plate, settings, imagecontainer):
-        super(PlateAnalyzer, self).__init__(plate, settings, imagecontainer)
 
-        self.h5f = Ch5File(join(settings("General", "pathout"), "%s.ch5" %plate))
+    def __init__(self, plate, settings, imagecontainer, mode="w"):
+        super(PlateAnalyzer, self).__init__(plate, settings, imagecontainer)
+        self._makedirs()
+
+        self.h5f = join(self._outdir, "%s.ch5" %plate)
+
+        with ch5open(self.h5f, mode) as ch5:
+            if not ch5.hasLayout(plate):
+                layout = "%s/%s.txt" %(settings("General", "plate_layout"), plate)
+                ch5.savePlateLayout(layout, plate)
 
         self._setup_cropping()
-        self.logger.info("openening image container: end")
-        self.logger.info("lstAnalysisFrames: %r" % self.frames)
+
+        self.logger.debug("frames: %r" % self.frames)
+
+    def _makedirs(self):
+
+        odirs = (join(self._outdir, "log"),
+                 join(self._outdir, "log", "_finished"),
+                 join(self._outdir, "cellh5"))
+
+        if self.settings("EventSelection", "unsupervised_event_selection"):
+            odirs  += (join(self._outdir, "tc3"), )
+
+        for odir in odirs:
+            try:
+                makedirs(odir)
+            except os.error: # no permissions
+                self.logger.error("mkdir %s: failed" %odir)
+            else:
+                self.logger.info("mkdir %s: ok" %odir)
+            setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
+
 
     def _already_processed(self, positions):
         """Find positions already been processed and remove them from list"""
@@ -160,6 +187,7 @@ class PlateAnalyzer(Analyzer):
         y0 = self.settings.get('General', 'crop_image_y0')
         x1 = self.settings.get('General', 'crop_image_x1')
         y1 = self.settings.get('General', 'crop_image_y1')
+
         if crop:
             MetaImage.enable_cropping(x0, y0, x1-x0, y1-y0)
             self.logger.info("cropping enabled with %d %d %d %d"
@@ -173,10 +201,13 @@ class PlateAnalyzer(Analyzer):
         job_args = []
         for pos in self.positions:
             self.logger.info('Process positions: %r' % pos)
+
+            datafile = join(self._cellh5_dir, '%s.ch5' %pos)
+
             if len(self.frames) > 0:
                 args = (self.plate,
                         pos,
-                        self._out_dir,
+                        datafile,
                         self.settings,
                         self.frames,
                         self.sample_reader,
@@ -185,20 +216,17 @@ class PlateAnalyzer(Analyzer):
                         self._imagecontainer)
                 job_args.append(args)
 
-        hdf5_links = []
         for i, args in enumerate(job_args):
             analyzer = PositionAnalyzer(*args)
             try:
-                nimages = analyzer()
-                if self.settings.get('Output', 'hdf5_create_file') and \
-                    self.settings.get('Output', 'hdf5_merge_positions'):
-                    hdf5_links.append(analyzer.hdf5_filename)
+                analyzer()
+                with ch5open(self.h5f, "r+") as ch5:
+                    ch5.linkFile(analyzer.datafile)
             except Exception as e:
                 traceback.print_exc()
                 raise
             finally:
                 analyzer.clear()
-        return hdf5_links
 
 
 class AnalyzerBrowser(PlateAnalyzer):
@@ -210,15 +238,9 @@ class AnalyzerBrowser(PlateAnalyzer):
         job_args = []
         pos = self.positions[0]
         self.logger.info('Browser(): Process positions: %r' % pos)
-        job_args = (self.plate,
-                     pos,
-                     self._out_dir,
-                     self.settings,
-                     self.frames,
-                     self.sample_reader,
-                     self.sample_positions,
-                     None,
-                     self._imagecontainer)
+        job_args = (self.plate, pos, self._outdir, self.settings,
+                     self.frames, self.sample_reader, self.sample_positions,
+                     None, self._imagecontainer)
 
         analyzer = PositionAnalyzerForBrowser(*job_args)
         analyzer.add_stream_handler()
@@ -285,7 +307,7 @@ class Trainer(Analyzer):
         for pos, frames in self.sample_positions.iteritems():
             self.logger.info('Process positions: %r' %pos)
 
-            postrainer = PosTrainer(self.plate, pos, self._out_dir,
+            postrainer = PosTrainer(self.plate, pos, self._outdir,
                                     self.settings,
                                     frames, self.sample_reader,
                                     self.sample_positions, self.learner,

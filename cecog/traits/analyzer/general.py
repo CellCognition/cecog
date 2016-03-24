@@ -24,8 +24,7 @@ from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
                                  SelectionTrait,
                                  DictTrait,
-                                 ListTrait
-                                 )
+                                 ListTrait)
 from cecog.environment import CecogEnvironment
 
 SECTION_NAME_GENERAL = 'General'

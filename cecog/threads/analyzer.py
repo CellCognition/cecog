@@ -15,7 +15,6 @@ __all__ = ['AnalyzerThread']
 
 import copy
 from cecog.threads.corethread import CoreThread
-from cecog.threads.link_hdf import link_hdf5_files
 from cecog.analyzer.plate import PlateAnalyzer
 
 
@@ -35,7 +34,4 @@ class AnalyzerThread(CoreThread):
             # set maxium in the progress bar
             imax = len(analyzer.frames)*len(analyzer.positions)*nplates
             self.statusUpdate(min=0, max=imax)
-
-            h5_links = analyzer()
-            if h5_links:
-                link_hdf5_files(h5_links)
+            analyzer()
