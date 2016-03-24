@@ -20,7 +20,7 @@ from contextlib import contextmanager
 import h5py
 import numpy as np
 
-from cellh5 import CH5FileWriter
+from cellh5 import CH5FileWriter, CH5Const
 
 
 @contextmanager
@@ -39,10 +39,9 @@ def ch5open(filename, mode='r'):
 
 class Ch5File(CH5FileWriter):
 
-    Layout = "/layout"
-
-    def __init__(self, *args, **kw):
-        super(Ch5File, self).__init__(*args, **kw)
+    def _init_basic_structure(self):
+        # because the parent method is crap
+        pass
 
     def __getitem__(self, key):
         self._file_handle[key]
@@ -55,7 +54,19 @@ class Ch5File(CH5FileWriter):
 
     def hasLayout(self, plate):
         """Check if file contains a experimental layout for a specific plate."""
-        return "%s/%s" %(self.Layout, plate) in self._file_handle
+        return "%s/%s" %(CH5Const.LAYOUT, plate) in self._file_handle
+
+    def hasDefinition(self):
+        """Check if file contains a experimental layout for a specific plate."""
+        return CH5Const.DEFINITION in self._file_handle
+
+    def copyDefinition(self, other):
+        if isinstance(other, basestring):
+            source = h5py.File(filename, "r")[CH5Const.DEFINITION]
+        else:
+            source = other[CH5Const.DEFINITION]
+
+        self._file_handle.copy(source, CH5Const.DEFINITION)
 
     def savePlateLayout(self, plate_layout, platename):
         """Save experimental layout for using the platename."""
@@ -63,7 +74,7 @@ class Ch5File(CH5FileWriter):
         if not os.path.isfile(plate_layout):
             raise RuntimeError("File not found %s" %plate_layout)
 
-        grp = self._file_handle.require_group(self.Layout)
+        grp = self._file_handle.require_group(CH5Const.LAYOUT)
 
         if platename not in grp:
             rec = np.recfromcsv(plate_layout, delimiter="\t")
@@ -72,6 +83,10 @@ class Ch5File(CH5FileWriter):
     def linkFile(self, filename):
 
         sf = h5py.File(filename, "r")
+
+        if not self.hasDefinition():
+            self.copyDefinition(sf)
+
 
         Plate = '/sample/0/plate/'
         Well = Plate + '%s/experiment/'
