@@ -32,7 +32,6 @@ class PositionAnalyzerForBrowser(PositionCore):
         # Also in the Browser we want to use cellh5
         # The setting for the other PositionAnalyszer is
         # implicitely set in _makedirs()
-        self._hdf5_dir = os.path.join(self._out_dir, 'hdf5')
 
     @property
     def _hdf_options(self):
@@ -70,10 +69,9 @@ class PositionAnalyzerForBrowser(PositionCore):
 
 
     def __call__(self):
-        hdf5_fname = join(self._hdf5_dir, '%s.ch5' % self.position)
 
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
-                                     hdf5_fname,
+                                     self.datafile,
                                      self.meta_data, self.settings,
                                      self._frames,
                                      self.plate_id,

@@ -11,7 +11,7 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
-__all__ = ('Ch5File', 'ch5open')
+__all__ = ('Ch5File', )
 
 
 import os
@@ -21,20 +21,6 @@ import h5py
 import numpy as np
 
 from cellh5 import CH5FileWriter, CH5Const
-
-
-@contextmanager
-def ch5open(filename, mode='r'):
-    """Open a cellh5 file using the with statement. The file handle is closed
-    automatically.
-
-    >>>with ch5open('datafile.ch5', 'r') as ch5:
-    >>>   ch5.get_position("0", "0038")
-    """
-
-    ch5 = Ch5File(filename, mode=mode)
-    yield ch5
-    ch5.close()
 
 
 class Ch5File(CH5FileWriter):
@@ -86,7 +72,6 @@ class Ch5File(CH5FileWriter):
 
         if not self.hasDefinition():
             self.copyDefinition(sf)
-
 
         Plate = '/sample/0/plate/'
         Well = Plate + '%s/experiment/'

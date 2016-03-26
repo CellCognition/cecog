@@ -22,7 +22,7 @@ from os.path import join, basename, isdir
 
 from PyQt5.QtCore import QThread
 
-from cecog.io import ch5open
+from cecog.io import Ch5File
 from cecog.classifier import AnnotationsFile
 from cecog.analyzer.position import PositionAnalyzer
 from cecog.analyzer.position import PositionAnalyzerForBrowser
@@ -101,7 +101,7 @@ class PlateAnalyzer(Analyzer):
 
         self.h5f = join(self._outdir, "%s.ch5" %plate)
 
-        with ch5open(self.h5f, mode) as ch5:
+        with Ch5File(self.h5f, mode) as ch5:
             if not ch5.hasLayout(plate):
                 layout = "%s/%s.txt" %(settings("General", "plate_layout"), plate)
                 ch5.savePlateLayout(layout, plate)
@@ -220,7 +220,7 @@ class PlateAnalyzer(Analyzer):
             analyzer = PositionAnalyzer(*args)
             try:
                 analyzer()
-                with ch5open(self.h5f, "r+") as ch5:
+                with Ch5File(self.h5f, "r+") as ch5:
                     ch5.linkFile(analyzer.datafile)
             except Exception as e:
                 traceback.print_exc()
