@@ -29,8 +29,8 @@ from cecog.analyzer.position import PositionAnalyzerForBrowser
 from cecog.analyzer.position import PosTrainer
 from cecog.io.imagecontainer import MetaImage
 from cecog.logging import LoggerObject
-
 from cecog.util.util import makedirs
+
 
 class Analyzer(LoggerObject):
 
@@ -101,7 +101,7 @@ class PlateAnalyzer(Analyzer):
 
         self.h5f = join(self._outdir, "%s.ch5" %plate)
 
-        with Ch5File(self.h5f, mode) as ch5:
+        with Ch5File(self.h5f, mode=mode) as ch5:
             if not ch5.hasLayout(plate):
                 layout = "%s/%s.txt" %(settings("General", "plate_layout"), plate)
                 ch5.savePlateLayout(layout, plate)
@@ -220,7 +220,7 @@ class PlateAnalyzer(Analyzer):
             analyzer = PositionAnalyzer(*args)
             try:
                 analyzer()
-                with Ch5File(self.h5f, "r+") as ch5:
+                with Ch5File(self.h5f, mode="r+") as ch5:
                     ch5.linkFile(analyzer.datafile)
             except Exception as e:
                 traceback.print_exc()
