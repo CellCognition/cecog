@@ -362,11 +362,9 @@ class PositionAnalyzer(PositionCore):
         if not self.has_timelapse:
             self.settings.set('Processing', 'tracking', False)
 
-        # self._makedirs()
-        self._log_dir = join(dirname(dirname(self.datafile)), "log")
-        self._finished_dir = join(self._log_dir, "_finished")
-        self.add_file_handler(join(self._log_dir, "%s.log" %self.position),
-                              self.Levels.DEBUG)
+        logfile = join(
+            dirname(dirname(self.datafile)), "log", "%s.log" %self.position)
+        self.add_file_handler(logfile, self.Levels.DEBUG)
 
     def setup_classifiers(self):
         sttg = self.settings
@@ -605,15 +603,8 @@ class PositionAnalyzer(PositionCore):
             self.logger.info(" - %d image sets analyzed, %3d ms per image set" %
                              (n_images, intval))
 
-        self.touch_finished()
         self.clear()
         return n_images
-
-    def touch_finished(self, times=None):
-        """Writes an empty file to mark this position as finished"""
-        fname = join(self._finished_dir, '%s__finished.txt' % self.position)
-        with open(fname, "w") as f:
-            os.utime(fname, times)
 
     def clear(self):
         # closes

@@ -30,6 +30,7 @@ from cecog.analyzer.position import PosTrainer
 from cecog.io.imagecontainer import MetaImage
 from cecog.logging import LoggerObject
 from cecog.util.util import makedirs
+from cecog.threads import StopProcessing
 
 
 class Analyzer(LoggerObject):
@@ -95,7 +96,7 @@ class Analyzer(LoggerObject):
 
 class PlateAnalyzer(Analyzer):
 
-    def __init__(self, plate, settings, imagecontainer, mode="r+"):
+    def __init__(self, plate, settings, imagecontainer, mode="w"):
         super(PlateAnalyzer, self).__init__(plate, settings, imagecontainer)
         self._makedirs()
 
@@ -117,7 +118,6 @@ class PlateAnalyzer(Analyzer):
     def _makedirs(self):
 
         odirs = (join(self._outdir, "log"),
-                 join(self._outdir, "log", "_finished"),
                  join(self._outdir, "cellh5"))
 
         if self.settings("EventSelection", "unsupervised_event_selection"):
@@ -200,8 +200,6 @@ class PlateAnalyzer(Analyzer):
 
     def __call__(self):
 
-        job_args = []
-
         with Ch5File(self.h5f, mode="r+") as ch5:
             finished = ch5.linkedFiles(self.plate)
 
@@ -214,24 +212,17 @@ class PlateAnalyzer(Analyzer):
                 self.logger.info("already processed, skipping...")
                 continue
 
-            if len(self.frames) > 0:
-                args = (self.plate,
-                        pos,
-                        datafile,
-                        self.settings,
-                        self.frames,
-                        self.sample_reader,
-                        self.sample_positions,
-                        None,
-                        self._imagecontainer)
-                job_args.append(args)
+            analyzer = PositionAnalyzer(
+                self.plate, pos, datafile, self.settings, self.frames,
+                self.sample_reader, self.sample_positions, None,
+                self._imagecontainer)
 
-        for i, args in enumerate(job_args):
-            analyzer = PositionAnalyzer(*args)
             try:
                 analyzer()
                 with Ch5File(self.h5f, mode="r+") as ch5:
                     ch5.linkFile(analyzer.datafile)
+            except StopProcessing:
+                pass
             except Exception as e:
                 traceback.print_exc()
                 raise

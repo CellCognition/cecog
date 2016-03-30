@@ -10,7 +10,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['CoreThread']
+__all__ = ('CoreThread', 'StopProcessing')
 
 import logging
 import traceback
