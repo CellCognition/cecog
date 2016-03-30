@@ -61,7 +61,7 @@ class SectionGeneral(SectionCore):
             IntTrait(1, 1, 100, label='increment')),
 
 
-        ('redofailedonly',
+        ('skip_finished',
             BooleanTrait(False, label='Skip finished positions')),
         ('constrain_positions', BooleanTrait(False, label='Positions')),
         ('positions',

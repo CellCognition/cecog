@@ -22,6 +22,9 @@ import numpy as np
 
 from cellh5 import CH5FileWriter, CH5Const
 
+Plate = '/sample/0/plate/'
+Well = Plate + '%s/experiment/'
+Site = Well + '%s/position/%s'
 
 class Ch5File(CH5FileWriter):
 
@@ -30,7 +33,7 @@ class Ch5File(CH5FileWriter):
         pass
 
     def __getitem__(self, key):
-        self._file_handle[key]
+        return self._file_handle[key]
 
     def __setitem__(self, key, value):
         self._file_handle[key] = value
@@ -73,10 +76,6 @@ class Ch5File(CH5FileWriter):
         if not self.hasDefinition():
             self.copyDefinition(sf)
 
-        Plate = '/sample/0/plate/'
-        Well = Plate + '%s/experiment/'
-        Site = Well + '%s/position/%s'
-
         plate = sf[Plate].keys()[0]
         well = sf[Well %plate].keys()[0]
         site = sf[Site[:-2] %(plate, well)].keys()[0]
@@ -87,3 +86,24 @@ class Ch5File(CH5FileWriter):
         source_file = os.sep.join(source_file)
 
         self[path] = h5py.ExternalLink(source_file, path)
+
+
+    def isLinkedFile(self, filename, plate):
+
+        if filename in self.linkedFiles(plate):
+            return True
+        else:
+            return False
+
+    def linkedFiles(self, plate):
+        files = list()
+
+        try:
+            wells = self[Well %plate].keys()
+            for well in wells:
+                sites = self[Site[:-2] %(plate, well)].values()
+                files.extend([s.file.filename for s in sites])
+        except (KeyError, AttributeError):
+            pass
+
+        return tuple(set(files))

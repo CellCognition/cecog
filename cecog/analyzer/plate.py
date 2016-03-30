@@ -95,11 +95,15 @@ class Analyzer(LoggerObject):
 
 class PlateAnalyzer(Analyzer):
 
-    def __init__(self, plate, settings, imagecontainer, mode="w"):
+    def __init__(self, plate, settings, imagecontainer, mode="r+"):
         super(PlateAnalyzer, self).__init__(plate, settings, imagecontainer)
         self._makedirs()
 
         self.h5f = join(self._outdir, "%s.ch5" %plate)
+
+        # don't overwrite file
+        if settings('General', 'skip_finished'):
+            mode = "r+"
 
         with Ch5File(self.h5f, mode=mode) as ch5:
             if not ch5.hasLayout(plate):
@@ -170,10 +174,8 @@ class PlateAnalyzer(Analyzer):
                                   " %s\nValid values are %s" % \
                                       (positions, self.meta_data.positions)))
 
-            # drop already processed positions
-            if self.settings.get('General', 'redoFailedOnly'):
-                positions = self._already_processed(positions)
             self._positions = sorted(positions)
+
         return self._positions
 
     @positions.setter
@@ -199,10 +201,18 @@ class PlateAnalyzer(Analyzer):
     def __call__(self):
 
         job_args = []
+
+        with Ch5File(self.h5f, mode="r+") as ch5:
+            finished = ch5.linkedFiles(self.plate)
+
         for pos in self.positions:
-            self.logger.info('Process positions: %r' % pos)
+            self.logger.info('Processing position: %r' % pos)
 
             datafile = join(self._cellh5_dir, '%s.ch5' %pos)
+            if datafile in finished and self.settings(
+                    'General', 'skip_finished'):
+                self.logger.info("already processed, skipping...")
+                continue
 
             if len(self.frames) > 0:
                 args = (self.plate,

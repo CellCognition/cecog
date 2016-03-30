@@ -50,7 +50,7 @@ class GeneralFrame(BaseFrame):
                        link="channels", label='Color Channels')
 
         self.add_group('constrain_positions', [('positions',)])
-        self.add_input('redofailedonly')
+        self.add_input('skip_finished')
         self.add_group('framerange', [('framerange_begin',),
                                       ('framerange_end',),
                                       ('frameincrement', )],
