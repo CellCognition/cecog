@@ -172,6 +172,9 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
         settings = ExportSettings.get_special_settings(
             self, self._settings, has_timelapse)
 
+        # old setting files may have set this to false
+        settings.set('Output', 'hdf5_create_file', True)
+
         # some processing settings overrule error correction settings
         settings.set('ErrorCorrection', 'primary',
                      settings('Processing', 'primary_errorcorrection'))
