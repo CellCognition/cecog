@@ -240,17 +240,16 @@ class AnalyzerBrowser(PlateAnalyzer):
         super(AnalyzerBrowser, self).__init__(plate, settings, imagecontainer)
 
     def __call__(self):
-        job_args = []
+
         pos = self.positions[0]
         self.logger.info('Browser(): Process positions: %r' % pos)
-        job_args = (self.plate, pos, self._outdir, self.settings,
-                     self.frames, self.sample_reader, self.sample_positions,
-                     None, self._imagecontainer)
+        analyzer = PositionAnalyzerForBrowser(
+            self.plate, pos, self._outdir, self.settings,
+            self.frames, self.sample_reader, self.sample_positions,
+            None, self._imagecontainer, write_logs=False)
 
-        analyzer = PositionAnalyzerForBrowser(*job_args)
         analyzer.add_stream_handler()
-        res = analyzer()
-        return res
+        analyzer()
 
 
 class Trainer(Analyzer):
@@ -317,4 +316,4 @@ class Trainer(Analyzer):
                                     frames, self.sample_reader,
                                     self.sample_positions, self.learner,
                                     self._imagecontainer)
-            result = postrainer()
+            postrainer()

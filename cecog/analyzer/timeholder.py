@@ -569,7 +569,8 @@ class TimeHolder(OrderedDict):
     def getCurrentChannels(self):
         return self[self._iCurrentT]
 
-    def purge_features(self):
+    def purge(self):
+        """Clear features from memory"""
         for channels in self.itervalues():
             for channel in channels.itervalues():
                 channel.purge(features={})

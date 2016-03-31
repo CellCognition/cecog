@@ -487,17 +487,16 @@ class PositionAnalyzer(PositionCore):
 
         return features
 
-    def export_tracks_hdf5(self):
+    def save_tracks(self):
         """Save tracking data to hdf file"""
-        self.logger.debug("--- serializing tracking start")
+        self.logger.info("Save tracking data")
         self.timeholder.serialize_tracking(self._tracker.graph)
-        self.logger.debug("--- serializing tracking ok")
 
-    def export_events_hdf5(self):
-        # writes event data to hdf5
+    def save_events(self):
+        self.logger.info("Save Event data")
         self.timeholder.serialize_events(self._tes)
 
-    def export_tc3(self):
+    def save_tc3(self):
         t_mean = self.meta_data.get_timestamp_info(self.position)[0]
         tu = TimeConverter(t_mean, TimeConverter.SECONDS)
         increment = self.settings('General', 'frameincrement')
@@ -508,7 +507,7 @@ class PositionAnalyzer(PositionCore):
                                t_step, TimeConverter.MINUTES, self.position)
         exporter()
 
-    def export_classlabels(self):
+    def save_classification(self):
         """Save classlabels of each object to the hdf file."""
         # function works for supervised and unuspervised case
         for channels in self.timeholder.itervalues():
@@ -550,66 +549,60 @@ class PositionAnalyzer(PositionCore):
                                                          'objectdetection'))
 
         self.export_features = self.define_exp_features()
-        n_images = self._analyze(ca)
+        self._analyze(ca)
 
-        if n_images > 0:
-            # invoke event selection
-            if self.settings('Processing', 'eventselection') and \
-                    self.settings('Processing', 'tracking'):
 
-                evchannel = self.settings('EventSelection', 'eventchannel')
-                region = self.classifiers[evchannel].regions
+        # invoke event selection
+        if self.settings('Processing', 'eventselection') and \
+           self.settings('Processing', 'tracking'):
 
-                if self.settings('EventSelection', 'unsupervised_event_selection'):
-                    graph = self._tracker.graph
-                elif  evchannel != PrimaryChannel.NAME or \
-                        region != self.settings("Tracking", "region"):
-                    graph = self._tracker.clone_graph(self.timeholder,
-                                                      evchannel,
-                                                      region)
-                else:
-                    graph = self._tracker.graph
+            evchannel = self.settings('EventSelection', 'eventchannel')
+            region = self.classifiers[evchannel].regions
 
-                self._tes = self.setup_eventselection(graph)
-                self.logger.debug("--- visitor start")
-                self._tes.find_events()
-                self.logger.debug("--- visitor ok")
-                if self.isAborted():
-                    return 0 # number of processed images
+            if self.settings('EventSelection', 'unsupervised_event_selection'):
+                graph = self._tracker.graph
+            elif  evchannel != PrimaryChannel.NAME or \
+                    region != self.settings("Tracking", "region"):
+                graph = self._tracker.clone_graph(self.timeholder,
+                                                  evchannel,
+                                                  region)
+            else:
+                graph = self._tracker.graph
 
-            # save all the data of the position, no aborts from here on
-            # want all processed data saved
-            if self.settings('Processing', 'tracking'):
-                self.statusUpdate(text="Saving Tracking Data to cellh5...")
-                self.export_tracks_hdf5()
+            self._tes = self.setup_eventselection(graph)
+            self.logger.info("Event detection")
+            self._tes.find_events()
+            if self.isAborted():
+                return 0 # number of processed images
 
-                if self.settings('Output', 'hdf5_include_events'):
-                    self.statusUpdate(text="Saving Event Data to cellh5...")
-                    self.export_events_hdf5()
+        # save all the data of the position, no aborts from here on
+        # want all processed data saved
+        if self.settings('Processing', 'tracking'):
+            self.statusUpdate(text="Saving Tracking Data to cellh5...")
+            self.save_tracks()
 
-                if self.settings('EventSelection', 'unsupervised_event_selection'):
-                    self.statusUpdate(text="Saving Event Data to cellh5...")
-                    self.export_tc3()
+            if self.settings('Output', 'hdf5_include_events'):
+                self.statusUpdate(text="Saving Event Data to cellh5...")
+                self.save_events()
 
-            self.export_classlabels()
+            if self.settings('EventSelection', 'unsupervised_event_selection'):
+                self.statusUpdate(text="Saving Event Data to cellh5...")
+                self.save_tc3()
 
-            # remove all features from all channels to free memory
-            # for the generation of gallery images
-            self.timeholder.purge_features()
+            self.save_classification()
+            self.timeholder.purge()
 
         try:
-            intval = stopwatch.stop()/n_images*1000
+            n = len(self._frames)
+            intval = stopwatch.stop()/n*1000
         except ZeroDivisionError:
             pass
         else:
-            self.logger.info(" - %d image sets analyzed, %3d ms per image set" %
-                             (n_images, intval))
+            self.logger.info(" - %d image sets analyzed, %3d ms per image set" %(n, intval))
 
         self.clear()
-        return n_images
 
     def clear(self):
-        # closes
         if self.timeholder is not None:
             self.timeholder.close_all()
         # close and remove handlers from logging object
@@ -619,7 +612,6 @@ class PositionAnalyzer(PositionCore):
 
         thread = QThread.currentThread()
 
-        n_images = 0
         stopwatch = StopWatch(start=True)
         crd = Coordinate(self.plate_id, self.position,
                          self._frames, list(set(self.ch_mapping.values())))
@@ -646,7 +638,6 @@ class PositionAnalyzer(PositionCore):
             self.logger.debug(" - Frame %d, cellanalyzer.process (ms): %3d" \
                              %(frame, stopwatch.interval()*1000))
 
-            n_images += 1
             images = []
 
             if self.settings('Processing', 'tracking'):
@@ -686,8 +677,6 @@ class PositionAnalyzer(PositionCore):
             self.logger.debug(" - Frame %d, duration (ms): %3d" \
                               %(frame, stopwatch.interim()*1000))
 
-
-        return n_images
 
     def render_contour_images(self, ca, images, frame):
         images_ = dict()

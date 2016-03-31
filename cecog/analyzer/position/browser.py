@@ -86,7 +86,6 @@ class PositionAnalyzerForBrowser(PositionCore):
                           detect_objects = self.settings.get('Processing', 'objectdetection'))
 
         self._analyze(ca)
-        return ca
 
     def setup_channel(self, proc_channel, col_channel, zslice_images,
                       check_for_plugins=False):
@@ -126,5 +125,3 @@ class PositionAnalyzerForBrowser(PositionCore):
                     cellanalyzer.classify_objects(clf, chname)
                 except KeyError as e:
                     pass
-
-        return n_images
