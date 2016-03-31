@@ -23,14 +23,16 @@ from os.path import join, basename, isdir
 from PyQt5.QtCore import QThread
 
 from cecog.io import Ch5File
+from cecog.util.util import makedirs
+from cecog.logging import LoggerObject
+from cecog.threads import StopProcessing
 from cecog.classifier import AnnotationsFile
+from cecog.gui.preferences import AppPreferences
 from cecog.analyzer.position import PositionAnalyzer
 from cecog.analyzer.position import PositionAnalyzerForBrowser
 from cecog.analyzer.position import PosTrainer
 from cecog.io.imagecontainer import MetaImage
-from cecog.logging import LoggerObject
-from cecog.util.util import makedirs
-from cecog.threads import StopProcessing
+
 
 
 class Analyzer(LoggerObject):
@@ -117,8 +119,10 @@ class PlateAnalyzer(Analyzer):
 
     def _makedirs(self):
 
-        odirs = (join(self._outdir, "log"),
-                 join(self._outdir, "cellh5"))
+        odirs = (join(self._outdir, "cellh5"), )
+
+        if AppPreferences().write_logs:
+            odirs += (join(self._outdir, "log"), )
 
         if self.settings("EventSelection", "unsupervised_event_selection"):
             odirs  += (join(self._outdir, "tc3"), )
@@ -215,7 +219,7 @@ class PlateAnalyzer(Analyzer):
             analyzer = PositionAnalyzer(
                 self.plate, pos, datafile, self.settings, self.frames,
                 self.sample_reader, self.sample_positions, None,
-                self._imagecontainer)
+                self._imagecontainer, AppPreferences().write_logs)
 
             try:
                 analyzer()

@@ -66,7 +66,7 @@ class AppPreferences(object):
     __slots__ = ("host", "port", "mapping_str", "target_platform",
                  "batch_size", "cluster_support", "stylesheet",
                  "available_stylesheets", "cradius", "track_length",
-                 "display_tracks")
+                 "display_tracks", "write_logs")
 
     def __init__(self):
 
@@ -85,6 +85,7 @@ class AppPreferences(object):
         self.track_length = 3
         self.cradius = 3
         self.display_tracks = True
+        self.write_logs = False
 
         self.restoreSettings()
 
@@ -103,6 +104,7 @@ class AppPreferences(object):
         settings.setValue('track_length', self.track_length)
         settings.setValue('cradius', self.cradius)
         settings.setValue('display_tracks', self.display_tracks)
+        settings.setValue('write_logs', self.write_logs)
         settings.endGroup()
 
     def restoreSettings(self):
@@ -139,6 +141,9 @@ class AppPreferences(object):
 
         if settings.contains('display_tracks'):
             self.display_tracks = settings.value('display_tracks', type=bool)
+
+        if settings.contains('write_logs'):
+            self.display_tracks = settings.value('write_logs', type=bool)
 
         settings.endGroup()
 
@@ -191,7 +196,6 @@ class AppPreferences(object):
         return path_mapped
 
 
-
 class PreferencesDialog(QtWidgets.QDialog):
 
     _osnames = {"darwin": "Mapple",
@@ -232,6 +236,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.cradius.setValue(apc.cradius)
         self.track_length.setValue(apc.track_length)
         self.display_tracks.setChecked(apc.display_tracks)
+        self.writelogs.setChecked(apc.write_logs)
 
 
     def setGlobalStylesheet(self, stylesheet):
@@ -291,6 +296,7 @@ class PreferencesDialog(QtWidgets.QDialog):
         appcfg.track_length = self.track_length.value()
         appcfg.cradius = self.cradius.value()
         appcfg.display_tracks = self.display_tracks.isChecked()
+        appcfg.write_logs = self.writelogs.isChecked()
         appcfg.saveSettings()
 
         super(PreferencesDialog, self).accept()

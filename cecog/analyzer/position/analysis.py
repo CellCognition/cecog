@@ -51,7 +51,6 @@ from cecog.features import FEATURE_MAP
 
 class PositionCore(LoggerObject):
 
-    POSITION_LENGTH = 4
     PRIMARY_CHANNEL = PrimaryChannel.NAME
     SECONDARY_CHANNEL = SecondaryChannel.NAME
     TERTIARY_CHANNEL = TertiaryChannel.NAME
@@ -65,7 +64,7 @@ class PositionCore(LoggerObject):
 
     def __init__(self, plate_id, position, datafile, settings, frames,
                  sample_readers, sample_positions, learner,
-                 image_container):
+                 image_container, writelogs=False):
         super(PositionCore, self).__init__()
 
         self.datafile = datafile
@@ -75,6 +74,7 @@ class PositionCore(LoggerObject):
         self.position = position
 
         self._frames = frames # frames to process
+        self._writelogs = writelogs
         self.sample_readers = sample_readers
         self.sample_positions = sample_positions
         self.learner = learner
@@ -362,9 +362,11 @@ class PositionAnalyzer(PositionCore):
         if not self.has_timelapse:
             self.settings.set('Processing', 'tracking', False)
 
-        logfile = join(
-            dirname(dirname(self.datafile)), "log", "%s.log" %self.position)
-        self.add_file_handler(logfile, self.Levels.DEBUG)
+        if self._writelogs:
+            logfile = join(
+                dirname(dirname(self.datafile)), "log", "%s.log" %self.position)
+            self.add_file_handler(logfile, self.Levels.DEBUG)
+        self.logger.setLevel(self.Levels.DEBUG)
 
     def setup_classifiers(self):
         sttg = self.settings

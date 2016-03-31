@@ -41,6 +41,7 @@ class LoggerObject(object):
 
     def __init__(self, *args, **kw):
         super(LoggerObject, self).__init__(*args, **kw)
+        self._file_handler = None
 
         # FIXME - special casing to get it running for
         # multiprocessing
@@ -69,5 +70,6 @@ class LoggerObject(object):
         self.logger.addHandler(self._file_handler)
 
     def close(self):
-        self._file_handler.close()
+        if self._file_handler is not None:
+            self._file_handler.close()
         self.logger.removeHandler(self._file_handler)
