@@ -55,7 +55,8 @@ class PositionAnalyzerForBrowser(PositionCore):
         # processing channel, color channel
         for p_channel, c_channel in self.ch_mapping.iteritems():
             if sttg('Processing', self._resolve_name(p_channel, 'classification')):
-                cpath = sttg('Classification', self._resolve_name(p_channel, 'classification_envpath'))
+                cpath = sttg('Classification', self._resolve_name(
+                    p_channel, 'classification_envpath'))
                 cpath = join(cpath, basename(cpath)+".hdf")
                 try:
                     svc = SupportVectorClassifier(
@@ -86,6 +87,7 @@ class PositionAnalyzerForBrowser(PositionCore):
                           detect_objects = self.settings.get('Processing', 'objectdetection'))
 
         self._analyze(ca)
+        return ca
 
     def setup_channel(self, proc_channel, col_channel, zslice_images,
                       check_for_plugins=False):

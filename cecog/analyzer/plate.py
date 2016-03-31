@@ -246,10 +246,10 @@ class AnalyzerBrowser(PlateAnalyzer):
         analyzer = PositionAnalyzerForBrowser(
             self.plate, pos, self._outdir, self.settings,
             self.frames, self.sample_reader, self.sample_positions,
-            None, self._imagecontainer, write_logs=False)
+            None, self._imagecontainer, writelogs=False)
 
         analyzer.add_stream_handler()
-        analyzer()
+        return analyzer()
 
 
 class Trainer(Analyzer):
