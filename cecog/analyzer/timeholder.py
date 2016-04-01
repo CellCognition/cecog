@@ -143,7 +143,8 @@ class TimeHolder(OrderedDict):
         self.minimal_effort = False
         try:
             # minimal_effort is read from the settings
-            self.minimal_effort = self._settings.get('Output', 'minimal_effort') and self._hdf5_reuse
+            self.minimal_effort = self._settings.get(
+                'Output', 'minimal_effort') and self._hdf5_reuse
         except:
             # for backwards compatibility
             self.minimal_effort = False

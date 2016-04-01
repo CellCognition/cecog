@@ -26,7 +26,17 @@ Plate = '/sample/0/plate/'
 Well = Plate + '%s/experiment/'
 Site = Well + '%s/position/%s'
 
+
+LayoutDtype = np.dtype(
+    [('File', 'S10'), ('Well', 'S3'), ('Site', '<i8'),
+     ('Row', 'S1'), ('Column', '<i8'), ('GeneSymbol', 'S6'),
+     ('siRNA', 'S8'), ('Group', 'S10')])
+
+
 class Ch5File(CH5FileWriter):
+
+    def __init__(self, *args, **kw):
+        super(Ch5File, self).__init__(*args, **kw)
 
     def _init_basic_structure(self):
         # because the parent method is crap
@@ -40,6 +50,10 @@ class Ch5File(CH5FileWriter):
 
     def __delitem__(self, key):
         del self._file_handle[key]
+
+    def layout(self, plate):
+        path = "%s/%s" %(CH5Const.LAYOUT, plate)
+        return self[path].value
 
     def hasLayout(self, plate):
         """Check if file contains a experimental layout for a specific plate."""
@@ -66,7 +80,8 @@ class Ch5File(CH5FileWriter):
         grp = self._file_handle.require_group(CH5Const.LAYOUT)
 
         if platename not in grp:
-            rec = np.recfromcsv(plate_layout, delimiter="\t")
+            rec = np.recfromtxt(plate_layout, dtype=LayoutDtype,
+                                delimiter="\t", skiprows=1)
             dset = grp.create_dataset(platename, data=rec)
 
     def linkFile(self, filename):

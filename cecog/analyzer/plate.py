@@ -137,28 +137,6 @@ class PlateAnalyzer(Analyzer):
             setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
 
-    def _already_processed(self, positions):
-        """Find positions already been processed and remove them from list"""
-        _finished_dir = join(self._log_dir, '_finished')
-        set_found = set()
-        positions = set(positions)
-        if isdir(_finished_dir):
-            for file_ in glob.glob(join("%s" %_finished_dir, "*.txt")):
-                fname = basename(file_)
-                if fname.startswith("_"):
-                    pos = fname.split('_')[1]
-                else:
-                    pos = fname.split('__')[0]
-                set_found.add(pos)
-                pos_found = list(positions.difference(set_found))
-            pos_found.sort()
-            self.logger.info(("Following positions have been "
-                              "processed already:\n%s" %positions))
-        else:
-            pos_found = positions
-            self.logger.info("No positions have been processed yet.")
-        return pos_found
-
     @property
     def positions(self):
         """Determine positions to process considering

@@ -32,11 +32,11 @@ class ECParams(object):
     HMM_BAUMWELCH = 1
 
     __slots__ = ['regionnames', 'constrain_graph', 'hmm_constrain',
-                 'classifier_dirs', 'position_labels', 'mapping_dir',
+                 'classifier_dirs', 'mapping_dir', 'size_gallery_image',
                  'sortby', 'timeunit', 'overwrite_timelapse', 'timelapse',
                  'sorting', 'sorting_sequence', 'tmax', 'ignore_tracking_branches',
                  'write_gallery', 'n_galleries', 'eventselection', 'nclusters',
-                 'resampling_factor', 'hmm_algorithm', 'size_gallery_image']
+                 'resampling_factor', 'hmm_algorithm']
 
     def __init__(self, settings, tstep, timeunit):
 
@@ -62,19 +62,14 @@ class ECParams(object):
                 self.classifier_dirs[channel] = \
                     settings('Classification', _setting)
 
-        self.position_labels = settings('General', 'plate_layout') != ''
         self.mapping_dir = settings('General', 'plate_layout')
 
-        if settings('ErrorCorrection', 'groupby_oligoid'):
-            self.sortby = PlateMapping.OLIGO
+        if settings('ErrorCorrection', 'groupby_sirna'):
+            self.sortby = PlateMapping.SIRNA
         elif settings('ErrorCorrection', 'groupby_genesymbol'):
             self.sortby = PlateMapping.GENE
         else:
-            self.sortby = PlateMapping.POSITION
-
-        # special case, sort by position if no mappings file is provided
-        if not self.position_labels:
-            self.sortby = PlateMapping.POSITION
+            self.sortby = PlateMapping.FILE
 
         # timelapse in minutes
         self.overwrite_timelapse = \

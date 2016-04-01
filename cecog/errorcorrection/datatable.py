@@ -35,12 +35,12 @@ class HmmDataTable(object):
             self._pos.setdefault(cn, [])
 
     def _update_pos(self, pos, mapping, ntracks):
-        self._pos[pm.POSITION].extend([pos]*ntracks)
+        self._pos[pm.FILE].extend([pos]*ntracks)
         try:
             for k, v in mapping.iteritems():
                 self._pos[k].extend([v]*ntracks)
         except AttributeError:
-            for cn in (cols for cols in pm.colnames if cols != pm.POSITION):
+            for cn in (cols for cols in pm.colnames if cols != pm.FILE):
                 self._pos[cn].extend([None]*ntracks)
 
     def add_tracks(self, tracks, pos, mapping, objids, coords,
@@ -64,13 +64,14 @@ class HmmDataTable(object):
             self._update_pos(pos, mapping, nt)
 
     def add_position(self, pos, mapping):
-        self._all_pos[pm.POSITION].append(pos)
+        self._all_pos[pm.FILE].append(pos)
+
         try:
             for k, v in mapping.iteritems():
                 self._all_pos[k].append(v)
         except AttributeError:
             for cn in pm.colnames:
-                if cn is pm.POSITION:
+                if cn is pm.FILE:
                     continue
                 self._all_pos[cn].append(None)
 

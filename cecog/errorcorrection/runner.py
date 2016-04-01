@@ -11,7 +11,9 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['PlateMapping', 'PositionRunner', 'PlateRunner']
+
+__all__ = ('PlateMapping', 'PositionRunner', 'PlateRunner')
+
 
 import os
 import glob
@@ -24,6 +26,7 @@ from PyQt5.QtCore import QThread
 
 import cellh5
 
+from cecog.io.hdf import Ch5File
 from cecog.util.util import makedirs
 from cecog.errorcorrection.hmm import HmmSklearn
 from cecog.errorcorrection.hmm import HmmTde
@@ -47,23 +50,14 @@ class PlateRunner(QtCore.QObject):
     def abort(self):
         self._is_aborted = True
 
-    def _check_mapping_files(self):
-        """Check plate mappings files for existence."""
-        for plate in self.plates:
-            mpfile = join(self.params_ec.mapping_dir, '%s.txt' %plate)
-            if not isfile(mpfile):
-                raise IOError('Mapping file not found\n(%s)' %mpfile)
-
     def __call__(self):
 
         thread = QThread.currentThread()
 
-        if self.params_ec.position_labels:
-            self._check_mapping_files()
-
         for i, plate in enumerate(self.plates):
             thread.interruption_point()
-            ch5file = join(self._outdirs[plate], 'cellh5', "_all_positions.ch5")
+            ch5file = join(self._outdirs[plate], "%s.ch5" %plate)
+
             runner = PositionRunner(plate, self._outdirs[plate],
                                     self.params_ec, parent=self,
                                     ch5file=ch5file)
@@ -86,8 +80,7 @@ class PositionRunner(QtCore.QObject):
         self._makedirs()
 
         self.ch5file = ch5file
-        self.files = glob.glob(join(dirname(ch5file), "*.ch5"))
-        self.files = [f for f in self.files if "_all_positions" not in f]
+        self.files = glob.glob(join(dirname(ch5file), "cellh5", "*.ch5"))
 
     def _makedirs(self):
         """Create/setup output directories.
@@ -113,60 +106,63 @@ class PositionRunner(QtCore.QObject):
 
     def _load_classdef(self, region):
 
-        with cellh5.ch5open(self.ch5file, "r", cached=True) as ch5:
+        with Ch5File(self.ch5file, mode="r") as ch5:
             cld = ch5.class_definition(region)
             classdef = ClassDefinition(cld)
         return classdef
 
-    def _load_data(self, mappings, channel):
+    def _load_data(self, channel):
+
         dtable = HmmDataTable()
 
         # XXX read region names from hdf not from settings
         chreg = "%s__%s" %(channel, self.ecopts.regionnames[channel])
 
         # setup the progressbar correctly
-        c = 4
+        c = 3
         if self.ecopts.write_gallery:
-            c = 5
+            c = 4
 
         thread = QThread.currentThread()
         thread.statusUpdate(min=0, max=len(self.files) + c)
 
-        for file_ in self.files:
-            position = splitext(basename(file_))[0]
-            thread.statusUpdate(text="loading plate: %s, file: %s" %(self.plate, file_))
-            thread.increment.emit()
-            thread.interruption_point()
-            QtCore.QCoreApplication.processEvents()
+        with Ch5File(self.ch5file, mode="r") as ch5:
+            layout = ch5.layout(self.plate)
+            mappings = PlateMapping(layout)
 
-            try:
-                ch5 = cellh5.CH5File(file_, "r", cached=True)
-                for pos in ch5.iter_positions():
-                    # only segmentation
-                    if not pos.has_classification(chreg):
-                        continue
+            for pos in ch5.iter_positions():
 
-                    # make dtable aware of all positions, sometime they contain
-                    # no tracks and I don't want to ignore them
-                    dtable.add_position(position, mappings[position])
-                    if not pos.has_events():
-                        continue
+                file_ = str(splitext(basename(pos.filename))[0])
+                thread.statusUpdate(
+                    text="loading plate: %s, file: %s" %(self.plate, file_))
+                thread.increment.emit()
+                thread.interruption_point()
+                QtCore.QCoreApplication.processEvents()
 
-                    objidx = np.array( \
-                        pos.get_events(not self.ecopts.ignore_tracking_branches),
-                        dtype=int)
-                    tracks = pos.get_class_label(objidx, chreg)
-                    try:
-                        probs = pos.get_prediction_probabilities(objidx, chreg)
-                    except KeyError as e:
-                        probs = None
+                # only segmentation
+                if not pos.has_classification(chreg):
+                    continue
 
-                    grp_coord = cellh5.CH5GroupCoordinate( \
-                        chreg, pos.pos, pos.well, pos.plate)
-                    dtable.add_tracks(tracks, position, mappings[position],
-                                      objidx, grp_coord, probs)
-            finally:
-                ch5.close()
+                # make dtable aware of all positions, sometime they contain
+                # no tracks and I don't want to ignore them
+                dtable.add_position(file_, mappings[file_])
+                if not pos.has_events():
+                    continue
+
+                objidx = np.array( \
+                    pos.get_events(not self.ecopts.ignore_tracking_branches),
+                    dtype=int)
+                tracks = pos.get_class_label(objidx, chreg)
+                try:
+                    probs = pos.get_prediction_probabilities(objidx, chreg)
+                except KeyError as e:
+                    probs = None
+
+                grp_coord = cellh5.CH5GroupCoordinate( \
+                    chreg, pos.pos, pos.well, pos.plate)
+                dtable.add_tracks(tracks, file_, mappings[file_],
+                                  objidx, grp_coord, probs)
+
 
         if dtable.is_empty():
             raise RuntimeError(
@@ -183,14 +179,8 @@ class PositionRunner(QtCore.QObject):
     def __call__(self):
         self._makedirs()
 
-        mappings = PlateMapping([splitext(basename(f))[0] for f in self.files])
-
-        if self.ecopts.position_labels:
-            mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
-            mappings.read(mpfile)
-
         for channel in self.ecopts.regionnames.keys():
-            dtable, cld = self._load_data(mappings, channel)
+            dtable, cld = self._load_data(channel)
             msg = 'performing error correction on channel %s' %channel
             self.interruption_point(msg)
 
@@ -228,7 +218,7 @@ class PositionRunner(QtCore.QObject):
                     fn = join(self._gallery_dir,
                               '%s-%s_gallery.png' %(prefix, sby))
 
-                    with cellh5.ch5open(self.ch5file, 'r') as ch5:
+                    with Ch5File(self.ch5file, mode='r') as ch5:
                         report.image_gallery_png(ch5, fn, self.ecopts.n_galleries,
                                                  self.ecopts.resampling_factor,
                                                  self.ecopts.size_gallery_image)

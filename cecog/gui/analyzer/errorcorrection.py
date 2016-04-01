@@ -52,7 +52,7 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
                         ('merged_graph',)])
         self.add_group(None,
                        [('groupby_position',),
-                        ('groupby_oligoid',),
+                        ('groupby_sirna',),
                         ('groupby_genesymbol',),
                         ], layout='flow', link='groupby', label='Group by')
         self.add_line()
