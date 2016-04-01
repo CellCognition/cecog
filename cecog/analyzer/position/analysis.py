@@ -598,7 +598,7 @@ class PositionAnalyzer(PositionCore):
         except ZeroDivisionError:
             pass
         else:
-            self.logger.info(" - %d image sets analyzed, %3d ms per image set" %(n, intval))
+            self.logger.info("%d images analyzed, %3d ms per image set" %(n, intval))
 
         self.clear()
 
