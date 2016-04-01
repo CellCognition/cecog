@@ -47,8 +47,13 @@ def dwell_boxplot(data, title=None, xlabel='class label',
     bp = axes.boxplot(data.values())#, notch=0, sym='+', vert=1, whis=1.5)
     plt.setp(bp['boxes'], color='black')
     plt.setp(bp['whiskers'], color='black')
-    plt.setp(bp['fliers'],  markeredgecolor='black', marker='o',
-             fillstyle='none')
+    # plt.setp(bp['fliers'],  markeredgecolor='black', marker='o',
+    #          fillstyle='none', markerfacecolor=colors[i])
+
+    colors = [cmap(l) for l in data.keys()]
+    for i, flier in enumerate(bp['fliers']):
+        flier.set(marker='o', color=colors[i], markerfacecolor=colors[i])
+
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
