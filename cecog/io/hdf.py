@@ -81,7 +81,7 @@ class Ch5File(CH5FileWriter):
 
         if platename not in grp:
             rec = np.recfromtxt(plate_layout, dtype=LayoutDtype,
-                                delimiter="\t", skiprows=1)
+                                delimiter="\t", skip_header=True)
             dset = grp.create_dataset(platename, data=rec)
 
     def linkFile(self, filename):
