@@ -102,7 +102,7 @@ def dwell_boxplot2(data, title=None, xlabel='', ylabel='dwell time (frames)',
     plt.setp(bp['boxes'], color='black')
     plt.setp(bp['whiskers'], color='black')
     plt.setp(bp['fliers'],  markeredgecolor='black', marker='o',
-             fillstyle='none')
+             fillstyle='none', markerfacecolor=color)
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
