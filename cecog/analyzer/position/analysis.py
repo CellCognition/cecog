@@ -503,7 +503,8 @@ class PositionAnalyzer(PositionCore):
         t_step = tu.sec2min(t_mean)*increment
 
         nclusters = self.settings.get('EventSelection', 'num_clusters')
-        exporter = TC3Exporter(self._tes.tc3data, self._tc3_dir, nclusters,
+        tc3dir = join(dirname(dirname(self.datafile)), "tc3")
+        exporter = TC3Exporter(self._tes.tc3data, tc3dir, nclusters,
                                t_step, TimeConverter.MINUTES, self.position)
         exporter()
 

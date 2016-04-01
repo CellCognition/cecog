@@ -70,7 +70,7 @@ class TC3Exporter(object):
 
         cmap = unsupervised_cmap(self._nclusters)
         try:
-            pdf = PdfPages(join(self._odir, filename))
+            pdf = PdfPages(join(self._odir, "%s_%s" %(self._position, filename)))
             for title_, tracks in self._data.iteritems():
                 title = '%s (%s)' %(self._position, title_.lower())
 
