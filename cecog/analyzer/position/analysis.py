@@ -64,7 +64,7 @@ class PositionCore(LoggerObject):
 
     def __init__(self, plate_id, position, datafile, settings, frames,
                  sample_readers, sample_positions, learner,
-                 image_container, writelogs=False):
+                 image_container, layout, writelogs=False):
         super(PositionCore, self).__init__()
 
         self.datafile = datafile
@@ -72,6 +72,7 @@ class PositionCore(LoggerObject):
         self._imagecontainer = image_container
         self.plate_id = plate_id
         self.position = position
+        self.layout = layout
 
         self._frames = frames # frames to process
         self._writelogs = writelogs
@@ -87,6 +88,10 @@ class PositionCore(LoggerObject):
 
     def _analyze(self, *args, **kw):
         raise NotImplementedError
+
+    def _posinfo(self):
+        i = np.where(self.layout["File"]==self.position)[0][0]
+        return self.layout["Well"][i], self.layout["Site"][i]
 
     def zslice_par(self, ch_name):
         """Returns either the number of the zslice to select or a tuple of
@@ -523,12 +528,14 @@ class PositionAnalyzer(PositionCore):
     def __call__(self):
 
         thread = QThread.currentThread()
+        well, site = self._posinfo()
 
         self.timeholder = TimeHolder(self.position, self._all_channel_regions,
                                      self.datafile,
                                      self.meta_data, self.settings,
                                      self._frames,
                                      self.plate_id,
+                                     well, site,
                                      **self._hdf_options)
 
         self.settings.set_section('Tracking')

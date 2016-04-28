@@ -107,7 +107,7 @@ class TimeHolder(OrderedDict):
                      ('edge_idx2', 'uint32'),])
 
     def __init__(self, P, channel_regions, filename_hdf5, meta_data, settings,
-                 analysis_frames, plate_id,
+                 analysis_frames, plate_id, well, site,
                  hdf5_create=True, hdf5_reuse=True, hdf5_compression='gzip',
                  hdf5_include_raw_images=True,
                  hdf5_include_label_images=True, hdf5_include_features=True,
@@ -118,6 +118,8 @@ class TimeHolder(OrderedDict):
 
         self.P = P
         self.plate_id = plate_id
+        self.well = well
+        self.site = str(site)
         self._iCurrentT = None
         self.channel_regions = channel_regions
         self._meta_data = meta_data
@@ -274,28 +276,13 @@ class TimeHolder(OrderedDict):
 
             self._hdf5_write_global_definition()
 
-    def get_well_position(self):
-        meta_data = self._meta_data
-
-        # Check for being wellbased or old style (B01_03 vs. 0037)
-        if meta_data.has_well_info:
-            well, subwell = meta_data.get_well_and_subwell(self.P)
-            position = str(subwell)
-        else:
-            well = "0"
-            position = self.P
-        return well, position
-
     def _hdf5_prepare_reuse(self):
         self.cellh5_file = CH5File(self.hdf5_filename, 'r')
         self._hdf5_file = self.cellh5_file.get_file_handle()
         try:
-            well, position = self.get_well_position()
-
-
             self._grp_cur_position = self._hdf5_file['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate_id,
-                                                                                                       well,
-                                                                                                       position)]
+                                                                                                       self.well,
+                                                                                                       self.site)]
             self._grp_def = self._hdf5_file[self.HDF5_GRP_DEFINITION]
             return 0
         except:
@@ -309,23 +296,15 @@ class TimeHolder(OrderedDict):
             return False
 
         try:
-            meta_data = self._meta_data
-            # Check for being wellbased or old style (B01_03 vs. 0037)
-            if meta_data.has_well_info:
-                well, subwell = meta_data.get_well_and_subwell(self.P)
-                position = str(subwell)
-            else:
-                well = "0"
-                position = self.P
 
             label_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/region' % (self.plate_id,
-                                                                                      well,
-                                                                                      position,
+                                                                                      self.well,
+                                                                                      self.site,
                                                                                       self.HDF5_GRP_IMAGE)
 
             raw_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/channel' % (self.plate_id,
-                                                                                      well,
-                                                                                      position,
+                                                                                      self.well,
+                                                                                      self.site,
                                                                                       self.HDF5_GRP_IMAGE)
             # we check if the label image and raw image are in the cellh5 file
             if label_image_str in f and raw_image_str in f:
@@ -458,7 +437,9 @@ class TimeHolder(OrderedDict):
 
         raise StopIteration
 
-    def _hdf5_create_file_structure(self, filename, label_info=(None, None, None), raw_info=(None, None, None), feature_dict=None, object_dict=None):
+    def _hdf5_create_file_structure(self, filename, label_info=(None, None, None),
+                                    raw_info=(None, None, None),
+                                    feature_dict=None, object_dict=None):
         label_image_str, label_image_cpy, label_image_valid = label_info
         raw_image_str, raw_image_cpy, raw_image_valid = raw_info
 
@@ -479,17 +460,10 @@ class TimeHolder(OrderedDict):
 
         meta_data = self._meta_data
 
-        # Check for being wellbased or old style (B01_03 vs. 0037)
-        if meta_data.has_well_info:
-            well, subwell = meta_data.get_well_and_subwell(self.P)
-            position = str(subwell)
-        else:
-            well = "0"
-            position = self.P
         grp_experiment = grp_cur_plate.create_group('experiment')
-        grp_cur_experiment = grp_experiment.create_group(well)
+        grp_cur_experiment = grp_experiment.create_group(self.well)
         grp_position = grp_cur_experiment.create_group('position')
-        grp_cur_position = grp_position.create_group(position)
+        grp_cur_position = grp_position.create_group(self.site)
 
         self._grp_cur_position = grp_cur_position
 
@@ -777,12 +751,11 @@ class TimeHolder(OrderedDict):
         channel._features_calculated = True
         channel_name = channel.NAME.lower()
         for region_name, container in channel.containers.iteritems():
-            well, position = self.get_well_position()
             frame_idx = self._frames_to_idx[self._iCurrentT]
 
             combined_region_name = self._convert_region_name(channel_name, region_name, '')
 
-            cur_pos = self.cellh5_file.get_position(well, position)
+            cur_pos = self.cellh5_file.get_position(self.well, self.site)
 
             # cast to tuple to enable cashing
             current_object_idx = tuple(cur_pos.get_object_idx(combined_region_name, frame_idx))
@@ -838,8 +811,8 @@ class TimeHolder(OrderedDict):
                 center = cur_pos.get_center(current_object_idx, combined_region_name)
 
                 # get_object_feature_by_name gives back all feature values for the specified feature (for all timepoints)
-                #bounding_box = cur_pos.get_object_feature_by_name("bounding_box")
-                #center = cur_pos.get_object_feature_by_name("center")
+                # bounding_box = cur_pos.get_object_feature_by_name("bounding_box")
+                # center = cur_pos.get_object_feature_by_name("center")
 
                 # loop over detected objects
                 for j, index in enumerate(current_object_idx):

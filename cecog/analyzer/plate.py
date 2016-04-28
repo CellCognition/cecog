@@ -184,6 +184,7 @@ class PlateAnalyzer(Analyzer):
 
         with Ch5File(self.h5f, mode="r+") as ch5:
             finished = ch5.linkedFiles(self.plate)
+            layout = ch5.layout(self.plate)
 
         for pos in self.positions:
             self.logger.info('Processing position: %r' % pos)
@@ -197,7 +198,7 @@ class PlateAnalyzer(Analyzer):
             analyzer = PositionAnalyzer(
                 self.plate, pos, datafile, self.settings, self.frames,
                 self.sample_reader, self.sample_positions, None,
-                self._imagecontainer, AppPreferences().write_logs)
+                self._imagecontainer, layout, AppPreferences().write_logs)
 
             try:
                 analyzer()
