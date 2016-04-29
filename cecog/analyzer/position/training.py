@@ -32,6 +32,8 @@ class PosTrainer(PositionCore):
                                      self.meta_data, self.settings,
                                      self._frames,
                                      self.plate_id,
+                                     well=None,
+                                     site=None,
                                      **self._hdf_options)
 
         ca = CellAnalyzer(timeholder=self.timeholder,

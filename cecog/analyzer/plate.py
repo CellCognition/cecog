@@ -225,7 +225,7 @@ class AnalyzerBrowser(PlateAnalyzer):
         analyzer = PositionAnalyzerForBrowser(
             self.plate, pos, self._outdir, self.settings,
             self.frames, self.sample_reader, self.sample_positions,
-            None, self._imagecontainer, writelogs=False)
+            None, self._imagecontainer, layout=None, writelogs=False)
 
         analyzer.add_stream_handler()
         return analyzer()
@@ -294,5 +294,5 @@ class Trainer(Analyzer):
                                     self.settings,
                                     frames, self.sample_reader,
                                     self.sample_positions, self.learner,
-                                    self._imagecontainer)
+                                    self._imagecontainer, layout=None)
             postrainer()
