@@ -33,10 +33,9 @@ from cecog.traits.config import ConfigSettings
 from cecog.traits.analyzer.general import SECTION_NAME_GENERAL
 from cecog.traits.analyzer.output import SECTION_NAME_OUTPUT
 from cecog.analyzer.plate import PlateAnalyzer
-from cecog.io.imagecontainer import ImageContainer
-from cecog.threads.link_hdf import link_hdf5_files
 from cecog.environment import CecogEnvironment
 from cecog.threads import ErrorCorrectionThread
+from cecog.io.imagecontainer import ImageContainer
 
 import cellh5
 
@@ -253,36 +252,32 @@ if __name__ ==  "__main__":
                 plate_id = os.path.split(path_input)[1]
                 pos = compound[0]
             else:
-                parser.error("Position must be of the form 'plateid___position'. Found '%s' instead." % item)
+                parser.error(
+                    "Position must be of the form 'plateid___position'. Found '%s' instead." % item)
         else:
-            parser.error("Position must be of the form 'position' or 'plateid___position'. Found '%s' instead." % item)
+            parser.error(
+                "Position must be of the form 'position' or 'plateid___position'. Found '%s' instead." % item)
 
-        if not plate_id in plates:
-            plates[plate_id] = []
-        plates[plate_id].append(pos)
+        if not plate in plates:
+            plates[plate] = []
+        plates[plate].append(pos)
 
-    # start one analyzer per plate with the corresponding positions
-    post_hdf5_link_list = []
-    for plate_id in plates:
+
+    for plate in plates:
         # redefine the positions
         settings.set(SECTION_NAME_GENERAL, 'constrain_positions', True)
-        settings.set(SECTION_NAME_GENERAL, 'positions', ','.join(plates[plate_id]))
-        logger.info("Launching analyzer for plate '%s' with positions %s" % (plate_id, plates[plate_id]))
-        # initialize and run the analyzer
-        analyzer = PlateAnalyzer(plate_id, settings, imagecontainer)
-        hdf_links = analyzer()
-        post_hdf5_link_list.append(hdf_links)
+        settings.set(SECTION_NAME_GENERAL, 'positions', ','.join(plates[plate]))
+        logger.info("Processing site %s - %s" % (plate_id, plates[plate]))
 
-    if settings.get('Output', 'hdf5_create_file') and settings.get('Output', 'hdf5_merge_positions'):
-        if len(post_hdf5_link_list) > 0:
-            post_hdf5_link_list = reduce(lambda x,y: x + y, post_hdf5_link_list)
-            ch5file = link_hdf5_files(sorted(post_hdf5_link_list))
+        analyzer = PlateAnalyzer(plate, settings, imagecontainer)
+        analyzer()
+        ch5file = analyzer.h5f
 
     # Run the error correction on the cluster
     if settings("Processing", "primary_errorcorrection") or \
-            settings("Processing", "secondary_errorcorrection") or \
-            settings("Processing", "tertiary_errorcorrection") or \
-            settings("Processing", "merged_errorcorrection"):
+       settings("Processing", "secondary_errorcorrection") or \
+       settings("Processing", "tertiary_errorcorrection") or \
+       settings("Processing", "merged_errorcorrection"):
 
         nsites = getCellH5NumberOfSites(ch5file)
         npos = len(os.listdir(os.path.dirname(ch5file))) - 1
