@@ -67,7 +67,7 @@ class TrainerThread(CoreThread):
         for plate in self._imagecontainer.plates:
             trainer = Trainer(
                 plate, self._settings, copy.deepcopy(self._imagecontainer),
-                learner=classifier)
+                learner=classifier, )
             trainer()
             classifier = trainer.learner
             frame_count += len(trainer.positions)

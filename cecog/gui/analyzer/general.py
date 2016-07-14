@@ -24,6 +24,7 @@ from cecog.gui.analyzer import BaseFrame
 
 
 class GeneralFrame(BaseFrame):
+
     ICON = ":general.png"
 
     def __init__(self, settings, parent, name):
@@ -34,13 +35,6 @@ class GeneralFrame(BaseFrame):
         self.add_input('has_multiple_plates')
         self.add_input('pathout')
         self.add_input('plate_layout')
-        self.add_line()
-
-        btn = QPushButton('Scan Images', self)
-        btn.setToolTip("Scan image directory")
-        btn.clicked.connect(self.parent().main_window._on_load_input)
-        self.add_input('namingscheme', w_button=btn)
-
         self.add_line()
 
         self.add_group(None, [('process_primary', (0, 0, 1, 1)),
@@ -81,8 +75,14 @@ class GeneralFrame(BaseFrame):
         btn = QPushButton('Save Settings as', buttonbar)
         layout.addWidget(btn)
         btn.clicked.connect(self.parent().main_window._on_file_save_as)
-        layout.addStretch()
+
         self.parent().main_window.modified.connect(self._on_modified)
+
+        btn = QPushButton('Scan Images', self)
+        btn.setToolTip("Scan image directory")
+        btn.clicked.connect(self.parent().main_window._on_load_input)
+        layout.addWidget(btn)
+        layout.addStretch()
 
     def _on_modified(self, changed):
         self._btn_save.setEnabled(changed)

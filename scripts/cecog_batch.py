@@ -27,6 +27,9 @@ except ImportError:
     sys.path.append(os.pardir)
     import cecog
 
+from matplotlib import use
+use("Agg")
+
 from cecog.version import version
 from cecog.traits.config import ConfigSettings
 from cecog.threads import ErrorCorrectionThread
@@ -38,6 +41,7 @@ from cecog.io.imagecontainer import ImageContainer
 ENV_INDEX_SGE = 'SGE_TASK_ID'
 PLATESEP = "___"
 POSSEP = ","
+
 
 
 def getCellH5NumberOfSites(file_):
@@ -103,9 +107,9 @@ if __name__ ==  "__main__":
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
-    logger.info("*****************************************************" + '*'*len(version))
+    logger.info("*"*(len(version) + 53))
     logger.info("*** CellCognition - Batch Script - Version %s ***" %version)
-    logger.info("*****************************************************" + '*'*len(version))
+    logger.info("*"*(len(version) + 53))
     logger.info("SGE job item index: environment variable '%s'" %str(index))
     logger.info('cmd: %s' %" ".join(sys.argv))
 
