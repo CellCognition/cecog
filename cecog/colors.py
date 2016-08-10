@@ -3,6 +3,8 @@ colors.py
 
 Defines some colors and mappings
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -78,31 +80,31 @@ class Colors(object):
 
     @classmethod
     def channel_color(cls, name):
-        if name not in cls.channel_table.keys():
+        if name not in list(cls.channel_table.keys()):
             if __debug__:
-                print "color %s not defined. Using fallback"
+                print("color %s not defined. Using fallback")
             return cls.fallback_str
         return cls.channel_table[name]
 
     @classmethod
     def channel_hexcolor(cls, name):
-        if name not in cls.channel_table.keys():
+        if name not in list(cls.channel_table.keys()):
             if __debug__:
-                print "channel color (%s) not defined. Using fallback" %name
+                print("channel color (%s) not defined. Using fallback" %name)
             return cls.fallback
         return getattr(cls, cls.channel_table[name])
 
     @classmethod
     def channel_rgb(cls, name):
-        if name not in cls.channel_table.keys():
+        if name not in list(cls.channel_table.keys()):
             if __debug__:
-                print "channel color (%s) not defined. Using fallback" %name
+                print("channel color (%s) not defined. Using fallback" %name)
             return hex2color(cls.fallback)
         return hex2color(getattr(cls, cls.channel_table[name]))
 
 
 if __name__ == "__main__":
-    print 'by attribute:', Colors.red
-    print 'colors: ', Colors.colors
-    print 'channel color: ', Colors.channel_color('rfp')
-    print 'color table: ', dict((c, getattr(Colors, c)) for c in Colors.colors)
+    print('by attribute:', Colors.red)
+    print('colors: ', Colors.colors)
+    print('channel color: ', Colors.channel_color('rfp'))
+    print('color table: ', dict((c, getattr(Colors, c)) for c in Colors.colors))

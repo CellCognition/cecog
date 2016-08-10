@@ -1,6 +1,9 @@
 """
 runner.py
 """
+from __future__ import absolute_import
+import six
+from six.moves import zip
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -100,7 +103,7 @@ class PositionRunner(QtCore.QObject):
         -) <analysis-dir>/hmm
         -) <analysis-dir>/hmm/gallery
         """
-        assert isinstance(self._outdir, basestring)
+        assert isinstance(self._outdir, six.string_types)
         self._analyzed_dir = join(self._outdir, "analyzed")
 
         odirs = [join(self._outdir, "hmm")]
@@ -192,7 +195,7 @@ class PositionRunner(QtCore.QObject):
             mpfile = join(self.ecopts.mapping_dir, "%s.txt" %self.plate)
             mappings.read(mpfile)
 
-        for channel in self.ecopts.regionnames.keys():
+        for channel in list(self.ecopts.regionnames.keys()):
             dtable, cld = self._load_data(mappings, channel)
             msg = 'performing error correction on channel %s' %channel
             self.interruption_point(msg)

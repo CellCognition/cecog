@@ -8,6 +8,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -419,7 +421,7 @@ class ObjectsFrame(QFrame):
             self._box_region.setCurrentIndex(0)
         else:
             self._box_region.setCurrentIndex(found_old_idx)
-            self._object_region = regions.values()[found_old_idx]
+            self._object_region = list(regions.values())[found_old_idx]
 
     def _on_show_by_color(self, state):
         if state:
@@ -558,14 +560,14 @@ class DisplayModule(Module):
             name = os.path.splitext(name)[0]
             p = ZeissPalette(name, data)
             palettes[p.name] = p
-        for palette in palettes.values():
+        for palette in list(palettes.values()):
             # FIXME: not optimal, mixin required for Qt purposes
             palette.qt = [qRgb(r, g, b) for r,g,b in palette.lut]
         return palettes
 
     def set_image_dict(self, image_dict):
         self._image_dict.clear()
-        for name, image in image_dict.iteritems():
+        for name, image in six.iteritems(image_dict):
             if not name in self._image_dict:
                 self._image_dict[name] = ImageHelper(image)
         self._display_images.clear()
@@ -574,19 +576,19 @@ class DisplayModule(Module):
         self.update_renderer()
 
     def update_display(self, restrict=None):
-        for name, image_helper in self._image_dict.iteritems():
+        for name, image_helper in six.iteritems(self._image_dict):
             image = image_helper.array
             if restrict is None or restrict == name:
                 image = self._enhancement.transform_image(name, image)
                 self._display_images[name] = image
 
     def update_renderer(self, restrict=None):
-        for name, image in self._display_images.iteritems():
+        for name, image in six.iteritems(self._display_images):
             widget = self._channels[name]
             if restrict is None or restrict == name:
                 rgb_image = widget.render_image(image)
                 self._rgb_images[name] = rgb_image
-        rgb_images = self._rgb_images.values()
+        rgb_images = list(self._rgb_images.values())
         self.browser.image_viewer.from_pixmap(blend_images_max(rgb_images))
 
     def on_object_region_changed(self, channel, region):

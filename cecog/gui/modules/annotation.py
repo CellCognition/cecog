@@ -8,6 +8,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from six.moves import range
 
 __author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
@@ -72,7 +74,7 @@ class Annotations(object):
         position = coordinate.position
         time = coordinate.time
         items = self._annotations[plate][position][time]
-        for class_name in items.keys():
+        for class_name in list(items.keys()):
             if item in items[class_name]:
                 items[class_name].remove(item)
                 self._counts[class_name] -= 1
@@ -299,7 +301,7 @@ class Annotations(object):
 
                 filename = 'PL%s___P%s___T%05d.xml' % \
                            (plateid, position, min_time)
-                f = file(os.path.join(path, filename), 'w')
+                f = open(os.path.join(path, filename), 'w')
                 doc.writexml(f, indent='  ', addindent='  ', encoding='utf8',
                              newl='\n')
                 f.close()
@@ -523,9 +525,9 @@ class AnnotationModule(Module):
         if not class_name is None:
             class_label = learner.class_labels[class_name]
 
-            class_labels = learner.class_labels.values()
+            class_labels = list(learner.class_labels.values())
             class_labels.remove(class_label)
-            class_names = learner.class_names.values()
+            class_names = list(learner.class_names.values())
             class_names.remove(class_name)
 
             if len(class_name_new) == 0:
@@ -576,8 +578,8 @@ class AnnotationModule(Module):
         class_name_new = str(self._class_text.text())
         class_label_new = self._class_sbox.value()
 
-        class_labels = learner.class_labels.values()
-        class_names = learner.class_names.values()
+        class_labels = list(learner.class_labels.values())
+        class_names = list(learner.class_names.values())
 
         if len(class_name_new) == 0:
             warning(self, "Invalid class name",
@@ -777,7 +779,7 @@ class AnnotationModule(Module):
         """Udate the class count for the class table"""
 
         counts = self._annotations.get_class_counts()
-        for class_name in self._learner.class_names.values():
+        for class_name in list(self._learner.class_names.values()):
             if class_name in counts:
                 items = self._find_items_in_class_table(class_name,
                                                         self.COLUMN_CLASS_NAME)

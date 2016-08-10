@@ -8,6 +8,9 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from __future__ import print_function
+import six
 
 __author__ = 'Michael Held'
 __date__ = '$Date: $'
@@ -21,7 +24,7 @@ from os.path import join
 import copy
 import cStringIO
 from collections import OrderedDict
-from ConfigParser import RawConfigParser, NoOptionError
+from six.moves.configparser import RawConfigParser, NoOptionError
 
 from cecog.version import version
 from cecog.plugin.metamanager import MetaPluginManager
@@ -105,7 +108,7 @@ class ConfigSettings(RawConfigParser):
 
     def read(self, filename):
         """Read the settings file and replace the battery_package path."""
-        settings  = file(filename, 'r').read()
+        settings  = open(filename, 'r').read()
         settings = settings.replace("$BATTERY_PACKAGE",
                                     join(self.environ.user_config_dir,
                                          "battery_package"))
@@ -163,13 +166,13 @@ class ConfigSettings(RawConfigParser):
                                                            option_name)
                         except NoOptionError as e:
                             pass
-                        print("Warning: option '%s' in section '%s' is not "
+                        print(("Warning: option '%s' in section '%s' is not "
                               "defined and will be deleted" %\
-                                  (option_name, section_name))
+                                  (option_name, section_name)))
                         self.remove_option(section_name, option_name)
             else:
-                print("Warning: section '%s' is not defined and will be "
-                      "deleted" % section_name)
+                print(("Warning: section '%s' is not defined and will be "
+                      "deleted" % section_name))
                 self.remove_section(section_name)
 
         self._merge_registry()
@@ -188,8 +191,8 @@ class ConfigSettings(RawConfigParser):
         return settings
 
     def from_dict(self, settings):
-        for section, group in settings.iteritems():
-            for option, value in group.iteritems():
+        for section, group in six.iteritems(settings):
+            for option, value in six.iteritems(group):
                 RawConfigParser.set(self, section, option, value)
 
         # # update the plugins
@@ -254,14 +257,14 @@ class ConfigSettings(RawConfigParser):
                 value = self.get(section_name, option_name)
                 new_option_name = VERSION_130_TO_140[section_name][option_name]
                 RawConfigParser.set(self, section_name, new_option_name, value)
-                print 'Converted', option_name, 'into', new_option_name, '=', value
+                print('Converted', option_name, 'into', new_option_name, '=', value)
 
         if section_name == 'ObjectDetection':
             for prefix in ['secondary', 'tertiary']:
                 if option_name == '%s_regions_expanded' % prefix:
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
-                            print 'Converted', option_name
+                            print('Converted', option_name)
                             value = self.get(section_name, '%s_regions_expanded_expansionsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__expanded__expanded__expansion_size' % prefix , value)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__expanded__expanded__require00' % prefix , 'primary')
@@ -269,7 +272,7 @@ class ConfigSettings(RawConfigParser):
                 elif option_name == '%s_regions_inside' % prefix:
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
-                            print 'Converted', option_name
+                            print('Converted', option_name)
                             value = self.get(section_name, '%s_regions_inside_shrinkingsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__inside__inside__shrinking_size' % prefix , value)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__inside__inside__require00' % prefix , 'primary')
@@ -277,7 +280,7 @@ class ConfigSettings(RawConfigParser):
                 elif option_name == '%s_regions_outside' % prefix:
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
-                            print 'Converted', option_name, '%s_regions_outside_expansionsize' % prefix
+                            print('Converted', option_name, '%s_regions_outside_expansionsize' % prefix)
                             value = self.get(section_name, '%s_regions_outside_expansionsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__outside__outside__expansion_size' % prefix , value)
                             value = self.get(section_name, '%s_regions_outside_separationsize' % prefix)
@@ -287,7 +290,7 @@ class ConfigSettings(RawConfigParser):
                 elif option_name == '%s_regions_rim' % prefix:
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
-                            print 'Converted', option_name
+                            print('Converted', option_name)
                             value = self.get(section_name, '%s_regions_rim_expansionsize' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__rim__rim__expansion_size' % prefix , value)
                             value = self.get(section_name, '%s_regions_rim_shrinkingsize' % prefix)
@@ -297,7 +300,7 @@ class ConfigSettings(RawConfigParser):
                 elif option_name == '%s_regions_constrained_watershed' % prefix:
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
-                            print 'Converted', option_name
+                            print('Converted', option_name)
                             value = self.get(section_name, '%s_regions_constrained_watershed_gauss_filter_size' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__constrained_watershed__constrained_watershed__gauss_filter_size' % prefix , value)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__constrained_watershed__constrained_watershed__require00' % prefix , 'primary')
@@ -305,7 +308,7 @@ class ConfigSettings(RawConfigParser):
                 elif option_name == '%s_regions_propagate' % prefix:
                     if self.has_option(section_name, option_name):
                         if self.get(section_name, option_name):
-                            print 'Converted', option_name
+                            print('Converted', option_name)
                             value = self.get(section_name, '%s_regions_propagate_deltawidth' % prefix)
                             RawConfigParser.set(self, section_name, 'plugin__%s_segmentation__propagate__propagate__delta_width' % prefix , value)
 

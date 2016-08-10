@@ -8,6 +8,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -104,13 +106,13 @@ class ChannelCore(LoggerObject):
         return cls._is_virtual
 
     def region_names(self):
-        return self._regions.keys()
+        return list(self._regions.keys())
 
     def get_region(self, name):
         return self._regions[name]
 
     def has_region(self, name):
-        return self._regions.has_key(name)
+        return name in self._regions
 
     def get_container(self, name):
         return self.containers[name]
@@ -133,19 +135,19 @@ class Channel(ChannelCore):
     def purge(self, features=None):
         self.meta_image = None
         self._zslices = []
-        for x in self.containers.keys():
+        for x in list(self.containers.keys()):
             del self.containers[x]
 
         # remove crack_contours
         for name in self.region_names():
             region = self.get_region(name)
-            for obj in region.values():
+            for obj in list(region.values()):
                 obj.crack_contour = None
 
         # purge features
         if not features is None:
             channelFeatures = []
-            for featureNames in features.values():
+            for featureNames in list(features.values()):
                 if not featureNames is None:
                     channelFeatures.extend(featureNames)
             channelFeatures = sorted(set(channelFeatures))
@@ -164,7 +166,7 @@ class Channel(ChannelCore):
                 region.feature_names = channelFeatures2
 
     def apply_zselection(self):
-        if type(self.oZSliceOrProjection) == types.TupleType:
+        if type(self.oZSliceOrProjection) == tuple:
             method, zbegin, zend, zstep = self.oZSliceOrProjection
             images = [img.image for img in self._zslices][(zbegin-1):zend:zstep]
             # single images don't carry the dtype
@@ -212,11 +214,11 @@ class Channel(ChannelCore):
 
     def apply_features(self):
         self._features_calculated = True
-        for region_name, container in self.containers.iteritems():
+        for region_name, container in six.iteritems(self.containers):
             object_holder = ObjectHolder(region_name)
             if container is not None:
 
-                for group, params in self.feature_groups.iteritems():
+                for group, params in six.iteritems(self.feature_groups):
 
                     # XXX special casing for feature parameters.
                     # call pattern like this: cnt.applyFeature(name, params)
@@ -237,7 +239,7 @@ class Channel(ChannelCore):
                     container.applyFeature(group)
 
 
-                for obj_id, c_obj in container.getObjects().iteritems():
+                for obj_id, c_obj in six.iteritems(container.getObjects()):
 
                     dctFeatures = c_obj.getFeatures()
                     # build a new ImageObject
@@ -255,7 +257,7 @@ class Channel(ChannelCore):
                     # at the moment a bit of a hack #
                     # The problem is that orientation cannot be a feature #
                     # but moments need to be chosen to calculate the orientation. #
-                    if self.feature_groups.has_key('moments'):
+                    if 'moments' in self.feature_groups:
                         obj.orientation = Orientation(
                             angle = c_obj.orientation,
                             eccentricity = dctFeatures['eccentricity']
@@ -294,7 +296,7 @@ class Channel(ChannelCore):
         try:
             # ccore need str not unicode
             bg_image = ccore.readImageFloat(str(path[0]))
-        except Exception, e:
+        except Exception as e:
             # catching all errors, even files that are no images
             raise IOError(("Z-slice flat field correction image could not be "
                            "loaded. \nDoes the file %s.tif exist and is it "
@@ -399,7 +401,7 @@ class MergedChannel(ChannelCore):
         """Set channels and regions to concatenate."""
 
         reginfo = MetaPluginManager().region_info
-        reginfo.names[self.NAME.lower()] = [regions.values()]
+        reginfo.names[self.NAME.lower()] = [list(regions.values())]
 
         self._merge_regions.update(regions)
 
@@ -413,8 +415,8 @@ class MergedChannel(ChannelCore):
 
     def apply_features(self, *args, **kw):
         """Concatenate features of images objects of different channels"""
-        holder = ObjectHolder("-".join(self._merge_regions.values()))
-        for cname, region_name in self._merge_regions.iteritems():
+        holder = ObjectHolder("-".join(list(self._merge_regions.values())))
+        for cname, region_name in six.iteritems(self._merge_regions):
             channel = self._channels[cname]
             holder0 = channel.get_region(region_name)
             pfx = "%s_%s" %(cname, region_name)
@@ -435,7 +437,7 @@ class MergedChannel(ChannelCore):
 
         # find the region of the primary channel
         # it does not feel a great piece of code ...
-        available_regions = self._channels[master].containers.keys()
+        available_regions = list(self._channels[master].containers.keys())
         if 'primary' in available_regions:
             default_region = 'primary'
         elif 'primary' in [x[:len('primary')] for x in available_regions]:
@@ -449,7 +451,7 @@ class MergedChannel(ChannelCore):
 
     @property
     def regkey(self):
-        return self._merge_regions.values()
+        return list(self._merge_regions.values())
 
     def meta_images(self, alpha=1.0):
         """Return a list of image, hexcolor, alpha-value tripples, which
@@ -457,9 +459,9 @@ class MergedChannel(ChannelCore):
         """
 
         images = list()
-        ccolors = dict([(c.strChannelId, False) for c in self._channels.values()])
+        ccolors = dict([(c.strChannelId, False) for c in list(self._channels.values())])
 
-        for channel in self._channels.values():
+        for channel in list(self._channels.values()):
             ccolor = channel.strChannelId
             if ccolor is not None and not ccolors[channel.strChannelId]:
                 ccolors[channel.strChannelId] = True
@@ -469,7 +471,7 @@ class MergedChannel(ChannelCore):
         return images
 
     def sub_channels(self):
-        for schannel, region in self._merge_regions.iteritems():
+        for schannel, region in six.iteritems(self._merge_regions):
             yield self._channels[schannel], region
 
     # most of the following functions are just dummy implementations to stay

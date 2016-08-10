@@ -8,6 +8,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -43,7 +45,7 @@ class SectionFeatureExtraction(SectionCore):
 
     ('primary_features',
      [('primary_%s' %name, BooleanTrait(True, label=desc))
-       for name, desc in GUI_LABELS.iteritems()]
+       for name, desc in six.iteritems(GUI_LABELS)]
    + [('primary_dist_haralick',
        StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
       ('primary_se_granulometry',
@@ -57,7 +59,7 @@ class SectionFeatureExtraction(SectionCore):
 
     ('secondary_features',
      [('secondary_%s' %name, BooleanTrait(True, label=desc))
-       for name, desc in GUI_LABELS.iteritems()] +
+       for name, desc in six.iteritems(GUI_LABELS)] +
      [('secondary_dist_haralick',
        StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
        ('secondary_se_granulometry',
@@ -71,7 +73,7 @@ class SectionFeatureExtraction(SectionCore):
 
     ('tertiary_features',
      [('tertiary_%s' % name, BooleanTrait(True, label=desc))
-       for name, desc in GUI_LABELS.iteritems()] +
+       for name, desc in six.iteritems(GUI_LABELS)] +
      [('tertiary_dist_haralick',
        StringTrait('1,2,4,8', 200, label='Haralick: Distances for cooccurence')),
       ('tertiary_se_granulometry',

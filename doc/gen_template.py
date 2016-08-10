@@ -7,6 +7,8 @@ The script scans all html files, generates a table of contents setups all
 keywords for the index search and all files to the resource list. The output
 file is only a template. Keywords must be changed manually.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 __author__ = 'rudolf.hoefler@gmail.com'
 
@@ -44,8 +46,8 @@ class TemplateGenerator(object):
                     self.css_files.append(path)
 
 
-        print self.genFileList()
-        print self.genKeyWords()
+        print(self.genFileList())
+        print(self.genKeyWords())
 
     def genFileList(self):
 
@@ -57,7 +59,7 @@ class TemplateGenerator(object):
     def genKeyWords(self):
         keywords = list()
         for html_file in self.html_files:
-            lines = file(html_file).readlines()
+            lines = open(html_file).readlines()
             for line in lines:
                 if "<a name=" in line:
                     anchor = line.split("name=")[1].split('"')[1]

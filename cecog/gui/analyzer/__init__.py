@@ -11,6 +11,8 @@
 """
 
 from __future__ import division
+from __future__ import absolute_import
+import six
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -264,7 +266,7 @@ class BaseProcessorFrame(BaseFrame):
 
             if self._process_items is None:
                 cls = self._control_buttons[name]['cls']
-                if type(cls) == types.ListType:
+                if type(cls) == list:
                     self._process_items = cls
                     self._current_process_item = 0
                     cls = cls[self._current_process_item]
@@ -450,7 +452,7 @@ class BaseProcessorFrame(BaseFrame):
 
     def _on_update_stage_info(self, info):
         sep = '   |   '
-        info = dict([(str(k), v) for k,v in info.iteritems()])
+        info = dict([(str(k), v) for k,v in six.iteritems(info)])
         #print info
         if self.CONTROL == CONTROL_1:
             if info['stage'] == 0:
@@ -490,7 +492,7 @@ class BaseProcessorFrame(BaseFrame):
                                            self._stage_infos[1]['text'],
                                            sep,
                                            self._stage_infos[2]['text'])
-                    if current > 1 and ('interval' in info.keys()):
+                    if current > 1 and ('interval' in list(info.keys())):
                         interval = info['interval']
                         self._intervals.append(interval)
                         estimate = seconds2datetime(

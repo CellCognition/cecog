@@ -9,16 +9,18 @@ Changes (Jan Finell):
   - moved the method documentation into a proper doc string.
 
 """
+from __future__ import absolute_import
+from six.moves import map
 
 #-- Error classes --#
-class Graph_duplicate_node(StandardError):
+class Graph_duplicate_node(Exception):
     pass
 
-class Graph_topological_error(StandardError):
+class Graph_topological_error(Exception):
     pass
 #-- added these since they were missing (Jan Finell) --#
 
-class Graph_no_edge(StandardError):
+class Graph_no_edge(Exception):
     pass
 
 class GraphQueue:
@@ -110,7 +112,7 @@ class Graph(object):
                (not node_id in self.hidden_nodes):
             self.nodes[node_id]=([],[],node_data)
         else:
-            raise Graph_duplicate_node, node_id
+            raise Graph_duplicate_node(node_id)
 
     def update_node_data(self, node_id, node_data):
         t = self.nodes[node_id]
@@ -137,8 +139,8 @@ class Graph(object):
         """
         head_id=self.head(edge_id)
         tail_id=self.tail(edge_id)
-        head_data=map(None, self.nodes[head_id])
-        tail_data=map(None, self.nodes[tail_id])
+        head_data=list(self.nodes[head_id])
+        tail_data=list(self.nodes[tail_id])
         head_data[1].remove(edge_id)
         tail_data[0].remove(edge_id)
         del self.edges[edge_id]
@@ -151,9 +153,9 @@ class Graph(object):
         edge_id = self.next_edge_id
         self.next_edge_id = self.next_edge_id+1
         self.edges[edge_id] = (head_id, tail_id, edge_data)
-        mapped_head_data = map(None, self.nodes[head_id])
+        mapped_head_data = list(self.nodes[head_id])
         mapped_head_data[1].append(edge_id)
-        mapped_tail_data = map(None, self.nodes[tail_id])
+        mapped_tail_data = list(self.nodes[tail_id])
         mapped_tail_data[0].append(edge_id)
         return edge_id
 
@@ -164,11 +166,11 @@ class Graph(object):
         and can be unhidden at some later time.
         """
         self.hidden_edges[edge_id]=self.edges[edge_id]
-        ed=map(None, self.edges[edge_id])
+        ed=list(self.edges[edge_id])
         head_id=ed[0]
         tail_id=ed[1]
-        hd=map(None, self.nodes[head_id])
-        td=map(None, self.nodes[tail_id])
+        hd=list(self.nodes[head_id])
+        td=list(self.nodes[tail_id])
         hd[1].remove(edge_id)
         td[0].remove(edge_id)
         del self.edges[edge_id]
@@ -191,11 +193,11 @@ class Graph(object):
         Restores a previously hidden edge back into the graph.
         """
         self.edges[edge_id]=self.hidden_edges[edge_id]
-        ed=map(None,self.hidden_edges[edge_id])
+        ed=list(self.hidden_edges[edge_id])
         head_id=ed[0]
         tail_id=ed[1]
-        hd=map(None,self.nodes[head_id])
-        td=map(None,self.nodes[tail_id])
+        hd=list(self.nodes[head_id])
+        td=list(self.nodes[tail_id])
         hd[1].append(edge_id)
         td[0].append(edge_id)
         del self.hidden_edges[edge_id]
@@ -212,7 +214,7 @@ class Graph(object):
         Restores a previously hidden node back into the graph
         and restores all of the hidden incident edges, too.
         """
-        hidden_node_data=map(None,self.hidden_nodes[node_id])
+        hidden_node_data=list(self.hidden_nodes[node_id])
         self.nodes[node_id]=hidden_node_data[0]
         degree_list=hidden_node_data[1]
         for edge in degree_list:
@@ -241,7 +243,7 @@ class Graph(object):
         for edge in out_edges:
             if self.tail(edge)==tail_id:
                 return edge
-        raise Graph_no_edge, (head_id, tail_id)
+        raise Graph_no_edge(head_id, tail_id)
 
     def number_of_nodes(self):
         return len(self.nodes)
@@ -253,10 +255,10 @@ class Graph(object):
         """
         Return a list of the node id's of all visible nodes in the graph.
         """
-        return self.nodes.keys()
+        return list(self.nodes.keys())
 
     def edge_list(self):
-        return self.edges.keys()
+        return list(self.edges.keys())
 
     def number_of_hidden_edges(self):
         return len(self.hidden_edges)
@@ -265,25 +267,25 @@ class Graph(object):
         return len(self.hidden_nodes)
 
     def hidden_node_list(self):
-        hnl=self.hidden_nodes.keys()
+        hnl=list(self.hidden_nodes.keys())
         return hnl[:]
 
     def hidden_edge_list(self):
-        hel=self.hidden_edges.keys()
+        hel=list(self.hidden_edges.keys())
         return hel[:]
 
     def node_data(self, node_id):
         """
         Returns a reference to the data attached to a node.
         """
-        mapped_data=map(None, self.nodes[node_id])
+        mapped_data=list(self.nodes[node_id])
         return mapped_data[2]
 
     def edge_data(self, edge_id):
         """
         Returns a reference to the data attached to an edge.
         """
-        mapped_data=map(None, self.edges[edge_id])
+        mapped_data=list(self.edges[edge_id])
         return mapped_data[2]
 
     def head(self, edge):
@@ -291,24 +293,24 @@ class Graph(object):
         Returns a reference to the head of the edge.
         (A reference to the head id)
         """
-        mapped_data=map(None, self.edges[edge])
+        mapped_data=list(self.edges[edge])
         return mapped_data[0]
 
     #--Similar to above.
     def tail(self, edge):
-        mapped_data=map(None, self.edges[edge])
+        mapped_data=list(self.edges[edge])
         return mapped_data[1]
 
     def out_arcs(self, node_id):
         """
         Returns a copy of the list of edges of the node's out arcs.
         """
-        mapped_data = map(None, self.nodes[node_id])
+        mapped_data = list(self.nodes[node_id])
         return mapped_data[1][:]
 
     #--Similar to above.
     def in_arcs(self, node_id):
-        mapped_data=map(None, self.nodes[node_id])
+        mapped_data=list(self.nodes[node_id])
         return mapped_data[0][:]
 
     #--Returns a list of in and out arcs.
@@ -324,15 +326,15 @@ class Graph(object):
 
 
     def out_degree(self, node_id):
-        mapped_data=map(None, self.nodes[node_id])
+        mapped_data=list(self.nodes[node_id])
         return len(mapped_data[1])
 
     def in_degree(self, node_id):
-        mapped_data=map(None, self.nodes[node_id])
+        mapped_data=list(self.nodes[node_id])
         return len(mapped_data[0])
 
     def degree(self, node_id):
-        mapped_data=map(None, self.nodes[node_id])
+        mapped_data=list(self.nodes[node_id])
         return len(mapped_data[0])+len(mapped_data[1])
 
     # --- Traversals ---
@@ -365,7 +367,7 @@ class Graph(object):
         if len(topological_list)!=len(self.nodes):
             #print "WARNING: Graph appears to be cyclic."\
             #      " Topological sort is invalid!"
-            raise Graph_topological_error, topological_list
+            raise Graph_topological_error(topological_list)
         return topological_list
 
 
@@ -396,7 +398,7 @@ class Graph(object):
                     topological_queue.add(head_id)
         #--Sanity check.
         if len(topological_list)!=len(self.nodes):
-            raise Graph_topological_error, topological_list
+            raise Graph_topological_error(topological_list)
         return topological_list
 
     def dfs(self, source_id):

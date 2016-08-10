@@ -3,6 +3,7 @@ image.py
 
 Image classes to tile sub images of e.g single objects (cells) beside each other.
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -75,8 +76,7 @@ class GalleryRGBImage(np.ndarray):
         color = np.round(color*np.iinfo(self.dtype).max)
 
         # filter pixels that do not lie in the sub image
-        contour = np.array(filter(
-                lambda c: c[0]<self.swidth and c[1]<self.swidth, contour))
+        contour = np.array([c for c in contour if c[0]<self.swidth and c[1]<self.swidth])
         contour = contour + np.array((position*self.swidth, 0))
         # rgb color according to dtype of the image
         self.contours.append((contour[:, 0], contour[:, 1], color))

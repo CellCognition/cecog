@@ -8,6 +8,8 @@ The output is the label image, the classifcation image and a table of the
 prediction probabilities.
 
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 import os
 import sys
@@ -17,6 +19,9 @@ import numpy as np
 from collections import OrderedDict
 
 from os.path import basename, splitext, join
+import six
+from six.moves import range
+from six.moves import zip
 
 try:
     import cecog
@@ -81,7 +86,7 @@ class SettingsMapper(object):
         if ch_name.lower() in CH_VIRTUAL:
             return f_categories, f_cat_params
 
-        for cat, feature in self.FEATURES.iteritems():
+        for cat, feature in six.iteritems(self.FEATURES):
             featopt = '%s_%s' %(ch_name, cat)
             if self('FeatureExtraction', featopt):
                 if "haralick" in cat:
@@ -93,7 +98,7 @@ class SettingsMapper(object):
                 else:
                     f_categories += feature
 
-        if f_cat_params.has_key("haralick_categories"):
+        if "haralick_categories" in f_cat_params:
             f_cat_params['haralick_distances'] = (1, 2, 4, 8)
 
         return f_categories, f_cat_params
@@ -198,7 +203,7 @@ class ImageProcessor(object):
         self._channels = OrderedDict()
 
         self.metaimages = dict()
-        for name, image in images.iteritems():
+        for name, image in six.iteritems(images):
             metaimage = MetaImage()
             metaimage.set_image(ccore.readImage(image))
             self.metaimages[name] = [metaimage]
@@ -210,7 +215,7 @@ class ImageProcessor(object):
         chdict = dict((c.NAME.lower(), c) for c in self.mapper.CHANNEL_CLASSES)
         regions = self.mapper.channelRegions()
 
-        for cname in images.iterkeys():
+        for cname in six.iterkeys(images):
             cid = self.mapper("ObjectDetection", "%s_channelid" %cname)
             channel = chdict[cname.lower()](
                 **self.mapper.channelParams(cname.title(), cid))
@@ -240,14 +245,14 @@ class ImageProcessor(object):
 
     def exportTable(self, ofile, classifier):
         ofile = ofile+'.csv'
-        classnames = classifier.class_names.values()
+        classnames = list(classifier.class_names.values())
         fieldnames = ['ObjectId'] + classnames
         with open(ofile, "wb") as fp:
             writer = csv.DictWriter(fp, fieldnames, delimiter=",")
             writer.writeheader()
             for obj, probs in zip(self.objects, self.probs):
                 line = {'ObjectId': obj.iId}
-                for label, name in classifier.class_names.iteritems():
+                for label, name in six.iteritems(classifier.class_names):
                     line[name] = probs[label]
                 writer.writerow(line)
 
@@ -255,7 +260,7 @@ class ImageProcessor(object):
         """process files: create projection normalize image get objects for
         several channels"""
         channels = list()
-        for cname, channel in self._channels.iteritems():
+        for cname, channel in six.iteritems(self._channels):
             channels.append(channel)
             channel.apply_zselection()
             channel.normalize_image()
@@ -276,7 +281,7 @@ class ImageProcessor(object):
         for region in channel.region_names():
             holder = channel.get_region(region)
             container = channel.containers[region]
-            for l, obj in holder.iteritems():
+            for l, obj in six.iteritems(holder):
 
                 obj.iLabel, prob = classifier.predict(obj.aFeatures,
                                                    holder.feature_names)
@@ -315,7 +320,7 @@ class CmdTool(object):
         self._setupClassifier()
 
     def _setupClassifier(self):
-        for name, image in self.images.iteritems():
+        for name, image in six.iteritems(self.images):
             if image is None:
                 continue
             self.classifiers[name] = CommonClassPredictor( \
@@ -333,8 +338,8 @@ class CmdTool(object):
         imp = ImageProcessor(self.mapper, self.images)
         imp.process()
 
-        for name, imgfile in self.images.iteritems():
-            print('processing image %s' %basename(imgfile))
+        for name, imgfile in six.iteritems(self.images):
+            print(('processing image %s' %basename(imgfile)))
             classifier = self.classifiers[name]
             ofile = join(self.outdir, str(splitext(basename(imgfile))[0]))
             imp.findObjects(classifier)

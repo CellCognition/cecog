@@ -8,6 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -96,7 +97,7 @@ class ListTrait(Trait):
             return value
         else:
             value = eval(value)
-            if not type(value) in [types.ListType, types.DictType]:
+            if not type(value) in [list, dict]:
                 value = [value]
             return value
 
@@ -143,7 +144,7 @@ class MultiSelectionTrait(SelectionTrait):
             return value
         else:
             value = eval(value)
-            if not type(value) in [types.ListType, types.DictType]:
+            if not type(value) in [list, dict]:
                 value = [value]
             return value
 
@@ -157,7 +158,7 @@ class DictTrait(ListTrait):
             return value
         else:
             value = eval(value)
-            if not type(value) == types.DictType:
+            if not type(value) == dict:
                 value = {}
             return value
 

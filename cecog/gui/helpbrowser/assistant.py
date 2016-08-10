@@ -5,6 +5,8 @@ The Qt-Project recommends to use the Qt-Assistant for online documentation.
 This is a lightweight reimplemntation of the assistant in python to embbed
 a help browser into a application bundle (i.e using py2exe or py2app).
 """
+from __future__ import absolute_import
+from six.moves import range
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -196,7 +198,7 @@ class AtAssistant(QtWidgets.QMainWindow):
         btn.clicked.connect(self.hbrowser.home)
 
     def waitForIndex(self):
-        for i in xrange(50):
+        for i in range(50):
             self.thread().msleep(100)
             if not self.hengine.indexModel().isCreatingIndex():
                 break
@@ -211,9 +213,9 @@ class AtAssistant(QtWidgets.QMainWindow):
 
         model = self.hengine.indexModel()
 
-        for i in xrange(model.rowCount()):
+        for i in range(model.rowCount()):
             keyword = model.data(model.index(i), 0)
-            link = model.linksForKeyword(keyword).values()[0]
+            link = list(model.linksForKeyword(keyword).values())[0]
             self._kwmap[self._keywordFromUrl(link)] = keyword
 
     def _keywordFromUrl(self, url):
@@ -229,12 +231,12 @@ class AtAssistant(QtWidgets.QMainWindow):
         if not self._kwmap:
             self._genKeywordMap()
 
-        if self._kwmap.has_key(keyword):
+        if keyword in self._kwmap:
             keyword = self._kwmap[keyword]
 
         links = self.hengine.indexModel().linksForKeyword(keyword)
         if links:
-            self.hbrowser.setSource(links.values()[0])
+            self.hbrowser.setSource(list(links.values())[0])
         else:
             QtWidgets.QMessageBox.warning(
                 self, 'Warning', 'No help for keyword "%s"' %keyword)

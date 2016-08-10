@@ -2,6 +2,8 @@
 cellanalyzer.py
 
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -53,7 +55,7 @@ class CellAnalyzer(LoggerObject):
         self._channel_registry[channel.NAME] = channel
 
     def get_channel_names(self):
-        return self._channel_registry.keys()
+        return list(self._channel_registry.keys())
 
     def get_channel(self, name):
         return self._channel_registry[str(name)]
@@ -64,7 +66,7 @@ class CellAnalyzer(LoggerObject):
         pseudo channels.
         """
         pchannels = OrderedDict()
-        for name, channel in self._channel_registry.iteritems():
+        for name, channel in six.iteritems(self._channel_registry):
             if not channel.is_virtual():
                 pchannels[name] =  channel
         return pchannels
@@ -73,7 +75,7 @@ class CellAnalyzer(LoggerObject):
     def virtual_channels(self):
         """Return a dict that contains all virtual channels."""
         channels = dict()
-        for name, channel in self._channel_registry.iteritems():
+        for name, channel in six.iteritems(self._channel_registry):
             if channel.is_virtual():
                 channels[name] =  channel
         return channels
@@ -115,7 +117,7 @@ class CellAnalyzer(LoggerObject):
                 self.timeholder.apply_channel(channel)
 
     def purge(self, features=None):
-        for channel in self._channel_registry.values():
+        for channel in list(self._channel_registry.values()):
             if not features is None and channel.strChannelId in features:
                 channelFeatures = features[channel.strChannelId]
             else:
@@ -124,9 +126,9 @@ class CellAnalyzer(LoggerObject):
 
     def exportLabelImages(self, pathOut, compression='LZW'):
         # no segmentaion in virtual channels --> no label images
-        for channel in self.proc_channels.itervalues():
+        for channel in six.itervalues(self.proc_channels):
             channel_id = channel.strChannelId
-            for region, container in channel.containers.iteritems():
+            for region, container in six.iteritems(channel.containers):
                 outdir = join(pathOut, channel_id, region)
                 makedirs(outdir)
                 fname = join(outdir, 'P%s_T%05d.tif' %(self.P, self._iT))
@@ -147,8 +149,8 @@ class CellAnalyzer(LoggerObject):
             lstImages += images
 
         if dctRenderInfo is None:
-            for name, oChannel in self._channel_registry.iteritems():
-                for strRegion, oContainer in oChannel.containers.iteritems():
+            for name, oChannel in six.iteritems(self._channel_registry):
+                for strRegion, oContainer in six.iteritems(oChannel.containers):
                     strHexColor, fAlpha = oChannel.dctAreaRendering[strRegion]
                     imgRaw = oChannel.meta_image.image
                     imgCon = ccore.Image(imgRaw.width, imgRaw.height)
@@ -156,7 +158,7 @@ class CellAnalyzer(LoggerObject):
                     lstImages.append((imgRaw, strHexColor, 1.0))
                     lstImages.append((imgCon, strHexColor, fAlpha))
         else:
-            for channel_name, dctChannelInfo in dctRenderInfo.iteritems():
+            for channel_name, dctChannelInfo in six.iteritems(dctRenderInfo):
                 if channel_name in self._channel_registry:
                     oChannel = self._channel_registry[channel_name]
                     if 'raw' in dctChannelInfo:
@@ -173,7 +175,7 @@ class CellAnalyzer(LoggerObject):
                         # which allows multiple definitions for one region
                         if isinstance(dctChannelInfo['contours'], dict):
                             lstContourInfos = [(k,)+v
-                                               for k,v in dctChannelInfo['contours'].iteritems()]
+                                               for k,v in six.iteritems(dctChannelInfo['contours'])]
                         else:
                             lstContourInfos = dctChannelInfo['contours']
 
@@ -191,7 +193,7 @@ class CellAnalyzer(LoggerObject):
                                     oRegion = oChannel.get_region(strRegion)
                                     dctLabels = {}
                                     dctColors = {}
-                                    for iObjId, oObj in oRegion.iteritems():
+                                    for iObjId, oObj in six.iteritems(oRegion):
                                         iLabel = oObj.iLabel
                                         if not iLabel is None:
                                             if not iLabel in dctLabels:
@@ -199,7 +201,7 @@ class CellAnalyzer(LoggerObject):
                                             dctLabels[iLabel].append(iObjId)
                                             dctColors[iLabel] = oObj.strHexColor
                                     imgCon2 = ccore.Image(imgRaw.width, imgRaw.height)
-                                    for iLabel, lstObjIds in dctLabels.iteritems():
+                                    for iLabel, lstObjIds in six.iteritems(dctLabels):
                                         imgCon = ccore.Image(imgRaw.width, imgRaw.height)
                                         # Flip this and use drawContours with fill option enables to get black background
                                         oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
@@ -213,7 +215,7 @@ class CellAnalyzer(LoggerObject):
                                 else:
                                     oContainer = oChannel.containers[strRegion]
                                     oRegion = oChannel.get_region(strRegion)
-                                    lstObjIds = oRegion.keys()
+                                    lstObjIds = list(oRegion.keys())
                                     imgCon = ccore.Image(imgRaw.width, imgRaw.height)
                                     if not strNameOrColor is None:
                                         oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
@@ -284,7 +286,7 @@ class CellAnalyzer(LoggerObject):
                         # radius of 30 pixel (compatibility with CellCounter)
                         else:
                             dists = []
-                            for obj_id, obj in objects.iteritems():
+                            for obj_id, obj in six.iteritems(objects):
                                 diff = obj.oCenterAbs - center1
                                 dist_sq = diff.squaredMagnitude()
                                 # limit to 30 pixel radius
@@ -344,12 +346,12 @@ class CellAnalyzer(LoggerObject):
 
     def draw_annotation_images(self, plate, training_set, container, learner, rid=""):
         cldir = dict([(cname, join(learner.samples_dir, cname)) \
-                          for cname in learner.class_names.values()])
+                          for cname in list(learner.class_names.values())])
         # create dir per class name
-        for dir_ in cldir.values():
+        for dir_ in list(cldir.values()):
             makedirs(dir_)
 
-        for obj in training_set.itervalues():
+        for obj in six.itervalues(training_set):
             rgb_value = ccore.RGBValue(*hex2rgb(obj.strHexColor))
 
             file_ = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
@@ -369,7 +371,7 @@ class CellAnalyzer(LoggerObject):
         training_set = ObjectHolder(region.name)
         training_set.feature_names = region.feature_names
 
-        for class_label, object_ids in sample_objects.iteritems():
+        for class_label, object_ids in six.iteritems(sample_objects):
             class_name = learner.class_names[class_label]
             hex_color = learner.hexcolors[class_name]
 
@@ -392,7 +394,7 @@ class CellAnalyzer(LoggerObject):
         except ValueError:
             has_basic_features = False
 
-        for label, obj in holder.iteritems():
+        for label, obj in six.iteritems(holder):
             if obj.aFeatures.size != len(holder.feature_names):
                 msg = ('Incomplete feature set found (%d/%d): skipping sample '
                        'object label %s'

@@ -7,6 +7,11 @@
                      See trunk/LICENSE.txt for details.
                See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from __future__ import print_function
+import six
+from six.moves import range
+from six.moves import zip
 
 __author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
@@ -54,13 +59,13 @@ class DefaultCoordinates(object):
         return
 
     def __call__(self, image_info, key):
-        if self.default_values.has_key(key):
-            if not image_info.has_key(key):
+        if key in self.default_values:
+            if key not in image_info:
                 return self.default_values[key]
             elif image_info[key] in ['', None]:
                 return self.default_values[key]
         else:
-            if image_info.has_key(key):
+            if key in image_info:
                 return image_info[key]
             else:
                 return self.default_values['DEFAULT']
@@ -95,7 +100,7 @@ class AbstractImporter(XmlSerializer):
         self.meta_data = MetaData()
 
     def __setstate__(self, state):
-        for k,v in state.iteritems():
+        for k,v in six.iteritems(state):
             self.__dict__[k] = v
 
     def scan(self):
@@ -143,7 +148,7 @@ class AbstractImporter(XmlSerializer):
         zslices = []
 
         dimension_items = self._get_dimension_items()
-        print("Get dimensions: %s" %s.interim())
+        print(("Get dimensions: %s" %s.interim()))
         s.reset(start=True)
 
         # if use_frame_indices is set in the ini file,
@@ -168,10 +173,10 @@ class AbstractImporter(XmlSerializer):
                 first_pass[position].append(time_val)
 
             time_index_correspondence = {}
-            for pos in first_pass.keys():
+            for pos in list(first_pass.keys()):
                 first_pass[position].sort()
-                time_index_correspondence[pos] = dict(zip(first_pass[position],
-                                                          range(len(first_pass[position]))))
+                time_index_correspondence[pos] = dict(list(zip(first_pass[position],
+                                                          list(range(len(first_pass[position]))))))
 
         for item in dimension_items:
             # import image info only once
@@ -248,7 +253,7 @@ class AbstractImporter(XmlSerializer):
                 if not zslice is None:
                     raise ValueError('Multi-image assigned for zslice conflicts'
                                      ' with zslice token in filename!')
-                zslices.extend(range(1,info.images+1))
+                zslices.extend(list(range(1,info.images+1)))
             else:
                 zslices.append(zslice)
 
@@ -264,19 +269,19 @@ class AbstractImporter(XmlSerializer):
         zslices = set(zslices)
         # find overall valid number of frames
         for p in lookup:
-            times = times.intersection(lookup[p].keys())
+            times = times.intersection(list(lookup[p].keys()))
         # find overall valid channels/zslices based on overall valid frames
         for p in lookup:
             for t in times:
-                channels = channels.intersection(lookup[p][t].keys())
+                channels = channels.intersection(list(lookup[p][t].keys()))
                 for c in channels:
-                    zslices = zslices.intersection(lookup[p][t][c].keys())
+                    zslices = zslices.intersection(list(lookup[p][t][c].keys()))
         self.meta_data.times = sorted(times)
         self.meta_data.channels = sorted(channels)
         self.meta_data.zslices = sorted(zslices)
         self.meta_data.image_files = len(dimension_items)
 
-        print('Build time: %s' %s.stop())
+        print(('Build time: %s' %s.stop()))
         return lookup
 
     def _get_dimension_items(self):
@@ -476,7 +481,7 @@ class IniFileImporter(AbstractImporter):
                                     result[MetaInfo.Well] = "%s%02d" % (well[0].upper(), int(well[1:]))
 
                             # subwell is converted to int (default 1)
-                            if not result.has_key(MetaInfo.Subwell):
+                            if MetaInfo.Subwell not in result:
                                 result[MetaInfo.Subwell] = 1
                             elif result[MetaInfo.Subwell] is None:
                                 result[MetaInfo.Subwell] = 1

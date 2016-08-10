@@ -9,6 +9,9 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from __future__ import print_function
+from functools import reduce
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -49,7 +52,7 @@ def getCellH5NumberOfSites(file_):
     try:
         c5 = cellh5.CH5File(file_)
         nsites = 0
-        for pos in c5.positions.values():
+        for pos in list(c5.positions.values()):
             nsites += len(pos)
     finally:
         c5.close()
@@ -234,11 +237,11 @@ if __name__ ==  "__main__":
         minimal_effort = False
     try:
         settings.set('Output', 'minimal_effort', minimal_effort)
-        print 'settings minimal_effort to ', settings.get('Output', 'minimal_effort')
+        print('settings minimal_effort to ', settings.get('Output', 'minimal_effort'))
     except:
-        print ' *** WARNING: the option minimal_effort has no effect.'
-        print 'Maybe opening the settings file and saving it with the current version of CellCognition'
-        print 'may fix the problem.'
+        print(' *** WARNING: the option minimal_effort has no effect.')
+        print('Maybe opening the settings file and saving it with the current version of CellCognition')
+        print('may fix the problem.')
         pass
 
 
@@ -297,4 +300,4 @@ if __name__ ==  "__main__":
             thread.start()
             thread.wait() # must return from run method
 
-    print 'BATCHPROCESSING DONE!'
+    print('BATCHPROCESSING DONE!')

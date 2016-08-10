@@ -4,6 +4,9 @@ eventseleciton.py
 Module supervised and unsupervised event selection based on class label
 transitions.
 """
+from __future__ import absolute_import
+import six
+from six.moves import zip
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -57,8 +60,8 @@ class EventSelectionCore(LoggerObject):
         self.visitor_data = dict()
 
     def iterevents(self):
-        for results in self.visitor_data.itervalues():
-            for start_id, event_data in results.iteritems():
+        for results in six.itervalues(self.visitor_data):
+            for start_id, event_data in six.iteritems(results):
                 yield start_id, event_data
 
     def itertracks(self):
@@ -387,8 +390,8 @@ class UnsupervisedEventSelection(EventSelectionCore):
 
     def _delete_tracks(self, trackids):
         """Delete tracks by trackid from visitor_data"""
-        for startid, results in self.visitor_data.items():
-            for trackid in results.keys():
+        for startid, results in list(self.visitor_data.items()):
+            for trackid in list(results.keys()):
                 if trackid in trackids:
                     del self.visitor_data[startid][trackid]
 

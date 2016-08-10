@@ -1,6 +1,7 @@
 """
 __init__.py
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -10,7 +11,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-from picker import *
-from training import *
-from analyzer import *
-from errorcorrection import *
+from .picker import *
+from .training import *
+from .analyzer import *
+from .errorcorrection import *

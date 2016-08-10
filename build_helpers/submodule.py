@@ -2,6 +2,8 @@
 submodule.py
 
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -39,4 +41,4 @@ def find_submodules(path, modname=None):
 
 
 if __name__ == "__main__":
-    print find_submodules("../cecog", "cecog")
+    print(find_submodules("../cecog", "cecog"))

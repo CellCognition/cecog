@@ -8,6 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
 
 __all__ = ['SegmentationPluginManager', '_SegmentationPlugin']
 

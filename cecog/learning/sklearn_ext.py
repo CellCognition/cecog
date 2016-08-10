@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import numpy
 import h5py
 import h5py._hl

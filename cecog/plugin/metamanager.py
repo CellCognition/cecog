@@ -8,6 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
 
 from collections import OrderedDict
 
@@ -31,6 +32,7 @@ from cecog.plugin.segmentation.strategies import SegmentationPluginDifference
 from cecog.plugin.segmentation.strategies import SegmentationPluginIlastik
 from cecog.plugin.segmentation.strategies import SegmentationPluginPrimaryLoadFromFile
 from cecog import CHANNEL_PREFIX
+import six
 
 
 class RegionInformation(object):
@@ -46,11 +48,9 @@ class RegionInformation(object):
         except KeyError:
             pass
 
-class MetaPluginManager(object):
+class MetaPluginManager(six.with_metaclass(Singleton, object)):
 
     # must be a process save Singleton, otherwise multiprocessing is broken
-    __metaclass__ = Singleton
-
     def __init__(self):
         super(MetaPluginManager, self).__init__()
         self.region_info = RegionInformation()
@@ -107,5 +107,5 @@ class MetaPluginManager(object):
         return self.managers[key]
 
     def __iter__(self):
-        for mgr in self.managers.itervalues():
+        for mgr in six.itervalues(self.managers):
             yield mgr

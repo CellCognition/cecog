@@ -4,6 +4,8 @@ tc3.py
 Implementation of temporal constraint combinatorial clustering
 
 """
+from __future__ import absolute_import
+from six.moves import range
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -125,7 +127,7 @@ class TemporalClustering(object):
                 if j > 0 : iM1 = iM1 + intervalMatrix[i,j-1]
                 iM2 = iM2 + int(intervalMatrix[i,j])
                 iM1 = int(iM1)
-                intv = range(iM1,iM2)
+                intv = list(range(iM1,iM2))
                 d =  d + sum(ssd.cdist(data[intv,:],
                                        np.array([np.mean(data[intv,:],
                                                          axis = 0)])))
@@ -172,7 +174,7 @@ class TemporalClustering(object):
                 labels[i, :] = labels[i-1, :]
             else :
                 k1 = 2
-                intV = range(0,indRange[0][0])
+                intV = list(range(0,indRange[0][0]))
                 # only 2 classes, no mcs constraint
                 intLabels = self._tc3_per_track(Rdata[intV,:],k1,1)
                 labels[i, intV] = intLabels

@@ -1,6 +1,8 @@
 """
 corethreads.py - base class  for all threads of the processing pipline
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -37,13 +39,13 @@ class ProgressMsg(dict):
 
     def __getattr__(self, attr):
 
-        if self.has_key(attr):
+        if attr in self:
             return self[attr]
         else:
             return super(ProgressMsg, self).__getattr__(attr)
 
     def __setattr__(self, attr, value):
-        if self.has_key(attr):
+        if attr in self:
             self[attr] = value
         else:
             super(ProgressMsg, self).__setattr__(attr, value)
@@ -72,7 +74,7 @@ class CoreThread(QtCore.QThread):
             import pydevd
             pydevd.connected = True
             pydevd.settrace(suspend=False)
-            print 'Thread enabled interactive eclipse debuging...'
+            print('Thread enabled interactive eclipse debuging...')
         except:
             pass
 
@@ -85,7 +87,7 @@ class CoreThread(QtCore.QThread):
             self._run()
         except StopProcessing:
             pass
-        except Exception, e:
+        except Exception as e:
             msg = traceback.format_exc(e)
             traceback.print_exc(e)
             logger = logging.getLogger()

@@ -8,6 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -135,7 +136,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
                 if isinstance(info[0], QLabel):
                     w_group.layout().addWidget(info[0], *info[1])
 
-                elif type(info[0]) == types.TupleType:
+                elif type(info[0]) == tuple:
                     if len(info) >= 2:
                         grid = info[1]
                     if len(info) >= 3:
@@ -440,7 +441,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
         if name in self._registry:
             text = str(self._registry[name].toPlainText())
             value = eval(text)
-            assert type(value) == types.DictType
+            assert type(value) == dict
             self._set_value(name, value)
 
     def _on_browse_name(self, name, mode):

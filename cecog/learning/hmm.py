@@ -4,6 +4,8 @@ hmm.py
 Subclassing sklearn MultinomialHMM
 
 """
+from __future__ import absolute_import
+from six.moves import range
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'

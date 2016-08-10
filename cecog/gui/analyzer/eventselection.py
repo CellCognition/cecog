@@ -1,6 +1,7 @@
 """
 eventselection.py
 """
+from __future__ import absolute_import
 
 __author__ = 'Qing Zhong'
 __copyright__ = ('The CellCognition Project'
@@ -66,7 +67,7 @@ class EventSelectionFrame(BaseProcessorFrame):
 
         # list only classifiers that has been trained, do nothing in case of tc3
         try:
-            clfnames = [k for k, c in clfframe.classifiers.items() if (c is not None and c.is_valid)]
+            clfnames = [k for k, c in list(clfframe.classifiers.items()) if (c is not None and c.is_valid)]
             trait.set_list_data(clfnames)
         except AttributeError:
             pass

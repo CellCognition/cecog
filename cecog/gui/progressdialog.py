@@ -2,6 +2,8 @@
 progressdialog.py
 
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -128,12 +130,12 @@ if __name__ == '__main__':
     dlg = ProgressDialog('labeltext', "buttontext", 0, 0, None)
 
     def foo(t):
-        print 'running long long target function for %d seconds' % t,
+        print('running long long target function for %d seconds' % t, end=' ')
         time.sleep(t)
-        print ' ...finished'
+        print(' ...finished')
         return 42
 
     # This is optional.
     # If not specified, the standard ProgressDialog is used
     res = dlg.exec_(lambda: foo(3))
-    print 'result of dialog target function is:', dlg.getTargetResult()
+    print('result of dialog target function is:', dlg.getTargetResult())

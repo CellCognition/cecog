@@ -4,6 +4,7 @@ annotations.py
 Read and parse annotation files i.e. file that contain imformation the
 training set withing the raw images
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -72,4 +73,4 @@ class Annotations(OrderedDict):
         return int(self.regex.group('time'))
 
     def timepoints(self):
-        return self.keys()
+        return list(self.keys())

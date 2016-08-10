@@ -10,6 +10,7 @@
 
 Translated to Python and adopted from Qxt (http://www.libqxt.org/)
 """
+from __future__ import absolute_import
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'

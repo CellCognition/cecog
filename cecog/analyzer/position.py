@@ -8,6 +8,9 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
+from six.moves import range
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -171,14 +174,14 @@ class PositionCore(LoggerObject):
     def feature_params(self, ch_name):
         fgroups = defaultdict(dict)
 
-        for group, features in FEATURE_MAP.iteritems():
+        for group, features in six.iteritems(FEATURE_MAP):
             if self.settings.get(SECTION_NAME_FEATURE_EXTRACTION,
                                  self._resolve_name(ch_name, group)):
 
-                for feature, params in features.iteritems():
+                for feature, params in six.iteritems(features):
 
                     if params is not None:
-                        for pname, value in params.iteritems():
+                        for pname, value in six.iteritems(params):
                             # special case, same parameters for haralick features
                             if feature.startswith("haralick"):
                                 option = "%s_%s" %(self._resolve_name(ch_name, pname), "haralick")
@@ -188,7 +191,7 @@ class PositionCore(LoggerObject):
                             option = self.settings("FeatureExtraction", option)
 
                             if isinstance(value, (list, tuple)) and \
-                               isinstance(option, basestring):
+                               isinstance(option, six.string_types):
                                 fgroups[feature][pname] = eval(option)
                             else:
                                 fgroups[feature][pname] = option
@@ -324,7 +327,7 @@ class PositionCore(LoggerObject):
     def set_image(self, images, message, stime=0):
         """Propagate a rendered image to QThread."""
         assert isinstance(images, dict)
-        assert isinstance(message, basestring)
+        assert isinstance(message, six.string_types)
         if not (self._qthread is None or not images):
             self._qthread.show_image(images, message, stime)
 
@@ -332,7 +335,7 @@ class PositionCore(LoggerObject):
         """Return a dict of of channel region pairs according to the classifier"""
         regions = COrderedDict()
         if self.CHANNELS[p_channel.lower()].is_virtual():
-            for prefix, channel in self.CHANNELS.iteritems():
+            for prefix, channel in six.iteritems(self.CHANNELS):
                 if channel.is_virtual():
                     continue
                 if self.settings.get("Classification", "merge_%s" %prefix):
@@ -421,8 +424,8 @@ class PositionAnalyzer(PositionCore):
                               self.Levels.DEBUG)
 
     def _makedirs(self):
-        assert isinstance(self.position, basestring)
-        assert isinstance(self._out_dir, basestring)
+        assert isinstance(self.position, six.string_types)
+        assert isinstance(self._out_dir, six.string_types)
 
         self._analyzed_dir = join(self._out_dir, "analyzed")
         if self.has_timelapse:
@@ -455,7 +458,7 @@ class PositionAnalyzer(PositionCore):
         sttg = self.settings
 
         # processing channel, color channel
-        for p_channel, c_channel in self.ch_mapping.iteritems():
+        for p_channel, c_channel in six.iteritems(self.ch_mapping):
             self.settings.set_section('Processing')
             if sttg.get2(self._resolve_name(p_channel, 'classification')):
                 chreg = self._channel_regions(p_channel)
@@ -508,7 +511,7 @@ class PositionAnalyzer(PositionCore):
             es = EventSelection(graph, **opts)
 
         elif self.settings.get('EventSelection', 'unsupervised_event_selection'):
-            cld = self.classifiers.values()[0] # only one classdef in case of UES
+            cld = list(self.classifiers.values())[0] # only one classdef in case of UES
             opts.update({'forward_check': self._convert_tracking_duration('min_event_duration'),
                          'forward_labels': (1, ),
                          'backward_check': -1, # unsused for unsupervised usecase
@@ -565,13 +568,13 @@ class PositionAnalyzer(PositionCore):
             # special case for merged channel
             if name is self.MERGED_CHANNEL:
                 mftrs = list()
-                for channel, region in self._channel_regions(name).iteritems():
+                for channel, region in six.iteritems(self._channel_regions(name)):
                     if features[channel][region] is None:
                         mftrs = None
                     else:
                         for feature in features[channel][region]:
                             mftrs.append("_".join((channel, region, feature)))
-                region_features[self._all_channel_regions[name].values()] = mftrs
+                region_features[list(self._all_channel_regions[name].values())] = mftrs
                 features[name] = region_features
 
         return features
@@ -580,8 +583,8 @@ class PositionAnalyzer(PositionCore):
         fname = join(self._statistics_dir, 'P%s__object_counts.txt' % self.position)
 
         ch_info = OrderedDict()
-        for name, clf in self.classifiers.iteritems():
-            names = clf.class_names.values()
+        for name, clf in six.iteritems(self.classifiers):
+            names = list(clf.class_names.values())
             colors = [clf.hexcolors[n] for n in names]
             ch_info[name] = (clf.regions, names, colors)
 
@@ -623,7 +626,7 @@ class PositionAnalyzer(PositionCore):
                               self._tracker)
 
         sample_holders = OrderedDict()
-        for frame in self.timeholder.keys():
+        for frame in list(self.timeholder.keys()):
             channel = self.timeholder[frame][channel_name]
             sample_holders[frame] = channel.get_region(region_name)
 
@@ -682,8 +685,8 @@ class PositionAnalyzer(PositionCore):
     def export_classlabels(self):
         """Save classlabels of each object to the hdf file."""
         # function works for supervised and unuspervised case
-        for channels in self.timeholder.itervalues():
-            for chname, classifier in self.classifiers.iteritems():
+        for channels in six.itervalues(self.timeholder):
+            for chname, classifier in six.iteritems(self.classifiers):
                 holder = channels[chname].get_region(classifier.regions)
                 if classifier.feature_names is None:
                     # special for unsupervised case
@@ -874,7 +877,7 @@ class PositionAnalyzer(PositionCore):
 
             # can't cluster on a per frame basis
             if self.settings("EventSelection", "supervised_event_selection"):
-                for clf in self.classifiers.itervalues():
+                for clf in six.itervalues(self.classifiers):
                     cellanalyzer.classify_objects(clf)
 
             self.logger.info(" - Frame %d, Classification (ms): %3d" \
@@ -905,17 +908,17 @@ class PositionAnalyzer(PositionCore):
         return n_images
 
     def render_channel_gallery(self, cellanalyzer, frame):
-        for channel in cellanalyzer.virtual_channels.itervalues():
+        for channel in six.itervalues(cellanalyzer.virtual_channels):
             chgal = ChannelGallery(channel, frame, self._channel_gallery_dir)
             chgal.make_gallery()
 
     def render_contour_images(self, ca, images, frame):
         images_ = dict()
-        for region, render_par in self.settings.get2('rendering').iteritems():
+        for region, render_par in six.iteritems(self.settings.get2('rendering')):
             out_dir = join(self._images_dir, region)
             write = self.settings('Output', 'rendering_contours_discwrite')
 
-            if region not in self.CHANNELS.keys():
+            if region not in list(self.CHANNELS.keys()):
                 img, _ = ca.render(out_dir, dctRenderInfo=render_par,
                                        writeToDisc=write, images=images)
 
@@ -928,7 +931,7 @@ class PositionAnalyzer(PositionCore):
 
     def render_classification_images(self, cellanalyzer, images, frame):
          images_ = dict()
-         for region, render_par in self.settings.get2('rendering_class').iteritems():
+         for region, render_par in six.iteritems(self.settings.get2('rendering_class')):
             out_images = join(self._images_dir, region)
             write = self.settings('Output', 'rendering_class_discwrite')
             image, _ = cellanalyzer.render(out_images,
@@ -968,7 +971,7 @@ class PositionAnalyzerForBrowser(PositionCore):
     def setup_classifiers(self):
         sttg = self.settings
         # processing channel, color channel
-        for p_channel, c_channel in self.ch_mapping.iteritems():
+        for p_channel, c_channel in six.iteritems(self.ch_mapping):
             self.settings.set_section('Processing')
             if sttg.get2(self._resolve_name(p_channel, 'classification')):
                 sttg.set_section('Classification')
@@ -1041,7 +1044,7 @@ class PositionAnalyzerForBrowser(PositionCore):
 
             self.setup_classifiers()
 
-            for clf in self.classifiers.itervalues():
+            for clf in six.itervalues(self.classifiers):
                 try:
                     cellanalyzer.classify_objects(clf)
                 except KeyError:

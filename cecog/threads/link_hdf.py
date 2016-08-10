@@ -2,6 +2,7 @@
 """
 link_hdf5.py
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -33,9 +34,9 @@ def link_hdf5_files(post_hdf5_link_list):
     POSITION_PREFIX = WELL_PREFIX + '%s/position/'
 
     def get_plate_and_postion(hf_file):
-        plate = hf_file[PLATE_PREFIX].keys()[0]
-        well = hf_file[WELL_PREFIX % plate].keys()[0]
-        position = hf_file[POSITION_PREFIX % (plate, well)].keys()[0]
+        plate = list(hf_file[PLATE_PREFIX].keys())[0]
+        well = list(hf_file[WELL_PREFIX % plate].keys())[0]
+        position = list(hf_file[POSITION_PREFIX % (plate, well)].keys())[0]
         return plate, well, position
 
     all_pos_hdf5_filename = join(split(post_hdf5_link_list[0])[0],

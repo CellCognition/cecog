@@ -8,6 +8,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
@@ -265,7 +267,7 @@ class ImageViewer(QGraphicsView):
 
     def set_objects_by_crackcoords(self, coords):
         scene = self.scene()
-        for obj_id, obj in coords.iteritems():
+        for obj_id, obj in six.iteritems(coords):
             crack = obj.crack_contour
             poly = QPolygonF([QPointF(*pos) for pos in crack])
             item = HoverPolygonItem(poly)
@@ -277,7 +279,7 @@ class ImageViewer(QGraphicsView):
 
     def set_objects_by_crackcoords_with_colors(self, coords):
         scene = self.scene()
-        for obj_id, obj in coords.iteritems():
+        for obj_id, obj in six.iteritems(coords):
             crack = obj.crack_contour
             poly = QPolygonF([QPointF(*pos) for pos in crack])
             item = HoverPolygonItem(poly)

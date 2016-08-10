@@ -7,6 +7,8 @@
                      See trunk/LICENSE.txt for details.
                See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from six.moves import zip
 
 __author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
@@ -49,7 +51,7 @@ class AxisIterator(object):
         if selected_values is None:
             self.values = possible_values
         # iterate on the a given sequence of values
-        elif type(selected_values) in [types.ListType, types.TupleType]:
+        elif type(selected_values) in [list, tuple]:
             self.values = selected_values
         # iterate just on one given value
         elif selected_values in possible_values:
@@ -217,7 +219,7 @@ class ImageContainer(object):
             plate_folders = [x for x in os.listdir(path_in)
                              if os.path.isdir(os.path.join(path_in, x))]
             if plates_restriction is not None:
-                plate_folders = filter(lambda x: x in plates_restriction, plate_folders)
+                plate_folders = [x for x in plate_folders if x in plates_restriction]
         else:
             plate_folders = [os.path.split(path_in)[1]]
 

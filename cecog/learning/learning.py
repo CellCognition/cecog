@@ -8,6 +8,11 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
+from six.moves import map
+from six.moves import range
+from six.moves import zip
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -66,9 +71,9 @@ class ClassDefinitionCore(object):
     @property
     def regions(self):
         if len(self.channels) == 1:
-            return self.channels.values()[0]
+            return list(self.channels.values())[0]
         else:
-            return self.channels.values()
+            return list(self.channels.values())
 
 
 class ClassDefinitionUnsup(ClassDefinitionCore):
@@ -86,7 +91,7 @@ class ClassDefinitionUnsup(ClassDefinitionCore):
         # dummy attribute to recyle export function in timeholder
         self.classifier = GaussianMixtureModel()
 
-        for i in xrange(self.nclusters):
+        for i in range(self.nclusters):
             name = "cluster-%d" %i
             self.class_labels[name] = i
             self.class_names[i] = name
@@ -104,7 +109,7 @@ class ClassDefinition(ClassDefinitionCore):
             self.hexcolors[name] = color
 
         colors = ["#ffffff"]*(max(self.class_names)+1)
-        for k, v in self.class_names.iteritems():
+        for k, v in six.iteritems(self.class_names):
             colors[k] = self.hexcolors[v]
         self.colormap = ListedColormap(colors, 'cmap-from-table')
 
@@ -138,9 +143,9 @@ class BaseLearner(LoggerObject):
     @property
     def regions(self):
         if len(self.channels) == 1:
-            return self.channels.values()[0]
+            return list(self.channels.values())[0]
         else:
-            return self.channels.values()
+            return list(self.channels.values())
 
     @property
     def feature_names(self):
@@ -200,7 +205,7 @@ class BaseLearner(LoggerObject):
     @property
     def names2samples(self):
         return dict([(n, len(self.feature_data.get(n, [])))
-                     for n in self.class_names.values()])
+                     for n in list(self.class_names.values())])
 
     def loadDefinition(self, path=None, filename=None):
         if filename is None:
@@ -228,7 +233,7 @@ class BaseLearner(LoggerObject):
             path = self.clf_dir
         with open(join(path, filename), "wb") as f:
             writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_NONE)
-            for class_name in self.class_names.values():
+            for class_name in list(self.class_names.values()):
                 class_label = self.class_labels[class_name]
                 color = self.hexcolors[class_name]
                 writer.writerow([class_label, class_name, color])
@@ -239,7 +244,7 @@ class BaseLearner(LoggerObject):
         if path is None:
             path = self.data_dir
 
-        all_features = np.vstack(self.feature_data.values())
+        all_features = np.vstack(list(self.feature_data.values()))
         features_min = np.min(all_features, 0)
         features_max = np.max(all_features, 0)
 
@@ -335,7 +340,7 @@ class BaseLearner(LoggerObject):
             strFileName = '%s.samples.txt' % strFileName
         if strFilePath is None:
             strFilePath = self.data_dir
-        f = file(os.path.join(strFilePath, strFileName), 'r')
+        f = open(os.path.join(strFilePath, strFileName), 'r')
         self.sample_names = {}
         for line in f:
             class_name, file_name = line.strip().split('\t')
@@ -351,8 +356,8 @@ class BaseLearner(LoggerObject):
             strFileName = '%s.samples.txt' % strFileName
         if strFilePath is None:
             strFilePath = self.data_dir
-        f = file(os.path.join(strFilePath, strFileName), 'w')
-        for class_name, samples in self.sample_names.iteritems():
+        f = open(os.path.join(strFilePath, strFileName), 'w')
+        for class_name, samples in six.iteritems(self.sample_names):
             for sample_name in samples:
                 f.write('%s\t%s\n' % (class_name, sample_name))
         f.close()
@@ -372,7 +377,7 @@ class CommonClassPredictor(BaseLearner):
         self.nan_features = []
 
     def has_nan_features(self):
-        for data in self.feature_data.itervalues():
+        for data in six.itervalues(self.feature_data):
             if np.any(np.isnan(data)):
                 return True
         return False
@@ -394,7 +399,7 @@ class CommonClassPredictor(BaseLearner):
     def getData(self, normalize=True):
         labels = []
         samples = []
-        for name, data in self.feature_data.iteritems():
+        for name, data in six.iteritems(self.feature_data):
             label = self.class_labels[name]
             labels += [label] * len(data)
             samples += data.tolist()
@@ -406,7 +411,7 @@ class CommonClassPredictor(BaseLearner):
             # scale between -1 and +1
             samples = 2.0 * (samples - lo) / (hi - lo + 0.0000001) - 1.0
         # FIXME: stupid libSVM conversions
-        labels = map(int, labels)
+        labels = list(map(int, labels))
         samples = samples.tolist()
         return labels, samples
 
@@ -419,7 +424,7 @@ class CommonClassPredictor(BaseLearner):
         filter_idx = np.array([], int)
         feature_idx = np.arange(len(self._feature_names), dtype=int)
 
-        for data in self.feature_data.itervalues():
+        for data in six.itervalues(self.feature_data):
             filter_idx = np.append(filter_idx, feature_idx[np.any(np.isnan(data), 0)])
         filter_idx = np.unique(filter_idx)
 
@@ -471,9 +476,9 @@ class CommonClassPredictor(BaseLearner):
             fp.write('accuracy = %f\n' % conf.ac_sample)
             fp.write('\n')
             fp.write('confusion matrix (absolute)\n')
-            fp.write('\t%s\n' %'\t'.join([str(k) for k in self.class_names.keys()]))
+            fp.write('\t%s\n' %'\t'.join([str(k) for k in list(self.class_names.keys())]))
 
-            for label, row in zip(self.class_names.keys(), conf.conf):
+            for label, row in zip(list(self.class_names.keys()), conf.conf):
                 fp.write( ('%d\t' %label) + '\t'.join(['%d' %i for i in row]))
                 fp.write('\n')
 
@@ -496,7 +501,7 @@ class CommonClassPredictor(BaseLearner):
                 line = line.strip()
                 if len(line) == 0:
                      break
-                items = map(int, map(float, line.split('\t')[1:]))
+                items = list(map(int, list(map(float, line.split('\t')[1:]))))
                 conf_array.append(items)
             conf = ConfusionMatrix(np.asarray(conf_array))
         return log2c, log2g, conf
@@ -505,7 +510,7 @@ class CommonClassPredictor(BaseLearner):
         ulabels = np.unique(labels)
         count = np.bincount(labels)[ulabels]
         weight = (float(len(labels)) - count) / count
-        weight_label = map(int, ulabels)
+        weight_label = list(map(int, ulabels))
         return weight, weight_label
 
     def gridSearch(self, fold=5, c_info=None, g_info=None,
@@ -569,10 +574,10 @@ class CommonClassPredictor(BaseLearner):
                     param.nr_weight = len(weight)
 
                 predictions = svm.cross_validation(problem, param, fold)
-                predictions = map(int, predictions)
+                predictions = list(map(int, predictions))
 
                 conf = ConfusionMatrix.from_lists(labels, predictions,
-                                                  self.class_names.keys())
+                                                  list(self.class_names.keys()))
                 yield n, l2c, l2g, conf
 
                 l2g += g_step
@@ -591,7 +596,7 @@ class CommonObjectLearner(BaseLearner):
         self.feature_names = training_set.feature_names
         nfeatures = training_set.n_features
 
-        for obj_label, sample in training_set.iteritems():
+        for obj_label, sample in six.iteritems(training_set):
             class_name = self.class_names[sample.iLabel]
 
             if sample.aFeatures.size != nfeatures:

@@ -1,6 +1,7 @@
 """
 __init__.py
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -13,4 +14,4 @@ __url__ = 'www.cellcognition.org'
 
 
 from os.path import join, dirname
-from assistant import *
+from .assistant import *

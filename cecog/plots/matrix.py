@@ -3,6 +3,8 @@ matrix.py
 
 Matrix plots for e.g. hmm transitons, emission matrices
 """
+from __future__ import absolute_import
+from six.moves import range
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -40,13 +42,13 @@ def hmm_matrix(matrix, xticks=None, yticks=None, text=None, axes=None,
     axes.matshow(matrix, cmap=cm.Greens)
 
     if xticks is not None:
-        axes.xaxis.set_major_locator(FixedLocator(range(matrix.shape[1])))
+        axes.xaxis.set_major_locator(FixedLocator(list(range(matrix.shape[1]))))
         axes.set_xticklabels(xticks, rotation=45, size=8)
     else:
         axes.xaxis.set_major_locator(NullLocator())
 
     if yticks is not None:
-        axes.yaxis.set_major_locator(FixedLocator(range(matrix.shape[0])))
+        axes.yaxis.set_major_locator(FixedLocator(list(range(matrix.shape[0]))))
         axes.set_yticklabels(yticks, rotation=45, size=8)
     else:
         axes.yaxis.set_major_locator(NullLocator())
@@ -58,8 +60,8 @@ def hmm_matrix(matrix, xticks=None, yticks=None, text=None, axes=None,
         else:
             return (1.0, 1.0, 1.0, 1.0)
 
-    idx = ((i, j) for i in xrange(matrix.shape[1])
-           for j in xrange(matrix.shape[0]))
+    idx = ((i, j) for i in range(matrix.shape[1])
+           for j in range(matrix.shape[0]))
     for i, j in idx:
         axes.text(i, j, '%.2f' %(matrix[j, i]), horizontalalignment='center',
         verticalalignment='center', fontsize=7, color=color(matrix[j, i]))

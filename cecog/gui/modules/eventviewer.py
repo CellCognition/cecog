@@ -1,6 +1,8 @@
 """
 eventviewer.py
 """
+from __future__ import absolute_import
+from six.moves import zip
 
 __author__ = 'christoph.sommer@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -80,7 +82,7 @@ class CellH5EventModule(CH5BasedModule):
         self.event_table.setRowCount(0)
 
         selected_track = []
-        start_ids = map(lambda x: x[1][0], events)
+        start_ids = [x[1][0] for x in events]
         time_idxs = pos.get_time_indecies(start_ids)
 
         self.tracks = []
@@ -160,7 +162,7 @@ class CellH5EventModule(CH5BasedModule):
         layout.addWidget(QLabel('Regions'))
         layout.setContentsMargins(*padding)
         self._cbb_object = QComboBox()
-        for o in self.ch5file.object_definition.keys():
+        for o in list(self.ch5file.object_definition.keys()):
             if self.ch5file.has_object_features(o):
                 self._cbb_object.addItem(str(o))
         layout.addWidget(self._cbb_object)
@@ -375,7 +377,7 @@ class CellH5EventModule(CH5BasedModule):
                 self.browser.image_viewer._scene.addItem(gallery_item)
 
                 if self._cb_segmentation.checkState():
-                    contour_item = QGraphicsPolygonItem(QPolygonF(map(lambda x: QPointF(x[0],x[1]), self.cur_pos.get_crack_contour(track[i],object_, size=size)[0])))
+                    contour_item = QGraphicsPolygonItem(QPolygonF([QPointF(x[0],x[1]) for x in self.cur_pos.get_crack_contour(track[i],object_, size=size)[0]]))
                     contour_item.setPos(x,y)
                     color = Qt.red
                     if self._cb_classification.checkState():

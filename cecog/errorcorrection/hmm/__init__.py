@@ -1,6 +1,7 @@
 """
 __init__.py
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -11,8 +12,8 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 
-from hmm import *
-from estimator import *
+from .hmm import *
+from .estimator import *
 
-from hmmskl import *
-from hmmtde import *
+from .hmmskl import *
+from .hmmtde import *

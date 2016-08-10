@@ -7,6 +7,9 @@
                      See trunk/LICENSE.txt for details.
                See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from __future__ import print_function
+import six
 
 __docformat__ = "epytext"
 __author__ = 'Michael Held'
@@ -85,7 +88,7 @@ class TokenHandler(object):
     def __str__(self):
         return '\n'.join(["token '%s': %s, %s, %s" % \
                           (t.name, t.format, t.regex.pattern, t.type)
-                          for t in self._token.itervalues()])
+                          for t in six.itervalues(self._token)])
 
     def register_token(self, token):
         self._token[token.name] = token
@@ -112,7 +115,7 @@ class TokenHandler(object):
 
     def search_all(self, text):
         result = {}
-        for name in self._token.iterkeys():
+        for name in six.iterkeys(self._token):
             result[name] = self.search(name, text)
         return result
 
@@ -126,7 +129,7 @@ class TokenTemplate(TokenHandler):
     def __str__(self):
         str1 = "%s\n\n" % super(TokenTemplate, self).__str__()
         str1 += "\n".join(["template '%s': %s" % (k, v.template)
-                           for k,v, in self._templates.iteritems()])
+                           for k,v, in six.iteritems(self._templates)])
         str1 += "\n"
         return str1
 
@@ -135,7 +138,7 @@ class TokenTemplate(TokenHandler):
 
     def format_template(self, name, **mappings):
         mappings.update([(k, self.format_token(k, v))
-                         for k,v in mappings.iteritems()
+                         for k,v in six.iteritems(mappings)
                          if self.has_token(k)])
         # FIXME
         return self._templates[name].substitute(mappings).replace('\.', '.')
@@ -145,7 +148,7 @@ class TokenTemplate(TokenHandler):
 
     def generate_pattern(self, name, **mappings):
         mappings.update([(t.name, t.regex.pattern)
-                         for t in self._token.itervalues()])
+                         for t in six.itervalues(self._token)])
         return self._templates[name].substitute(mappings)
 
     def match(self, name, text, **mappings):
@@ -156,7 +159,7 @@ class TokenTemplate(TokenHandler):
             results = match.groupdict()
             # convert types
             results.update([(k, self._token[k].type(v))
-                           for k,v in results.iteritems()])
+                           for k,v in six.iteritems(results)])
         return results
 
 
@@ -175,7 +178,7 @@ if __name__ == "__main__":
     foo.register_token(Token('R', type_code='c', length='+', prefix=''))
     foo.register_token(Token('F', type_code='c', length='+', prefix=''))
 
-    print foo
+    print(foo)
 
     foo.register_template('EVENT_FOLDER',
                          '${P}_${T}_${O}')
@@ -188,4 +191,4 @@ if __name__ == "__main__":
     foo.register_template('PLOT_FILE',
                           '${prefix}__${P}__${T}__${O}__${C}__${R}\.${ext}')
 
-    print foo
+    print(foo)

@@ -3,6 +3,7 @@ pattern.py
 
 Some design pattern collected
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -29,7 +30,7 @@ class Singleton(type):
     def __call__(cls, *args, **kwargs):
         pid = os.getpid()
 
-        if not cls._instances.has_key(pid):
+        if pid not in cls._instances:
             cls._instances[pid] = super(Singleton, cls).__call__(*args, **kwargs)
 
         return cls._instances[pid]

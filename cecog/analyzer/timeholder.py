@@ -8,6 +8,12 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from __future__ import print_function
+import six
+from six.moves import map
+from six.moves import range
+from six.moves import zip
 
 
 __author__ = 'Michael Held'
@@ -173,7 +179,7 @@ class TimeHolder(OrderedDict):
         self._region_infos = []
         region_names2 = []
 
-        for prefix in self.channel_regions.keys():
+        for prefix in list(self.channel_regions.keys()):
             for name in self.reginfo.names[prefix.lower()]:
                 self._channel_info[prefix.lower()] = \
                     settings.get('ObjectDetection', '%s_channelid' %prefix)
@@ -195,8 +201,8 @@ class TimeHolder(OrderedDict):
 
         _cmap = dict()
         self._channels_to_idx = OrderedDict()
-        for i, (k, v) in enumerate(self._channel_info.iteritems()):
-            if not _cmap.has_key(v):
+        for i, (k, v) in enumerate(six.iteritems(self._channel_info)):
+            if v not in _cmap:
                 _cmap[v] = len(_cmap)
             self._channels_to_idx[k] = _cmap[v]
 
@@ -258,7 +264,7 @@ class TimeHolder(OrderedDict):
 
 
                 except Exception as e:
-                    print 'Loading of Hdf5 failed... '
+                    print('Loading of Hdf5 failed... ')
                     self._logger.info('Loading of Hdf5 failed... ')
                     self._hdf5_reuse = False
                     label_image_cpy = None
@@ -356,7 +362,7 @@ class TimeHolder(OrderedDict):
         global_channel_desc = self._grp_def[self.HDF5_GRP_IMAGE].create_dataset( \
             'channel', (nr_channels,), dtype)
 
-        for i, (ch, col) in enumerate(self._channel_info.iteritems()):
+        for i, (ch, col) in enumerate(six.iteritems(self._channel_info)):
             is_physical = bool(col is not None)
             data = (ch, col, is_physical, (0, 0, 0), Colors.channel_hexcolor(col))
             global_channel_desc[i] = data
@@ -432,7 +438,7 @@ class TimeHolder(OrderedDict):
                 obj_name, (1,), numpy.dtype(dtype))
 
             data = (obj_name, self.HDF5_OTYPE_RELATION)
-            for ch, reg in chreg.iteritems():
+            for ch, reg in six.iteritems(chreg):
                 data += (("%s__%s" %(ch, reg)).lower(), )
             dset[0] = data
 
@@ -454,10 +460,10 @@ class TimeHolder(OrderedDict):
         """
         chnames = [rinfo[0] for rinfo in self._region_infos]
 
-        for channel_name, regions in self.channel_regions.iteritems():
+        for channel_name, regions in six.iteritems(self.channel_regions):
             if channel_name.lower() not in chnames:
-                combined = "region__%s__%s" %(channel_name.lower(), regions.values())
-                yield channel_name.lower(), combined, '-'.join(regions.values())
+                combined = "region__%s__%s" %(channel_name.lower(), list(regions.values()))
+                yield channel_name.lower(), combined, '-'.join(list(regions.values()))
 
         raise StopIteration
 
@@ -469,7 +475,7 @@ class TimeHolder(OrderedDict):
             try:
                 self.cellh5_file.close()
             except:
-                print '_hdf5_create_file_structure(): Closing already opended file for rewrite'
+                print('_hdf5_create_file_structure(): Closing already opended file for rewrite')
 
         # TODO: This should be replaced with cellh5 API functions
         f = h5py.File(filename, 'w')
@@ -535,7 +541,7 @@ class TimeHolder(OrderedDict):
 
         if feature_dict is not None:
             if object_dict is not None:
-                for (key_desc, key_data), (value_desc, value_data) in feature_dict.items():
+                for (key_desc, key_data), (value_desc, value_data) in list(feature_dict.items()):
                     self._hdf5_file.create_dataset(key_desc, data=value_desc, compression=self._hdf5_compression)
                     if not value_data.dtype == numpy.dtype('O'):
                         d = self._hdf5_file.create_dataset(key_data, data=value_data, compression=self._hdf5_compression)
@@ -544,7 +550,7 @@ class TimeHolder(OrderedDict):
                         d = self._hdf5_file.create_dataset(key_data, data=value_data, compression=self._hdf5_compression, dtype=h5py.new_vlen(str))
                         d.attrs["reused"] = True
 
-                for (key_desc, key_data), (value_desc, value_data) in object_dict.items():
+                for (key_desc, key_data), (value_desc, value_data) in list(object_dict.items()):
                     d = self._hdf5_file.create_dataset(key_desc, data=value_desc, compression=self._hdf5_compression)
                     d.attrs["reused"] = True
                     d = self._hdf5_file.create_dataset(key_data, data=value_data, compression=self._hdf5_compression)
@@ -574,8 +580,8 @@ class TimeHolder(OrderedDict):
         return self[self._iCurrentT]
 
     def purge_features(self):
-        for channels in self.itervalues():
-            for channel in channels.itervalues():
+        for channels in six.itervalues(self):
+            for channel in six.itervalues(channels):
                 channel.purge(features={})
 
     def _convert_region_name(self, channel_name, region_name, prefix='region'):
@@ -778,7 +784,7 @@ class TimeHolder(OrderedDict):
     def _apply_features_from_hdf5(self, channel):
         channel._features_calculated = True
         channel_name = channel.NAME.lower()
-        for region_name, container in channel.containers.iteritems():
+        for region_name, container in six.iteritems(channel.containers):
             well, position = self.get_well_position()
             frame_idx = self._frames_to_idx[self._iCurrentT]
 
@@ -806,7 +812,7 @@ class TimeHolder(OrderedDict):
 
             if not container is None:
                 # in this case a container is present (segmentation and images have been found/computed)
-                for j, (obj_id, c_obj) in enumerate(container.getObjects().iteritems()):
+                for j, (obj_id, c_obj) in enumerate(six.iteritems(container.getObjects())):
                     # build a new ImageObject
                     obj = ImageObject(c_obj)
                     obj.iId = obj_id
@@ -820,7 +826,7 @@ class TimeHolder(OrderedDict):
                                  container.getCrackCoordinates(obj_id)]
                         obj.crack_contour = crack
 
-                        if channel.feature_groups.has_key('moments') and eccentricity_idx is not None:
+                        if 'moments' in channel.feature_groups and eccentricity_idx is not None:
                             obj.orientation = Orientation(angle = c_obj.orientation,
                                                           eccentricity = object_features[j, eccentricity_idx])
 
@@ -880,7 +886,7 @@ class TimeHolder(OrderedDict):
                 object_holder.feature_names = channel.lstFeatureNames
 
             else:
-                print 'no features found in cellh5 file'
+                print('no features found in cellh5 file')
             channel._regions[region_name] = object_holder
 
     def _write_object_feature_table(self, feature_names, global_def_group):
@@ -903,7 +909,7 @@ class TimeHolder(OrderedDict):
                         assign_table[j][i+1] = feat_group_assignment
 
         dset_tmp[:] = assign_table
-        dset_tmp.attrs["feature_groups"] = numpy.array([("group_%02d" % i, FeatureGroups.values()[i].group_name) for i in range(n_feature_groups)], dtype='|S64')
+        dset_tmp.attrs["feature_groups"] = numpy.array([("group_%02d" % i, list(FeatureGroups.values())[i].group_name) for i in range(n_feature_groups)], dtype='|S64')
 
     def apply_features(self, channel):
         stop_watch = StopWatch(start=True)
@@ -976,7 +982,7 @@ class TimeHolder(OrderedDict):
                                                           maxshape=(None,))
                     offset = 0
                 else:
-                    if not "reused" in grp_cur_pos[self.HDF5_GRP_OBJECT][combined_region_name].attrs.keys():
+                    if not "reused" in list(grp_cur_pos[self.HDF5_GRP_OBJECT][combined_region_name].attrs.keys()):
                         dset_idx_relation = grp_cur_pos[self.HDF5_GRP_OBJECT][combined_region_name]
                         offset = len(dset_idx_relation)
                         dset_idx_relation.resize((nr_objects + offset,))
@@ -1017,7 +1023,7 @@ class TimeHolder(OrderedDict):
                                                           compression=self._hdf5_compression,
                                                           maxshape=(None,))
                 else:
-                    if not "reused" in grp_region_features['bounding_box'].attrs.keys():
+                    if not "reused" in list(grp_region_features['bounding_box'].attrs.keys()):
                         dset_bounding_box = grp_region_features['bounding_box']
                         dset_bounding_box.resize((nr_objects + offset,))
 
@@ -1033,7 +1039,7 @@ class TimeHolder(OrderedDict):
                                                       compression=self._hdf5_compression,
                                                       maxshape=(None,))
                 else:
-                    if not "reused" in grp_region_features['orientation'].attrs.keys():
+                    if not "reused" in list(grp_region_features['orientation'].attrs.keys()):
                         dset_orientation = grp_region_features['orientation']
                         dset_orientation.resize((nr_objects + offset,))
 
@@ -1049,7 +1055,7 @@ class TimeHolder(OrderedDict):
                                                           compression=self._hdf5_compression,
                                                           maxshape=(None,))
                 else:
-                    if not "reused" in grp_region_features['center'].attrs.keys():
+                    if not "reused" in list(grp_region_features['center'].attrs.keys()):
                         dset_center = grp_region_features['center']
                         dset_center.resize((nr_objects + offset,))
 
@@ -1062,7 +1068,7 @@ class TimeHolder(OrderedDict):
                                                           compression=self._hdf5_compression,
                                                           maxshape=(None, nr_features))
                     elif nr_objects > 0:
-                        if not "reused" in grp_region_features['object_features'].attrs.keys():
+                        if not "reused" in list(grp_region_features['object_features'].attrs.keys()):
                             dset_object_features = grp_region_features['object_features']
                             dset_object_features.resize(nr_objects + offset, axis=0)
                             # This I do not understand: if you set this to false,
@@ -1077,7 +1083,7 @@ class TimeHolder(OrderedDict):
                                                 chunks=(nr_objects if nr_objects > 0 else 1, ),
                                                 maxshape=(None,))
                     else:
-                        if not "reused" in grp_region_features['crack_contour'].attrs.keys():
+                        if not "reused" in list(grp_region_features['crack_contour'].attrs.keys()):
                             dset_crack_contour = grp_region_features['crack_contour']
                             dset_crack_contour.resize((nr_objects + offset, ))
 
@@ -1094,25 +1100,25 @@ class TimeHolder(OrderedDict):
                     self._object_coord_to_id[(channel.PREFIX, coord)] = new_obj_id
                     self._object_coord_to_idx[(channel.PREFIX, coord)] = idx_new
 
-                    if not "reused" in grp_region_features['bounding_box'].attrs.keys():
+                    if not "reused" in list(grp_region_features['bounding_box'].attrs.keys()):
                         dset_bounding_box[idx + offset] = obj.oRoi.upperLeft[0], obj.oRoi.lowerRight[0], obj.oRoi.upperLeft[1], obj.oRoi.lowerRight[1]
-                    if not "reused" in grp_region_features['center'].attrs.keys():
+                    if not "reused" in list(grp_region_features['center'].attrs.keys()):
                         dset_center[idx + offset] = obj.oCenterAbs
 
                     # is case one don't wants nan's written to the hdf5 file
                     # if np.isnan(obj.orientation.angle)
-                    if not "reused" in grp_region_features['orientation'].attrs.keys():
+                    if not "reused" in list(grp_region_features['orientation'].attrs.keys()):
                         dset_orientation[idx + offset] = obj.orientation.angle, obj.orientation.eccentricity
-                    if not "reused" in grp_cur_pos[self.HDF5_GRP_OBJECT][combined_region_name].attrs.keys():
+                    if not "reused" in list(grp_cur_pos[self.HDF5_GRP_OBJECT][combined_region_name].attrs.keys()):
                         dset_idx_relation[idx + offset] = frame_idx, obj_id
 
                     if self._hdf5_include_features:
                         if len(obj.aFeatures) > 0:
-                            if not "reused" in grp_region_features['object_features'].attrs.keys():
+                            if not "reused" in list(grp_region_features['object_features'].attrs.keys()):
                                 dset_object_features[idx + offset] = obj.aFeatures
 
                     if self._hdf5_include_crack:
-                        if not "reused" in grp_region_features['crack_contour'].attrs.keys():
+                        if not "reused" in list(grp_region_features['crack_contour'].attrs.keys()):
                             data = ','.join(map(str, numpy.array(obj.crack_contour).flatten()))
                             dset_crack_contour[idx + offset] = base64.b64encode(zlib.compress(data))
 
@@ -1138,7 +1144,7 @@ class TimeHolder(OrderedDict):
 
             prefix = PrimaryChannel.PREFIX
             data = []
-            for idx, edge in enumerate(graph.edges.itervalues()):
+            for idx, edge in enumerate(six.itervalues(graph.edges)):
                 head_id, tail_id = edge[:2]
                 head_frame, head_obj_id = \
                     Tracker.split_nodeid(head_id)[:2]
@@ -1160,14 +1166,14 @@ class TimeHolder(OrderedDict):
             event_lookup = {}
             if tracker is None:
                 return
-            for events in tracker.visitor_data.itervalues():
-                for start_id, event in events.iteritems():
+            for events in six.itervalues(tracker.visitor_data):
+                for start_id, event in six.iteritems(events):
                     if start_id[0] != '_':
                         key = Tracker.split_nodeid(start_id)[:2]
                         event_lookup.setdefault(key, []).append(event)
             nr_events = len(event_lookup)
             nr_edges = 0
-            for events in event_lookup.itervalues():
+            for events in six.itervalues(event_lookup):
                 if len(events) == 1:
                     nr_edges += events[0]['maxLength'] - 1
                 elif len(events) == 2:
@@ -1183,7 +1189,7 @@ class TimeHolder(OrderedDict):
 
                 obj_idx = 0
                 rel_idx = 0
-                for events in event_lookup.itervalues():
+                for events in six.itervalues(event_lookup):
                     obj_id = obj_idx
                     track = events[0]['tracks'][0]
                     for head_id, tail_id in zip(track, track[1:]):
@@ -1221,7 +1227,7 @@ class TimeHolder(OrderedDict):
                            sep='\t', has_header=False):
 
         with open(filename, 'w') as fp:
-            for frame, channels in self.iteritems():
+            for frame, channels in six.iteritems(self):
                 line1 = []
                 line2 = []
                 line3 = []
@@ -1231,7 +1237,7 @@ class TimeHolder(OrderedDict):
                 prefix = [frame, meta_data.get_timestamp_relative(coordinate)]
                 prefix_names = ['frame', 'time']
 
-                for chname, (region_name, class_names, _) in ch_info.iteritems():
+                for chname, (region_name, class_names, _) in six.iteritems(ch_info):
                     channel = channels[chname]
 
                     if not has_header:
@@ -1246,7 +1252,7 @@ class TimeHolder(OrderedDict):
                     count = dict([(x, 0) for x in class_names])
                     # in case just total counts are needed
                     if len(class_names) > 0:
-                        for obj in region.values():
+                        for obj in list(region.values()):
                             count[obj.strClassName] += 1
                     items += [total] + [count[x] for x in class_names]
 
@@ -1262,12 +1268,12 @@ class TimeHolder(OrderedDict):
     def getObjectCounts(self, ch_info):
 
         all_counts = {}
-        for chname, (region_name, class_names, _) in ch_info.iteritems():
+        for chname, (region_name, class_names, _) in six.iteritems(ch_info):
             all_counts[(chname, region_name)] = {}
 
-        for frame, channels in self.iteritems():
+        for frame, channels in six.iteritems(self):
 
-            for chname, (region_name, class_names, _) in ch_info.iteritems():
+            for chname, (region_name, class_names, _) in six.iteritems(ch_info):
 
                 if len(all_counts[(chname, region_name)])==0:
                     all_counts[(chname, region_name)] = OrderedDict([(x, [])
@@ -1278,7 +1284,7 @@ class TimeHolder(OrderedDict):
                 count = dict([(x, 0) for x in class_names])
                 # in case just total counts are needed
                 if len(class_names) > 0:
-                    for obj in region.values():
+                    for obj in list(region.values()):
                         count[obj.strClassName] += 1
                 for class_name in class_names:
                     all_counts[(chname, region_name)][class_name].append(count[class_name])
@@ -1298,12 +1304,12 @@ class TimeHolder(OrderedDict):
         else:
             ylab = 'class counts (raw)'
 
-        for chname, (region_name, class_names, colors) in ch_info.iteritems():
+        for chname, (region_name, class_names, colors) in six.iteritems(ch_info):
             if len(class_names) < 2:
                 continue
 
             X = numpy.array([all_counts[(chname, region_name)][x] for x in class_names])
-            timevec = range(X.shape[1])
+            timevec = list(range(X.shape[1]))
 
             if len(timevec) > 1:
                 if relative:
@@ -1314,7 +1320,7 @@ class TimeHolder(OrderedDict):
                 ax = fig.add_subplot(1,1,1)
 
                 # in this case we have more than one time point and we can visualize the time series
-                for i, lb, color in zip(range(len(class_names)), class_names, colors):
+                for i, lb, color in zip(list(range(len(class_names))), class_names, colors):
                     ax.plot(timevec, X[i,:], color=color, label=lb, linewidth=2.0)
 
                 if not ymax is None and ymax > -1:
@@ -1373,7 +1379,7 @@ class TimeHolder(OrderedDict):
         return
 
     def exportObjectDetails(self, filename, sep='\t'):
-        f = file(filename, 'w')
+        f = open(filename, 'w')
 
         feature_lookup = OrderedDict()
         feature_lookup['mean'] = 'n2_avg'
@@ -1385,10 +1391,10 @@ class TimeHolder(OrderedDict):
         line2 = []
         line3 = []
 
-        for frame, channels in self.iteritems():
+        for frame, channels in six.iteritems(self):
 
             items = []
-            prim_region = channels.values()[0].get_region(self.reginfo.names['primary'][0])
+            prim_region = list(channels.values())[0].get_region(self.reginfo.names['primary'][0])
 
             for obj_id in prim_region:
 
@@ -1396,7 +1402,7 @@ class TimeHolder(OrderedDict):
                 prefix_names = ['frame', 'objID']
                 items = []
 
-                for channel in channels.values():
+                for channel in list(channels.values()):
 
                     for rname in channel.region_names():
 
@@ -1404,7 +1410,7 @@ class TimeHolder(OrderedDict):
                         if obj_id in region:
                             #FIXME:
                             feature_lookup2 = feature_lookup.copy()
-                            for k,v in feature_lookup2.items():
+                            for k,v in list(feature_lookup2.items()):
                                 if not region.has_feature(v):
                                     del feature_lookup2[k]
 
@@ -1412,14 +1418,14 @@ class TimeHolder(OrderedDict):
                                 keys = ['classLabel', 'className']
                                 if channel.NAME == 'Primary':
                                     keys += ['centerX', 'centerY']
-                                keys += feature_lookup2.keys()
+                                keys += list(feature_lookup2.keys())
 
                                 line1 += ['%s_%s_%s' % (channel.NAME.upper(),
                                                         rname, key)
                                           for key in keys]
 
                             obj = region[obj_id]
-                            features = region.features_by_name(obj_id, feature_lookup2.values())
+                            features = region.features_by_name(obj_id, list(feature_lookup2.values()))
                             values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
                             if channel.NAME == 'Primary':
                                 values += [obj.oCenterAbs[0], obj.oCenterAbs[1]]
@@ -1439,11 +1445,11 @@ class TimeHolder(OrderedDict):
         fname = join(outdir, 'P%s__image_files.csv' %position)
 
         with open(fname, 'wb') as fp:
-            writer = csv.DictWriter(fp, ch_mapping.keys(), lineterminator='\n')
+            writer = csv.DictWriter(fp, list(ch_mapping.keys()), lineterminator='\n')
             writer.writeheader()
-            for frame in self.keys():
+            for frame in list(self.keys()):
                 table = dict()
-                for chname, color in ch_mapping.iteritems():
+                for chname, color in six.iteritems(ch_mapping):
                     # no color channel in merged channel
                     if color is None:
                         continue
@@ -1474,9 +1480,9 @@ class TimeHolder(OrderedDict):
             var = classification_group.create_dataset('class_labels', (nr_classes,), dt)
             var.attrs["UNPREDICED_LABEL"] = numpy.int32(self.UNPREDICTED_LABEL)
             var.attrs['UNPREDICED_PROB'] = numpy.float32(self.UNPREDICTED_PROB)
-            var[:] = zip(predictor.class_names.keys(),
-                         predictor.class_names.values(),
-                         [predictor.hexcolors[n] for n in predictor.class_names.values()])
+            var[:] = list(zip(list(predictor.class_names.keys()),
+                         list(predictor.class_names.values()),
+                         [predictor.hexcolors[n] for n in list(predictor.class_names.values())]))
 
             # classifier
             dt = numpy.dtype([('name', '|S512'),
@@ -1528,14 +1534,14 @@ class TimeHolder(OrderedDict):
 
         label2idx = dict([(l, i) for i, l in enumerate(predictor.class_names.keys())])
 
-        for i, obj in enumerate(region.itervalues()):
+        for i, obj in enumerate(six.itervalues(region)):
             # replace default for unlabeld object with numerical values
             if obj.iLabel is None:
                 dset_prediction[i+offset] = (self.UNPREDICTED_LABEL, )
                 probs = [self.UNPREDICTED_PROB]*predictor.n_classes
             else:
                 dset_prediction[i+offset] = (label2idx[obj.iLabel], )
-                probs = obj.dctProb.values()
+                probs = list(obj.dctProb.values())
 
             if predictor.SAVE_PROBS:
                 dset_probability[i+offset] = probs

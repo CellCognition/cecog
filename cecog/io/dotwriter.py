@@ -4,6 +4,9 @@ dotwriter.py
 Export tracking graphs to a graphviz *.dot file
 
 """
+from __future__ import absolute_import
+import six
+from six.moves import zip
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -36,19 +39,19 @@ class DotWriter(object):
         timestrings = ["time %d" % x for x in tracker.frames]
         self._file.write("node%s;\n" %self.NODE_STYLE)
 
-        for frame, node_ids in tracker.frames.iteritems():
+        for frame, node_ids in six.iteritems(tracker.frames):
             for object_id in node_ids:
                 node_id = tracker.node_id(frame, object_id)
                 if frame == tracker.start_frame:
                     self._traverseGraph(node_id)
                 # find appearing nuclei
-                elif not self._known_node_ids.has_key(node_id):
+                elif node_id not in self._known_node_ids:
                     self._traverseGraph(node_id)
 
         # write nodes
         tmp_node = '"%s" [%s];\n'
 
-        for node_id in self._known_node_ids.iterkeys():
+        for node_id in six.iterkeys(self._known_node_ids):
             node = self.tracker.graph.node_data(node_id)
             node_attrs = []
 
@@ -74,7 +77,7 @@ class DotWriter(object):
             self._file.write(node)
 
         # write ranks (force node to be on the same ranks)
-        for node, (frame, object_ids) in zip(timestrings, tracker.frames.iteritems()):
+        for node, (frame, object_ids) in zip(timestrings, six.iteritems(tracker.frames)):
             tmp = "{%s}\n" % "; ".join(['rank=same'] +
                                        ['"%s"' % tracker.node_id(frame, object_id)
                                         for object_id in object_ids])
@@ -93,7 +96,7 @@ class DotWriter(object):
             # since merges are possible, a node reachable more than one time
             # -> store all edges (combined node ids) and follow them only once
             key = "%s--%s" % (node_id, node_idn)
-            if not self._edges.has_key(key):
+            if key not in self._edges:
                 self._edges[key] = 1
                 self._writeEdge(node_id, node_idn)
                 self._traverseGraph(node_id, level+1)

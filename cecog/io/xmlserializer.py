@@ -1,6 +1,8 @@
 """
 xmlserializer.py
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __licence__ = 'LGPL'
@@ -18,11 +20,11 @@ from collections import OrderedDict
 
 types = {float: float.__name__,
          int: int.__name__,
-         long: long.__name__,
+         int: int.__name__,
          str: str.__name__,
-         unicode: unicode.__name__,
+         six.text_type: six.text_type.__name__,
          complex: complex.__name__,
-         unicode: unicode.__name__,
+         six.text_type: six.text_type.__name__,
          list: list.__name__,
          tuple: tuple.__name__,
          dict: dict.__name__,
@@ -60,10 +62,8 @@ class XmlMetaSerializer(type):
             return type.__init__(cls, name, bases, dct)
 
 
-class XmlSerializer(object):
+class XmlSerializer(six.with_metaclass(XmlMetaSerializer, object)):
     """Parenet for all serializable objects"""
-
-    __metaclass__ = XmlMetaSerializer
     _type = 'type'
     _keytype = 'keytype'
     _subtype = 'subtype'
@@ -76,7 +76,7 @@ class XmlSerializer(object):
 
     def _validate(self, name):
 
-        if not isinstance(name, basestring):
+        if not isinstance(name, six.string_types):
             raise TypeError('tag names must be string not %s' %type(name))
 
         if re.match('^(?!xml)[A-Za-z_][A-Za-z0-9._:]*$', name) is None:
@@ -112,7 +112,7 @@ class XmlSerializer(object):
         else:
             element.attrib[self._keytype] = keytype
 
-        for key_, value in dict_.iteritems():
+        for key_, value in six.iteritems(dict_):
             key =  key2tag(key_)
             self._validate(key)
             if isinstance(value, dict):
@@ -140,7 +140,7 @@ class XmlSerializer(object):
         root = etree.Element(name)
         root.attrib[self._type] = type(self).__name__
 
-        for key, value in self.__dict__.iteritems():
+        for key, value in six.iteritems(self.__dict__):
             self._validate(key)
 
             if isinstance(value, dict):
@@ -172,7 +172,7 @@ class XmlSerializer(object):
         return obj
 
     def load(self, root):
-        if isinstance(root, basestring):
+        if isinstance(root, six.string_types):
             root = etree.fromstring(root)
 
         for child in root.getchildren():
@@ -191,11 +191,11 @@ class XmlSerializer(object):
     def _to_attr(self, element):
         _type = element.attrib[self._type]
 
-        if _type in (types[int], types[float], types[long], types[complex]):
+        if _type in (types[int], types[float], types[int], types[complex]):
             return eval(element.text)
         elif _type == types[bool]:
             return eval(element.text.title())
-        elif _type in (types[str], types[unicode]):
+        elif _type in (types[str], types[six.text_type]):
             return element.text
         elif _type == types[list]:
             return self._to_seq(element)

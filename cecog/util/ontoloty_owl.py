@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import rdflib
 from ontospy.ontospy import Ontology
 from PyQt5 import QtGui, QtCore
@@ -7,19 +9,20 @@ from cecog.environment import CecogEnvironment
 import os
 import sys
 from functools import partial
+from six.moves import range
 
 
 
 def getPrefLabel(onto, uriref):
     props = onto.classProperties(uriref)
-    f_props = filter(lambda xxx: xxx[0].endswith("#prefLabel"), props)
+    f_props = [xxx for xxx in props if xxx[0].endswith("#prefLabel")]
     if len(f_props) == 0:
-        f_props = filter(lambda xxx: xxx[0].endswith("#label"), props)
+        f_props = [xxx for xxx in props if xxx[0].endswith("#label")]
     return f_props[0][1]
 
 def getDescription(onto, uriref):
     props = onto.classProperties(uriref)
-    f_props = filter(lambda xxx: xxx[0].endswith("IAO_0000115"), props)
+    f_props = [xxx for xxx in props if xxx[0].endswith("IAO_0000115")]
     if len(f_props) == 0:
         return 'No description'
     return f_props[0][1]
@@ -103,7 +106,7 @@ class CecogOntologyBrowserWidget(FilterableQTreeWidget):
 
     def fillTree(self):
         self.root_items = []
-        for i, ontology_file in enumerate(filter(lambda xxx: xxx.endswith(".owl"), os.listdir(CecogEnvironment.ONTOLOGY_DIR))):
+        for i, ontology_file in enumerate([xxx for xxx in os.listdir(CecogEnvironment.ONTOLOGY_DIR) if xxx.endswith(".owl")]):
             ontology_path = os.path.join(CecogEnvironment.ONTOLOGY_DIR, ontology_file)
             o = Ontology(ontology_path)
             onto_root_item = QtWidgets.QTreeWidgetItem([ontology_file])
@@ -195,8 +198,8 @@ if __name__ == "__main__":
     diag_layout.addWidget(tw)
 
     def slot_(t):
-        print "Add clicked with", t
+        print("Add clicked with", t)
 
     tw.trigger_add.connect(slot_)
 
-    print diag.exec_()
+    print(diag.exec_())

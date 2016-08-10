@@ -1,6 +1,7 @@
 """
 __init__.py
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -10,9 +11,9 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-from emptyfigure import *
-from boxplot import *
-from trajectories import *
-from hmmnetwork import *
-from trjgallery import *
-from matrix import *
+from .emptyfigure import *
+from .boxplot import *
+from .trajectories import *
+from .hmmnetwork import *
+from .trjgallery import *
+from .matrix import *

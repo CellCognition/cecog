@@ -3,6 +3,9 @@ exporter.py
 
 Exporters for numerical data to text/csv files
 """
+from __future__ import absolute_import
+import six
+from six.moves import zip
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -59,7 +62,7 @@ class TrackExporter(object):
 
     def tracking_data(self, filename, sample_holders):
         fp = None
-        for frame, sample_holder in sample_holders.iteritems():
+        for frame, sample_holder in six.iteritems(sample_holders):
             feature_names = sample_holder.feature_names
             if len(sample_holder) == 0:
                 continue
@@ -76,7 +79,7 @@ class TrackExporter(object):
                                        delimiter=CSVParams.sep)
                 table.writeheader()
 
-            for label, sample in sample_holder.iteritems():
+            for label, sample in six.iteritems(sample_holder):
                 data = {'Frame' : frame, 'ObjectID' : label}
 
                 # to have it in the same order as the feature names
@@ -90,7 +93,7 @@ class TrackExporter(object):
                     data[CSVParams.class_ %'name'] = sample.strClassName
                     data[CSVParams.class_ %'probability'] = \
                         ','.join(['%d:%.5f' % (int(x), y) for x, y in \
-                                  sample.dctProb.iteritems()])
+                                  six.iteritems(sample.dctProb)])
 
                 data[CSVParams.tracking %'center_x'] = sample.oCenterAbs[0]
                 data[CSVParams.tracking %'center_y'] = sample.oCenterAbs[1]
@@ -112,12 +115,12 @@ class EventExporter(object):
         shutil.rmtree(outdir, True)
         makedirs(outdir)
 
-        for tracks in visitor_data.itervalues():
-            for startid, event_data in tracks.iteritems():
+        for tracks in six.itervalues(visitor_data):
+            for startid, event_data in six.iteritems(tracks):
                 if startid in ('_full_tracks', '_current_branch'):
                     continue
-                for chname, region in channel_regions.iteritems():
-                    for region_name, feature_names in region.iteritems():
+                for chname, region in six.iteritems(channel_regions):
+                    for region_name, feature_names in six.iteritems(region):
                         try:
                             frame, obj_label, branch = Tracker.split_nodeid(startid)
                         except ValueError:
@@ -195,7 +198,7 @@ class EventExporter(object):
                     data[CSVParams.class_ %'name'] = sample.strClassName
                     data[CSVParams.class_ %'probability'] = \
                         ','.join(['%d:%.5f' % (int(x),y) for x,y in
-                                  sample.dctProb.iteritems()])
+                                  six.iteritems(sample.dctProb)])
 
                 common_ftr = [f for f in set(sample_holder.feature_names).intersection(feature_names)]
                 features = sample_holder.features_by_name(objid, common_ftr)
@@ -237,7 +240,7 @@ class EventExporter(object):
 
         # prominent place int the table for certain features
         flkp = OrderedDict()
-        for nname, name in name_table.iteritems():
+        for nname, name in six.iteritems(name_table):
             if name in feature_names:
                 flkp[nname] = name
         for fn in feature_names:
@@ -248,7 +251,7 @@ class EventExporter(object):
         shutil.rmtree(outdir, True)
         makedirs(outdir)
 
-        for start_id, data in visitor_data.iteritems():
+        for start_id, data in six.iteritems(visitor_data):
             for idx, track in enumerate(data['_full_tracks']):
                 has_header = False
                 line1 = []
@@ -258,7 +261,7 @@ class EventExporter(object):
                 frame, obj_label= Tracker.split_nodeid(start_id)[:2]
                 filename = 'P%s__T%05d__O%04d__B%02d.txt' \
                     %(position, frame, obj_label, idx+1)
-                f = file(join(outdir, filename), 'w')
+                f = open(join(outdir, filename), 'w')
 
                 for node_id in track:
                     frame, obj_id = Tracker.split_nodeid(node_id)
@@ -268,7 +271,7 @@ class EventExporter(object):
                     prefix_names = ['frame', 'time', 'objID']
                     items = []
 
-                    for channel in timeholder[frame].values():
+                    for channel in list(timeholder[frame].values()):
                         for region_id in channel.region_names():
                             region = channel.get_region(region_id)
                             if obj_id in region:
@@ -277,12 +280,12 @@ class EventExporter(object):
                                     keys = ['classLabel', 'className']
                                     if channel.NAME == 'Primary':
                                         keys += ['centerX', 'centerY']
-                                    keys += flkp.keys()
+                                    keys += list(flkp.keys())
                                     line1 += [channel.NAME.upper()] * len(keys)
                                     line2 += [str(region_id)] * len(keys)
                                     line3 += keys
                                 obj = region[obj_id]
-                                features = region.features_by_name(obj_id, flkp.values())
+                                features = region.features_by_name(obj_id, list(flkp.values()))
                                 values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
                                 if channel.NAME == 'Primary':
                                     values += [obj.oCenterAbs[0], obj.oCenterAbs[1]]

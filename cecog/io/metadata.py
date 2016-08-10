@@ -2,6 +2,9 @@
 metadata.py
 
 """
+from __future__ import absolute_import
+from __future__ import print_function
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = 'LGPL'
@@ -127,7 +130,7 @@ class MetaData(XmlSerializer):
     def get_well_and_subwell_dict(self):
         wells_subwell_pairs = [(self._position_well_map[x][MetaInfo.Well],
                                 self._position_well_map[x][MetaInfo.Subwell])
-                                for x in self._position_well_map.keys()]
+                                for x in list(self._position_well_map.keys())]
         well_map = {}
         for well, subwell in wells_subwell_pairs:
             if well in ['', None]:
@@ -140,23 +143,23 @@ class MetaData(XmlSerializer):
         return well_map
 
     def setup(self):
-        for pos, od in self._timestamps_absolute.iteritems():
-            sorted_od = OrderedDict(sorted(od.iteritems(), key=lambda o: o[0]))
+        for pos, od in six.iteritems(self._timestamps_absolute):
+            sorted_od = OrderedDict(sorted(six.iteritems(od), key=lambda o: o[0]))
             self._timestamps_absolute[pos] = sorted_od
-        for position, timestamps in self._timestamps_absolute.iteritems():
-            base_time = timestamps.values()[0]
+        for position, timestamps in six.iteritems(self._timestamps_absolute):
+            base_time = list(timestamps.values())[0]
             self._timestamps_relative[position] = OrderedDict()
-            for frame, timestamp in timestamps.iteritems():
+            for frame, timestamp in six.iteritems(timestamps):
                 self._timestamps_relative[position][frame] = \
                     timestamp - base_time
-        for position, timestamps in self._timestamps_absolute.iteritems():
-            values = numpy.array(timestamps.values())
+        for position, timestamps in six.iteritems(self._timestamps_absolute):
+            values = numpy.array(list(timestamps.values()))
             diff = numpy.diff(values)
             self._timestamp_summary[position] = (numpy.mean(diff),
                                                  numpy.std(diff))
 
         if self.has_timestamp_info:
-            values = numpy.array(self._timestamp_summary.values())
+            values = numpy.array(list(self._timestamp_summary.values()))
             mean = numpy.mean(values, axis=0)
             std = numpy.std(values, axis=0)
             self.plate_timestamp_info = (mean[0], std[0] + mean[1])
@@ -199,7 +202,7 @@ class MetaData(XmlSerializer):
         return "\n".join(strings)
 
     def get_frames_of_position(self, pos):
-        return self._timestamps_absolute[pos].keys()
+        return list(self._timestamps_absolute[pos].keys())
 
     def __str__(self):
         return self.format()
@@ -230,7 +233,7 @@ class MetaImage(object):
         try:
             image = self.image
         except:
-            print 'MetaImage.format(): No image loaded'
+            print('MetaImage.format(): No image loaded')
             raise
         if isinstance(image, (ccore.UInt16Image,)):
             return numpy.uint16

@@ -7,6 +7,8 @@ Hiddem Markov Model with time dependent emissions.
 Unfortunately the R code contain some adhoc assumptions like the
 emission matrix as unit matrix.
 """
+from __future__ import absolute_import
+from six.moves import range
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -70,23 +72,23 @@ class HmmTde(HmmCore):
 
 
             # setup the time dependend emssion matrix
-            for j in xrange(est.nstates):
+            for j in range(est.nstates):
                 emis += np.tile(est.emis[:, j], (nframes, 1))* \
                     np.tile(probs[i, :, j], (est.nstates, 1)).T
 
             P[0, ] = est.startprob*emis[0, :]
             # loop over frames
-            for fi in xrange(1, nframes, 1):
+            for fi in range(1, nframes, 1):
                 # loop over hidden states
-                for ni in xrange(est.nstates):
+                for ni in range(est.nstates):
                     P2[ni, :] = P[fi-1, ni] * est.trans[ni, :]*emis[fi, :]
 
-                for ni in xrange(est.nstates):
+                for ni in range(est.nstates):
                     P[fi, ni] = P2[:, ni].max()
                     bp[fi, ni] = np.argmax(P2[:, ni])
 
             tracks2[i, nframes-1] = np.argmax(P[nframes-1, :])
-            for fi in xrange(nframes-1, 0, -1):
+            for fi in range(nframes-1, 0, -1):
                 tracks2[i, fi-1] = bp[fi, tracks2[i, fi]]
 
         return tracks2
@@ -104,7 +106,7 @@ class HmmTde(HmmCore):
                                     "Try different hmm learing algorithm"))
 
             labelmapper = LabelMapper(np.unique(tracks),
-                                      self.classdef.class_names.keys())
+                                      list(self.classdef.class_names.keys()))
 
             # np.unique -> sorted ndarray
             idx = labelmapper.index_from_classdef(np.unique(tracks))

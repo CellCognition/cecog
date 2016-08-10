@@ -8,6 +8,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -282,9 +284,9 @@ class Picker(AnalyzerBase):
             else:
                 raise RuntimeError("Annotation file is invalid!")
 
-        for pos, iframes in self.sample_positions.iteritems():
+        for pos, iframes in six.iteritems(self.sample_positions):
             self.sample_positions[pos] = sorted(list(set(iframes)))
-        self.positions = self.sample_positions.keys()
+        self.positions = list(self.sample_positions.keys())
 
     def is_valid_annofile(self, result):
         # sanity checks for the annotation file
@@ -300,7 +302,7 @@ class Picker(AnalyzerBase):
     def processPositions(self, qthread=None):
         imax = len(self.sample_positions)
 
-        for i, (posid, frames) in enumerate(self.sample_positions.iteritems()):
+        for i, (posid, frames) in enumerate(six.iteritems(self.sample_positions)):
             self.logger.info('Process positions: %r' %posid)
 
             if not qthread is None:

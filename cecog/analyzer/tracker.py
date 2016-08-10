@@ -1,6 +1,9 @@
 """
 tracker.py
 """
+from __future__ import absolute_import
+import six
+from six.moves import range
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -65,7 +68,7 @@ class Tracker(LoggerObject):
 
     def track_next_frame(self, frame, samples):
         self._frame_data.setdefault(frame, [])
-        for label, sample in samples.iteritems():
+        for label, sample in six.iteritems(samples):
             node_id = self.node_id(frame, label)
             self.graph.add_node(node_id, sample)
             self._frame_data[frame].append(label)
@@ -78,7 +81,7 @@ class Tracker(LoggerObject):
         """Return the preceding frame or None if the gap between the to frames
         is larget than max_frame_gap."""
 
-        frames = self._frame_data.keys()
+        frames = list(self._frame_data.keys())
         icurrent = frames.index(frame)
 
         pre_frame = None
@@ -99,7 +102,7 @@ class Tracker(LoggerObject):
             sample = timeholder[iframe][channel].get_region(region)[objid]
             ngraph.add_node(nodeid, sample)
 
-        for edge in self.graph.edges.values():
+        for edge in list(self.graph.edges.values()):
             ngraph.add_edge(*edge)
 
         return ngraph

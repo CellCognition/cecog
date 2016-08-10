@@ -8,6 +8,9 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from six.moves import map
+from six.moves import zip
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -19,7 +22,7 @@ import numpy
 class Normalizer(object):
 
     def __init__(self, strFilepath):
-        oFile = file(strFilepath, "r")
+        oFile = open(strFilepath, "r")
         strLine = oFile.readline().rstrip()
         if strLine == "x":
             strLine = oFile.readline().rstrip()
@@ -65,7 +68,7 @@ class ArffReader(object):
                       'string' : str}
 
     def __init__(self, strFilename):
-        self.oFile = file(strFilename, "r")
+        self.oFile = open(strFilename, "r")
         self.strRelationName = ""
         self.dctClassNames = {}
         self.dctClassLabels = {}
@@ -177,7 +180,7 @@ class WriterBase(object):
     FLOAT_DIGITS = 8
 
     def __init__(self, strFilename, lstFeatureNames, dctClassLabels):
-        self.oFile = file(strFilename, "w")
+        self.oFile = open(strFilename, "w")
         self.lstFeatureNames = lstFeatureNames
         self.dctClassLabels = dctClassLabels
 
@@ -238,7 +241,7 @@ class ArffWriter(WriterBase):
         for strFeatureName in self.lstFeatureNames:
             self.writeLine("@ATTRIBUTE %s NUMERIC" % strFeatureName)
 
-        lstClassNames = self.dctClassLabels.keys()
+        lstClassNames = list(self.dctClassLabels.keys())
         # sort names by labels
         lstClassNames.sort(key = lambda n: self.dctClassLabels[n])
         self.writeLine("@ATTRIBUTE class {%s}" %
@@ -265,7 +268,7 @@ class ArffWriter(WriterBase):
 
     @classmethod
     def buildLineStatic(cls, strClassName, lstObjectFeatures, dctClassLabels):
-        strLine = ",".join(map(cls._convert, lstObjectFeatures) +
+        strLine = ",".join(list(map(cls._convert, lstObjectFeatures)) +
                            ["'%s'" % strClassName]
                            )
         return strLine

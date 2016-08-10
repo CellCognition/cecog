@@ -8,6 +8,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'Michael Held, Thomas Walter'
 __date__ = '$Date$'
@@ -254,7 +256,7 @@ class Browser(QMainWindow):
         # fallback if no Segmentation plugins have been specified
         rdict = self._region_names()
         if len(rdict) > 0:
-            self._object_region = rdict.keys()[0].split(' - ')
+            self._object_region = list(rdict.keys())[0].split(' - ')
         else:
             self._object_region = ('Primary', 'primary')
 
@@ -308,7 +310,7 @@ class Browser(QMainWindow):
 
         rdict = OrderedDict()
         reginfo = MetaPluginManager().region_info
-        for channel, regions in reginfo.names.iteritems():
+        for channel, regions in six.iteritems(reginfo.names):
             for region in regions:
                 rdict['%s - %s' % (channel.capitalize(), region)] = \
                     (channel.capitalize(), region)
@@ -476,7 +478,7 @@ class Browser(QMainWindow):
             QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
             res = analyzer.processPositions()
             self.render_browser(res)
-        except Exception, e:
+        except Exception as e:
             import traceback
             from cecog.gui.util import exception
             traceback.print_exc()

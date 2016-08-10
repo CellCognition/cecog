@@ -8,6 +8,9 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from __future__ import print_function
+from six.moves import range
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -65,7 +68,7 @@ class _FilePalette(_Palette):
 
     @classmethod
     def from_file(cls, filename, size=50000):
-        f = file(filename, 'rb')
+        f = open(filename, 'rb')
         data = f.read(size)
         f.close()
         name = os.path.splitext(os.path.split(filename)[1])[0]
@@ -128,7 +131,7 @@ class SingleColorPalette(_Palette):
         assert len(color) == 3, 'RGB color tuple is not valid.'
 
         for c in range(3):
-            self.lut[:,c] = numpy.array(range(256)) / 255. * color[c]
+            self.lut[:,c] = numpy.array(list(range(256))) / 255. * color[c]
 
     @classmethod
     def from_hex_color(cls, name, string):
@@ -138,13 +141,13 @@ class SingleColorPalette(_Palette):
 if __name__ == "__main__":
     import sys
     z = ZeissPalette.from_file(sys.argv[1])
-    print '"%s"' % z.name
-    print z.lut
+    print('"%s"' % z.name)
+    print(z.lut)
 
     z = NucMedPalette.from_file(sys.argv[1])
-    print '"%s"' % z.name
-    print z.lut
+    print('"%s"' % z.name)
+    print(z.lut)
 
     z = SingleColorPalette('test', (255,18,100))
-    print '"%s"' % z.name
-    print z.lut
+    print('"%s"' % z.name)
+    print(z.lut)

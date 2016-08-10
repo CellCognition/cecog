@@ -8,6 +8,9 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
+from six.moves import range
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -42,7 +45,7 @@ class ColorBox(QComboBox):
         self._user_count = 0
         self._highlight_index = None
 
-        for name, palette in palettes.iteritems():
+        for name, palette in six.iteritems(palettes):
             self.add_palette(name, palette)
 
         self.setCurrentIndex(self.findData(current))
