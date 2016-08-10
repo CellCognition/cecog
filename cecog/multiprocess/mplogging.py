@@ -1,6 +1,8 @@
 """
 mplogging.py
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -13,12 +15,12 @@ __url__ = 'www.cellcognition.org'
 
 
 import os
-import cPickle
+import six.moves.cPickle
 import struct
 import socket
 import logging
 import logging.handlers
-import SocketServer
+import six.moves.socketserver
 
 
 def initialyze_process(port):
@@ -30,7 +32,7 @@ def initialyze_process(port):
     logger.info('logger init')
 
 
-class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
+class LogRecordStreamHandler(six.moves.socketserver.BaseRequestHandler):
     """Handler for a streaming logging request"""
 
     def handle(self):
@@ -46,12 +48,12 @@ class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
                 chunk = self.request.recv(slen)
                 while len(chunk) < slen:
                     chunk = chunk + self.request.recv(slen - len(chunk))
-                obj = cPickle.loads(chunk)
+                obj = six.moves.cPickle.loads(chunk)
                 record = logging.makeLogRecord(obj)
                 self.handleLogRecord(record)
 
             except socket.error:
-                print 'socket handler abort'
+                print('socket handler abort')
                 break
 
     def handleLogRecord(self, record):
@@ -69,7 +71,7 @@ class LogRecordStreamHandler(SocketServer.BaseRequestHandler):
         logger.handle(record)
 
 
-class LoggingReceiver(SocketServer.ThreadingTCPServer):
+class LoggingReceiver(six.moves.socketserver.ThreadingTCPServer):
     """Simple TCP socket-based logging receiver"""
 
     logname = None
@@ -80,4 +82,4 @@ class LoggingReceiver(SocketServer.ThreadingTCPServer):
         self.handler = handler
         if port is None:
             port = logging.handlers.DEFAULT_TCP_LOGGING_PORT
-        SocketServer.ThreadingTCPServer.__init__(self, (host, port), handler)
+        six.moves.socketserver.ThreadingTCPServer.__init__(self, (host, port), handler)

@@ -7,6 +7,7 @@ Usage:
    python setup_mac.py py2app
 
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -25,7 +26,7 @@ from distutils.core import setup, Extension
 import build_helpers
 
 # override other -arch options
-if not os.environ.has_key("ARCHFLAGS"):
+if "ARCHFLAGS" not in os.environ:
     os.environ["ARCHFLAGS"] = "-arch x86_64"
 
 py2app_opts = {'excludes': build_helpers.EXCLUDES,

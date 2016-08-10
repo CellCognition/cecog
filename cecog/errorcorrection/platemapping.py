@@ -1,6 +1,8 @@
 """
 platemapping.py
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -44,7 +46,7 @@ class PlateMapping(OrderedDict):
         to have a value i.e. a dict. If the value is None (default)
         a RuntimeError is raised."""
 
-        positions = [k for k in self.keys() if self[k] is None]
+        positions = [k for k in list(self.keys()) if self[k] is None]
         if len(positions) > 0:
             msg = ("Invalid plate mapping file\n"
                    "Missing entries for data files %s" %str(positions))
@@ -60,7 +62,7 @@ class PlateMapping(OrderedDict):
             reader = csv.DictReader(fp, delimiter='\t')
             for line in reader:
                 pos = line['Position']
-                if self.has_key(pos):
+                if pos in self:
                     del line['Position']
                     self[pos] = line
 
@@ -71,7 +73,7 @@ class PlateMapping(OrderedDict):
             writer = csv.DictWriter(fp, fieldnames=self.colnames,
                                     delimiter='\t')
             writer.writeheader()
-            for k, v in self.iteritems():
+            for k, v in six.iteritems(self):
                 line = v.copy()
                 line.update({"Position": k})
                 writer.writerow(line)

@@ -8,6 +8,7 @@
                            See LICENSE.txt for details.
                     See AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -111,7 +112,7 @@ class CH5BasedModule(Module):
         else:
             try:
                 self.ch5file = cellh5.CH5File(self.hdf_file, mode="r")
-            except Exception, e:
+            except Exception as e:
                 raise RuntimeError(("Invalid CellH5 files. Interactive viewing "
                                     "of selected events will not be possible.\n "
                                     "%s is corrupt!\n\n%s"

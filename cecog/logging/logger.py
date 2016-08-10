@@ -1,6 +1,8 @@
 """
 logger.py - logging at class level
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -60,7 +62,7 @@ class LoggerObject(object):
         self.logger.addHandler(self._stream_handler)
 
     def add_file_handler(self, logfile, level=logging.DEBUG):
-        assert isinstance(logfile, basestring)
+        assert isinstance(logfile, six.string_types)
         self.logger.setLevel(level)
         fmt = logging.Formatter(self._fmt)
         self._file_handler = logging.FileHandler(logfile, 'w')

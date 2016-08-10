@@ -8,6 +8,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
 
 __all__ = ('PluginBay', 'PluginParamFrame', 'PluginItem')
 
@@ -113,7 +115,7 @@ class PluginItem(QFrame):
 
     def on_label_clicked(self, trait_name=None):
 
-        if isinstance(trait_name, basestring):
+        if isinstance(trait_name, six.string_types):
             keyword = self._plugin.param_manager.get_param_name(str(trait_name))
         else:
             keyword = self._plugin.name
@@ -170,7 +172,7 @@ class PluginBay(QFrame):
 
     def reset(self):
         self._set_plugin_labels()
-        for plugin_name in self._plugins.keys()[:]:
+        for plugin_name in list(self._plugins.keys())[:]:
             self.remove_plugin(plugin_name)
 
     def add_plugin(self, plugin_name):

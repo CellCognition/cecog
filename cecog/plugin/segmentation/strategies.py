@@ -8,6 +8,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 import os
 import re
@@ -23,6 +25,9 @@ from cecog.plugin import stopwatch
 from cecog.plugin.segmentation.manager import _SegmentationPlugin
 
 import pdb
+import six
+from six.moves import range
+from six.moves import zip
 
 class SegmentationPluginPrimary(_SegmentationPlugin):
 
@@ -107,7 +112,7 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
     def postprocessing(self, container, is_active, roisize_minmax,
                        intensity_minmax, delete_objects=True):
 
-        valid_ids = container.getObjects().keys()
+        valid_ids = list(container.getObjects().keys())
         rejected_ids = []
 
         if is_active:
@@ -136,7 +141,7 @@ class SegmentationPluginPrimary(_SegmentationPlugin):
 
                 # get a dict copy, because we delete elements from the dict
                 objects = container.getObjects()
-                for obj_id, obj in objects.iteritems():
+                for obj_id, obj in six.iteritems(objects):
                     # eval condition string based on the feature dict (provides values for the features above)
                     if not eval(conditions_str, obj.getFeatures()):
                         if delete_objects:
@@ -290,7 +295,7 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
                        intensity_minmax, delete_objects=True,
                        offset=0):
 
-        valid_ids = container.getObjects().keys()
+        valid_ids = list(container.getObjects().keys())
         rejected_ids = []
 
         if is_active:
@@ -321,7 +326,7 @@ class SegmentationPluginPrimary2(_SegmentationPlugin):
 
                 # get a dict copy, because we delete elements from the dict
                 objects = container.getObjects()
-                for obj_id, obj in objects.iteritems():
+                for obj_id, obj in six.iteritems(objects):
                     # eval condition string based on the feature dict (provides values for the features above)
                     if not eval(conditions_str, obj.getFeatures()):
                         if delete_objects:
@@ -497,7 +502,7 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
             # However, the distances are "deeper" for 4-connectivity.
             res = ccore.watershed_dynamic_split(img_bin, dyn, 8, 0)
         else:
-            print 'not implemented'
+            print('not implemented')
             res = img_bin
 
         return res
@@ -507,7 +512,7 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
                        intensity_minmax, delete_objects=True,
                        offset=0):
 
-        valid_ids = container.getObjects().keys()
+        valid_ids = list(container.getObjects().keys())
         rejected_ids = []
 
         if is_active:
@@ -538,7 +543,7 @@ class SegmentationPluginPrimary3(_SegmentationPlugin):
 
                 # get a dict copy, because we delete elements from the dict
                 objects = container.getObjects()
-                for obj_id, obj in objects.iteritems():
+                for obj_id, obj in six.iteritems(objects):
                     # eval condition string based on the feature dict (provides values for the features above)
                     if not eval(conditions_str, obj.getFeatures()):
                         if delete_objects:
@@ -748,7 +753,7 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
             # However, the distances are "deeper" for 4-connectivity. 
             res = ccore.watershed_dynamic_split(img_bin, dyn, 8, 0)
         else:
-            print 'not implemented'
+            print('not implemented')
             res = img_bin
             
         return res
@@ -758,7 +763,7 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
                        intensity_minmax, delete_objects=True,
                        offset=0):
 
-        valid_ids = container.getObjects().keys()
+        valid_ids = list(container.getObjects().keys())
         rejected_ids = []
 
         if is_active:
@@ -789,7 +794,7 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
 
                 # get a dict copy, because we delete elements from the dict
                 objects = container.getObjects()
-                for obj_id, obj in objects.iteritems():
+                for obj_id, obj in six.iteritems(objects):
                     # eval condition string based on the feature dict (provides values for the features above)
                     if not eval(conditions_str, obj.getFeatures()):
                         if delete_objects:
@@ -1040,7 +1045,7 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         ilastik_class = self.params["ilastik_class_selector"]
 
         hf = h5py.File(fileName,'r')
-        temp = hf['classifiers'].keys()
+        temp = list(hf['classifiers'].keys())
         # If hf is not closed this leads to an error in win64 and mac os x
         hf.close()
         del hf
@@ -1055,7 +1060,7 @@ class SegmentationPluginIlastik(SegmentationPluginPrimary):
         # Restore user selection of feature items from hdf5
         featureItems = []
         f = h5py.File(fileName,'r')
-        for fgrp in f['features'].values():
+        for fgrp in list(f['features'].values()):
             featureItems.append(FeatureBase.deserialize(fgrp))
         f.close()
         del f

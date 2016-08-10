@@ -8,6 +8,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -95,7 +97,7 @@ class ObjectHolder(OrderedDict):
 
     @property
     def files(self):
-        return [sample.file for sample in self.values()]
+        return [sample.file for sample in list(self.values())]
 
     @property
     def n_features(self):
@@ -114,7 +116,7 @@ class ObjectHolder(OrderedDict):
         provides separatly.
         """
         self.feature_names = feature_names
-        for label, sample in holder.iteritems():
+        for label, sample in six.iteritems(holder):
             self[label] = copy.deepcopy(sample)
 
     def remove_incomplete(self):
@@ -124,7 +126,7 @@ class ObjectHolder(OrderedDict):
         skipped in on channel for some reasion.
         """
         removed = list()
-        for label, sample in self.items():
+        for label, sample in list(self.items()):
             if sample.aFeatures.size != len(self.feature_names):
                 del self[label]
                 removed.append(label)
@@ -136,8 +138,8 @@ class ObjectHolder(OrderedDict):
         """
         self.feature_names.extend(feature_names)
 
-        for label, sample in holder.iteritems():
-            if self.has_key(label):
+        for label, sample in six.iteritems(holder):
+            if label in self:
                 sample0 = self[label]
                 sample0.aFeatures = np.append(sample0.aFeatures,
                                               np.array(sample.aFeatures))

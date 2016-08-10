@@ -3,6 +3,8 @@ datatable.py
 
 Custumized data table for hmm error correction.
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -37,7 +39,7 @@ class HmmDataTable(object):
     def _update_pos(self, pos, mapping, ntracks):
         self._pos[pm.POSITION].extend([pos]*ntracks)
         try:
-            for k, v in mapping.iteritems():
+            for k, v in six.iteritems(mapping):
                 self._pos[k].extend([v]*ntracks)
         except AttributeError:
             for cn in (cols for cols in pm.colnames if cols != pm.POSITION):
@@ -66,7 +68,7 @@ class HmmDataTable(object):
     def add_position(self, pos, mapping):
         self._all_pos[pm.POSITION].append(pos)
         try:
-            for k, v in mapping.iteritems():
+            for k, v in six.iteritems(mapping):
                 self._all_pos[k].append(v)
         except AttributeError:
             for cn in pm.colnames:
@@ -92,7 +94,7 @@ class HmmDataTable(object):
     def groups(self, key, name):
         """Plate mapping for a destinct sorting scheme (key) and name."""
         grps = dict()
-        for k, v in self._pos.iteritems():
+        for k, v in six.iteritems(self._pos):
             try:
                 grps[k] = v[self._pos[key].index(name)]
             except IndexError:
@@ -101,7 +103,7 @@ class HmmDataTable(object):
 
     def iterby(self, key, include_empty_positions=False):
 
-        if not self._pos.has_key(key):
+        if key not in self._pos:
             raise StopIteration()
 
         for k in np.unique(self._all_pos[key]):

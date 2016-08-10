@@ -8,6 +8,9 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
+from six.moves import range
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -240,7 +243,7 @@ class ClassifierResultFrame(QGroupBox):
                             ('%PR', 'class precision in %'),
                             ('%SE', 'class sensitivity in %')]
 
-        names_vertical = [str(k) for k in self._learner.class_names.keys()] + \
+        names_vertical = [str(k) for k in list(self._learner.class_names.keys())] + \
             ['', '#']
         self._table_info.setColumnCount(len(names_horizontal))
         self._table_info.setRowCount(len(names_vertical))
@@ -400,7 +403,7 @@ class ClassificationFrame(BaseProcessorFrame):
         self._init_control()
 
     def connect_browser_btn(self, func):
-        for name, frame in self._result_frames.iteritems():
+        for name, frame in six.iteritems(self._result_frames):
             frame.browserBtn.clicked.connect(func)
 
     def _get_modified_settings(self, name, has_timelapse=True):
@@ -527,12 +530,12 @@ class ClassificationFrame(BaseProcessorFrame):
     @property
     def classifiers(self):
         classifiers = OrderedDict()
-        for k, v in self._result_frames.iteritems():
+        for k, v in six.iteritems(self._result_frames):
             classifiers[k.title()] = v.classifier
         return classifiers
 
     def settings_loaded(self):
-        for frame in self._result_frames.values():
+        for frame in list(self._result_frames.values()):
             frame.load_classifier(quiet=True, check=True)
             frame.update_frame()
         self.update_region_boxes()
@@ -560,7 +563,7 @@ class ClassificationFrame(BaseProcessorFrame):
     def update_region_boxes(self):
         """Update the 'Region name' or 'Merge Channels' combo boxes resp."""
 
-        for name in self.plugin_mgr.region_info.names.keys():
+        for name in list(self.plugin_mgr.region_info.names.keys()):
             if name in CH_VIRTUAL:
                 self._merged_channel_and_region(name)
             else:

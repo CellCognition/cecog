@@ -1,6 +1,7 @@
 """
 section_core.py
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -28,7 +29,7 @@ class TraitGroup(object):
         return self._registry[name]
 
     def get_trait_names(self):
-        return self._registry.keys()
+        return list(self._registry.keys())
 
 
 class SectionCore(object):
@@ -64,7 +65,7 @@ class SectionCore(object):
         grp.unregister_trait(trait_name)
 
     def get_group_names(self):
-        return self._registry.keys()
+        return list(self._registry.keys())
 
     def get_trait(self, trait_name):
         grp_name = self._traitname_grpname[trait_name]
@@ -73,7 +74,7 @@ class SectionCore(object):
 
     def get_trait_names(self):
         names = []
-        for grp in self._registry.values():
+        for grp in list(self._registry.values()):
             names += grp.get_trait_names()
         return set(names)
 

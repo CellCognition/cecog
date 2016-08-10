@@ -2,6 +2,9 @@
 """
 confusion_matrix.py
 """
+from __future__ import absolute_import
+from six.moves import map
+from six.moves import zip
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -89,7 +92,7 @@ class ConfusionMatrix(object):
         return self.conf.shape[0]
 
     def export(self, filename, sep='\t', mapping=None):
-        f = file(filename, 'w')
+        f = open(filename, 'w')
 
         #data = self.ac.copy()
         overall = np.asarray([np.sum(self.samples),
@@ -154,4 +157,4 @@ class ConfusionMatrix(object):
 
         @return: ConfusionMatrix
         """
-        return cls.from_pairs(zip(labels, predictions), class_labels)
+        return cls.from_pairs(list(zip(labels, predictions)), class_labels)

@@ -7,6 +7,9 @@ of the CecogEnvironment class. The __init__ method copies all the config files
 including the battery_package to the users home directory. i.e. the gui should
 call the __init__ the batch script not.
 """
+from __future__ import absolute_import
+from __future__ import print_function
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -23,7 +26,7 @@ import shutil
 from os.path import join, isdir, isfile, dirname, normpath, abspath, \
     realpath, expanduser, basename
 
-from ConfigParser import RawConfigParser
+from six.moves.configparser import RawConfigParser
 
 from cecog import version
 from cecog.util.pattern import Singleton
@@ -54,15 +57,14 @@ def find_resource_dir():
                   join(dirname(__file__), os.pardir, 'resources')])
 
     if 'PYTHONPATH' in os.environ:
-        environment_paths = filter(lambda x: os.path.basename(os.path.abspath(x)) == 'site-packages',
-                                   os.environ['PYTHONPATH'].split(os.pathsep))
+        environment_paths = [x for x in os.environ['PYTHONPATH'].split(os.pathsep) if os.path.basename(os.path.abspath(x)) == 'site-packages']
     else:
         environment_paths = []
     
     if len(environment_paths) > 0:
         env_path_candidates = [join(x, os.pardir, os.pardir, os.pardir, 'share', 'cellcognition', 'resources')
                                for x in environment_paths]
-        rdirs.extend(filter(lambda x: isdir(normpath(abspath(x))), env_path_candidates))
+        rdirs.extend([x for x in env_path_candidates if isdir(normpath(abspath(x)))])
 
 #    for rdir in rdirs:
 #        print '%s\t%s\t%s' % (rdir, normpath(abspath(rdir)), isdir(normpath(abspath(rdir))))
@@ -114,11 +116,8 @@ class BatteryPackage(object):
     def package_path(self):
         del self._path
 
-class CecogEnvironment(object):
+class CecogEnvironment(six.with_metaclass(Singleton, object)):
 
-    __metaclass__ = Singleton
-
-    # need to refer to the executable path, or working directory...
     RESOURCE_DIR = find_resource_dir()
     BATTERY_PACKAGE_DIR = join(RESOURCE_DIR, "battery_package")
     ONTOLOGY_DIR = join(RESOURCE_DIR, "ontologies")
@@ -148,7 +147,7 @@ class CecogEnvironment(object):
         fontfile = join(self.user_config_dir, self.FONT12)
         ccore.Config.strFontFilepath = realpath(fontfile)
         if debug:
-            print 'ccore.Config.strFontFilepath(%s) called' %self.FONT12
+            print('ccore.Config.strFontFilepath(%s) called' %self.FONT12)
 
     @property
     def demo_settings(self):
@@ -232,7 +231,7 @@ class CecogEnvironment(object):
         return self.battery_package.package_path
 
     def pprint(self):
-        print 'resource-dir: ', self.RESOURCE_DIR
-        print 'font12-file: ', self.FONT12
-        print 'naming-scheme: ', self.NAMING_SCHEMA
-        print 'battery_package: ', self.package_dir
+        print('resource-dir: ', self.RESOURCE_DIR)
+        print('font12-file: ', self.FONT12)
+        print('naming-scheme: ', self.NAMING_SCHEMA)
+        print('battery_package: ', self.package_dir)

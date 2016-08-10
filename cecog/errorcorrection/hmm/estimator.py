@@ -3,6 +3,8 @@ hmmestimator.py
 
 Esitmators for Hidden Markov Models.
 """
+from __future__ import absolute_import
+from six.moves import range
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -41,7 +43,7 @@ class HMMSimpleLeft2RightConstraint(HMMConstraintCore):
     def __init__(self, nstates):
         super(HMMSimpleLeft2RightConstraint, self).__init__(nstates)
         self.trans = np.eye(nstates)
-        for i in xrange(nstates):
+        for i in range(nstates):
             try:
                 self.trans[i, i+1] = 1
             except IndexError:
@@ -192,8 +194,8 @@ class HMMProbBasedEstimator(HMMEstimator):
     def _estimate_trans(self):
         super(HMMProbBasedEstimator, self)._estimate_trans()
         self._trans[:] = 0.0
-        for i in xrange(self._probs.shape[0]): # tracks
-            for j in xrange(1, self._probs.shape[1], 1): # frames
+        for i in range(self._probs.shape[0]): # tracks
+            for j in range(1, self._probs.shape[1], 1): # frames
                 prob0 = self._probs[i, j-1, :]
                 prob1 = self._probs[i, j, :]
                 condprob = np.matrix(prob0).T*np.matrix(prob1)
@@ -223,7 +225,7 @@ class HMMProbBasedEstimator(HMMEstimator):
         probs = self._probs.reshape((-1, self.nstates))
         tracks = self._tracks.flatten()
 
-        for i in xrange(self.nstates):
+        for i in range(self.nstates):
             mprobs[i, :] = probs[tracks == i].mean(axis=0)
 
         self._emis = normalize(mprobs, axis=1)

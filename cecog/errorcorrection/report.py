@@ -5,6 +5,10 @@ Data container and report class (for pdf generation)
 
 """
 from __future__ import division
+from __future__ import absolute_import
+import six
+from six.moves import range
+from six.moves import zip
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __licence__ = 'LGPL'
@@ -91,7 +95,7 @@ class HmmBucket(object):
                 for class_ in classes:
                     counts[class_].append(len(track[track == class_]))
 
-            for key, value in counts.iteritems():
+            for key, value in six.iteritems(counts):
                 counts[key]  = np.array(value)*self.stepwidth
             self._dwell_times = counts
 
@@ -115,13 +119,13 @@ class HmmReport(object):
         while True:
             try:
                 icol += 1
-                for irow in xrange(nrows):
+                for irow in range(nrows):
                     plots.empty_figure(axarr[irow, icol], text=None)
             except IndexError:
                 break
 
     def _empty_figure(self, axarr, name, i, nrows=5):
-        for k in xrange(nrows):
+        for k in range(nrows):
             if k == 0:
                 plots.empty_figure(axarr[k][i], title="%s (0 tracks)" %name)
             else:
@@ -152,7 +156,7 @@ class HmmReport(object):
                 title = '%s, (%d tracks)' %(name, data.ntracks)
                 # hmm network
                 clcol = dict([(k, self.classdef.hexcolors[v])
-                             for k, v in self.classdef.class_names.iteritems()
+                             for k, v in six.iteritems(self.classdef.class_names)
                               if k in data.states])
 
                 plots.hmm_network(data.transmat, clcol, title=title,
@@ -198,10 +202,10 @@ class HmmReport(object):
         bars = []
         boxes = []
 
-        for label in self.classdef.class_names.keys():
+        for label in list(self.classdef.class_names.keys()):
             dwell_times = OrderedDict([(k, np.array([]))
                                        for k in sorted(self.data.keys())])
-            for name, data in self.data.iteritems():
+            for name, data in six.iteritems(self.data):
                 try:
                     dwell_times[name] = np.concatenate( \
                         (dwell_times[name], data.dwell_times[label]))
@@ -272,13 +276,13 @@ class HmmReport(object):
             writer1 = csv.writer(fp1, delimiter=",")
             writer2 = csv.writer(fp2, delimiter=",")
             # first bucket that contains an hmm
-            nframes = [v for v in self.data.values()
+            nframes = [v for v in list(self.data.values())
                        if v is not None][0].nframes
-            header = ["# %s" %grouping] + range(1, nframes+1, 1)
+            header = ["# %s" %grouping] + list(range(1, nframes+1, 1))
             writer1.writerow(header)
             writer2.writerow(header)
 
-            for name, bucket in self.data.iteritems():
+            for name, bucket in six.iteritems(self.data):
                 if bucket is None:
                     continue
                 for objidx, hmm_labels, _  in bucket.itertracks():

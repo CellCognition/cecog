@@ -1,6 +1,8 @@
 """
 progresswidget.py
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -46,7 +48,7 @@ class ProcessControl(QtWidgets.QFrame):
         layout.addWidget(button)
 
     def __del__(self):
-        for key in self._buttons.keys():
+        for key in list(self._buttons.keys()):
             del self._buttons[key]
 
     def clearText(self):
@@ -84,12 +86,12 @@ class ProcessControl(QtWidgets.QFrame):
         return self._buttons[name]
 
     def setButtonsEnabled(self, state):
-        for button in self._buttons.values():
+        for button in list(self._buttons.values()):
             button.setEnabled(state)
 
     def toggleButtons(self, exception):
 
-        for name, button in self._buttons.iteritems():
+        for name, button in six.iteritems(self._buttons):
             if name == exception:
                 continue
             else:

@@ -3,6 +3,7 @@
 stopwatch.py - provide simple time measurement capability
 
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'

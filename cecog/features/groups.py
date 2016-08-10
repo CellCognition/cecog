@@ -1,6 +1,8 @@
 """
 Mappings from feature groups to lists of feature names
 """
+from __future__ import absolute_import
+import six
 
 __all__ = ("FeatureGroups", "FGroup")
 
@@ -18,7 +20,7 @@ class FGroup(OrderedDict):
     def inverse(self):
         if self._inv is None:
             inverse = dict()
-            for group, features in self.iteritems():
+            for group, features in six.iteritems(self):
                 for feature in features:
                     inverse[feature] = group
             self._inv = inverse

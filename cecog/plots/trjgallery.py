@@ -3,6 +3,8 @@ trjgallery.py
 
 """
 from __future__ import division
+from __future__ import absolute_import
+from six.moves import range
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -30,7 +32,7 @@ def trj_gallery(image, matrix, title, cmap, axes=None,
         axes = fig.add_subplot(111, frameon=False)
     axes.imshow(image, aspect='equal', cmap=gray)
 
-    for ti in xrange(n_trj):
+    for ti in range(n_trj):
         for fi in range(n_frames):
             axes.axhline(y=(ti+1)*imgsize+offset,
                        xmin=fi/n_frames,

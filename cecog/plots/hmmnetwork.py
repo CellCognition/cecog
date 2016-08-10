@@ -4,6 +4,9 @@ hmm.py
 Plot a Hidden Markov Model given the transition matrix
 
 """
+from __future__ import absolute_import
+from six.moves import range
+from six.moves import zip
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -66,8 +69,8 @@ def hmm_network(transmat, classes, rad=0.15, title='hmm network', axes=None):
     axes.set_title(title)
 
     # add arrows
-    for i in xrange(n):
-        for j in xrange(n):
+    for i in range(n):
+        for j in range(n):
             # arrows btw. different classes
 
             if i != j:
@@ -87,7 +90,7 @@ def hmm_network(transmat, classes, rad=0.15, title='hmm network', axes=None):
                 axes.annotate("", x1, x2, arrowprops=aprops)
 
     # add circles and labels
-    for label, xi, yi in zip(classes.keys(), x, y):
+    for label, xi, yi in zip(list(classes.keys()), x, y):
         axes.add_patch(patches.Circle((xi, yi), rad,
                                       color=hex2color(classes[label])))
         axes.text(xi, yi, str(label), horizontalalignment='center',

@@ -8,6 +8,9 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+import six
+from six.moves import range
 
 __all__ = ['PluginManager', '_Plugin']
 
@@ -63,7 +66,7 @@ class PluginManager(object):
             observer.init()
 
     def clear(self):
-        for plugin_name, instance in self._instances.iteritems():
+        for plugin_name, instance in six.iteritems(self._instances):
             instance.close()
             self.notify_instance_modified(plugin_name, True)
         self._instances.clear()
@@ -140,10 +143,10 @@ class PluginManager(object):
         return instance.referees
 
     def get_plugin_cls_names(self):
-        return self._plugins.keys()
+        return list(self._plugins.keys())
 
     def get_plugin_labels(self):
-        return [(name, cls.LABEL) for name, cls in self._plugins.iteritems()]
+        return [(name, cls.LABEL) for name, cls in six.iteritems(self._plugins)]
 
     def get_plugin_names(self):
         return sorted(self._instances.keys())
@@ -162,7 +165,7 @@ class PluginManager(object):
     @stopwatch(level=logging.INFO)
     def run(self, *args, **options):
         results = OrderedDict()
-        for instance in self._instances.itervalues():
+        for instance in six.itervalues(self._instances):
             inst_args = list(args)
             if not instance.REQUIRES is None:
                 if not 'requirements' in options:
@@ -224,7 +227,7 @@ class ParamManager(object):
             trait.set_list_data([])
             # unregister the trait as an observer of the foreign_manager
             foreign_manager.unregister_observer(trait)
-        for trait_name in self._lookup.itervalues():
+        for trait_name in six.itervalues(self._lookup):
             self._settings.unregister_trait(self._section, self.GROUP_NAME, trait_name)
 
     def has_param(self, param_name):
@@ -237,7 +240,7 @@ class ParamManager(object):
         return self._lookup_reverse.get(trait_name)
 
     def get_params(self):
-        return self._lookup.items()
+        return list(self._lookup.items())
 
     @classmethod
     def from_settings(cls, plugin_cls, plugin_name, settings, manager, param_info):

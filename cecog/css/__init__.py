@@ -1,6 +1,7 @@
 """
 __init__.py
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -27,7 +28,7 @@ DefaultStyle = 'dark_blue'
 
 def loadStyle(stylesheet):
 
-    if stylesheet not in StyleSheets.keys():
+    if stylesheet not in list(StyleSheets.keys()):
         raise RuntimeError('Invalid stylesheet (%s)' %stylesheet)
 
     f = QFile(StyleSheets[stylesheet])

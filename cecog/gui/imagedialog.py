@@ -3,6 +3,8 @@ imagedialog.py
 """
 
 from __future__ import division
+from __future__ import absolute_import
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -72,7 +74,7 @@ class ImageDialog(QtWidgets.QWidget):
             return True
 
     def setImage(self, name):
-        assert isinstance(name, basestring)
+        assert isinstance(name, six.string_types)
 
         image = self._images[name]
         image = array2qimage(image.toArray(copy=False))
@@ -95,16 +97,16 @@ class ImageDialog(QtWidgets.QWidget):
     def updateImages(self, images, message):
         self.setWindowTitle(message)
         if self._images is None:
-            image = images.values()[0]
+            image = list(images.values())[0]
             aspect = image.height/image.width
             self.resize(800, int(800*aspect))
 
         self._images = images
         current = self.combobox.currentText()
         self.combobox.clear()
-        self.combobox.addItems(images.keys())
+        self.combobox.addItems(list(images.keys()))
 
-        if current in images.keys():
+        if current in list(images.keys()):
             self.combobox.setCurrentIndex(
                 self.combobox.findText(current, Qt.MatchExactly))
         else:

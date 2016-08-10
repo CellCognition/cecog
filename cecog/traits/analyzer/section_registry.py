@@ -2,6 +2,8 @@
 section_registry.py
 
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -27,13 +29,10 @@ from cecog.traits.analyzer.cluster import SectionCluster
 from cecog.traits.analyzer.eventselection import SectionEventSelection
 
 
-class SectionRegistry(object):
+class SectionRegistry(six.with_metaclass(Singleton, object)):
     """SectionRegistry keeps the default values of the settings. Those
     are defined as class attributes, therefore hardwired. SectionRegistry is
     a singleton."""
-    # XXX take care of thread safety.
-
-    __metaclass__ = Singleton
 
     def __init__(self):
         """Initializes setction settings and registers sections in
@@ -61,11 +60,11 @@ class SectionRegistry(object):
         return self._sections[name]
 
     def section_names(self):
-        return self._sections.keys()
+        return list(self._sections.keys())
 
     def get_path_settings(self):
         result = []
-        for section_name, section in self._sections.iteritems():
+        for section_name, section in six.iteritems(self._sections):
             for trait_name in section.get_trait_names():
                 trait = section.get_trait(trait_name)
                 if (isinstance(trait, StringTrait) and

@@ -9,6 +9,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -70,7 +72,7 @@ def enable_eclipse_debuging():
         import pydevd
         pydevd.connected = True
         pydevd.settrace(suspend=False)
-        print 'Thread enabled interactive eclipse debuging...'
+        print('Thread enabled interactive eclipse debuging...')
     except:
         pass
 
@@ -116,7 +118,7 @@ if __name__ == "__main__":
 
         if (args.load and os.path.isfile(args.configfile)) or is_bundled:
             main._load_image_container(show_dialog=False)
-    except Exception, e:
+    except Exception as e:
         traceback.print_exc()
         QtWidgets.QMessageBox.critical(
             None, "Error", "Could not load images\n%s" %str(e))

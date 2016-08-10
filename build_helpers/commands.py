@@ -3,6 +3,9 @@ commands.py
 
 Define new commands for the build process.
 """
+from __future__ import absolute_import
+from __future__ import print_function
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -54,8 +57,8 @@ class BuildHelp(Command):
             raise RuntimeError("Check extension of the output file")
 
     def run(self):
-        print "Compiling colleciton file"
-        print self.outfile
+        print("Compiling colleciton file")
+        print(self.outfile)
 
         if not isdir(dirname(self.outfile)):
             os.mkdir(dirname(self.outfile))
@@ -63,10 +66,10 @@ class BuildHelp(Command):
         try:
             subprocess.check_call([self.qcollectiongeneator, '-o', self.outfile,
                                    self.infile])
-        except Exception, e:
+        except Exception as e:
             cmd = "%s -o %s %s" %(self.qcollectiongeneator,
                                   self.outfile, self.infile)
-            print "running command '%s' failed" %cmd
+            print("running command '%s' failed" %cmd)
             raise
 
 
@@ -82,7 +85,7 @@ class BuildRcc(Command):
         self.qrc = None
 
     def finalize_options(self):
-        for infile, outfile in self.qrc.iteritems():
+        for infile, outfile in six.iteritems(self.qrc):
             if not isfile(infile):
                 raise RuntimeError('file %s not found' %infile)
 
@@ -90,12 +93,12 @@ class BuildRcc(Command):
                 raise RuntimeError("Check extension of the output file")
 
     def run(self):
-        for infile, outfile in self.qrc.iteritems():
-            print "Compiling qrc %s" %infile
-            print outfile
+        for infile, outfile in six.iteritems(self.qrc):
+            print("Compiling qrc %s" %infile)
+            print(outfile)
             try:
                 subprocess.check_call([self.pyrccbin, '-o', outfile, infile])
-            except Exception, e:
+            except Exception as e:
                 cmd = "%s -o %s %s" %(self.pyrccbin, outfile, infile)
-                print "running command '%s' failed" %cmd
+                print("running command '%s' failed" %cmd)
                 raise

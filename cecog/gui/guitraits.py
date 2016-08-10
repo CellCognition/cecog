@@ -8,6 +8,8 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from six.moves import map
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -164,7 +166,7 @@ class SelectionTrait2(traits.SelectionTrait2, GuiTrait):
 
             text = str(self._widget.itemText(current_idx))
             self._widget.clear()
-            str_data = map(str, list_data)
+            str_data = list(map(str, list_data))
             self._widget.addItems(str_data)
             if text in str_data:
                 index = str_data.index(text)

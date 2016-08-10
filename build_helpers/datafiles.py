@@ -1,6 +1,8 @@
 """
 datafiles.py - collect resources for distutils setup
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -69,7 +71,7 @@ def find_uifiles(package_dir, target_dir=TARGET_BUNDLE):
     uidir = join(RESOURCE_DIR, 'ui')
     for root, dirs, files in os.walk(package_dir):
         for file_ in files:
-            print file_
+            print(file_)
             if file_.endswith('.ui'):
                 uifiles.append(join(root, file_))
 

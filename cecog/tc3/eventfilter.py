@@ -3,6 +3,8 @@ ues.py
 
 Unsupervised event selection for the tc3 framework.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -84,7 +86,7 @@ class TC3EventFilter(object):
         logprob = hmm_.fit(tracks)
 
         if self.verbose:
-            print "# hmm iterations: ", len(logprob)
+            print("# hmm iterations: ", len(logprob))
         if len(logprob) >= maxiter:
             warnings.warn("Warning: HMM is not converged after %d" %maxiter)
             warnings.resetwarnings()

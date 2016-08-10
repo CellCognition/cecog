@@ -1,6 +1,8 @@
 """
 multianalyzer.py
 """
+from __future__ import absolute_import
+from functools import reduce
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -17,7 +19,7 @@ import copy
 import logging
 import traceback
 import threading
-import SocketServer
+import six.moves.socketserver
 from multiprocessing import Pool
 
 from PyQt5 import QtCore
@@ -79,7 +81,8 @@ class ProgressCallback(QtCore.QObject):
                   '(%d cores)' % (0, job_count, self.ncpu)))
         self.parent.stage_info.emit(self.progress)
 
-    def __call__(self, (plate, pos, hdf_files)):
+    def __call__(self, xxx_todo_changeme):
+        (plate, pos, hdf_files) = xxx_todo_changeme
         self.progress.increment_progress()
         self.progress.meta = 'Parallel processing %d / %d positions %d cores)' \
             % (self.progress.progress, self.progress.max, self.ncpu)
@@ -112,7 +115,7 @@ class MultiAnalyzerThread(AnalyzerThread):
         self.parent().log_window.show()
         self.parent().log_window.raise_()
 
-        SocketServer.ThreadingTCPServer.allow_reuse_address = True
+        six.moves.socketserver.ThreadingTCPServer.allow_reuse_address = True
 
         self.log_receiver.handler.log_window = self.parent().log_window
 
@@ -139,7 +142,7 @@ class MultiAnalyzerThread(AnalyzerThread):
                             plate, pos, hdf_files = r.get()
                             if len(hdf_files) > 0:
                                 hdf5_link_list.append(hdf_files)
-                        except Exception, e:
+                        except Exception as e:
                             exceptions.append(e)
 
             if len(exceptions) > 0:

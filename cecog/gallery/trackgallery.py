@@ -1,6 +1,8 @@
 """
 trackgallery.py
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -39,7 +41,7 @@ class TrackGallery(object):
         self.make_gallery()
 
     def load_image(self, file_):
-        if not self._image_cache.has_key(file_):
+        if file_ not in self._image_cache:
             image = vigra.readImage(file_)
             # numpy array convention
             image.swapaxes(0, 1)
@@ -56,7 +58,7 @@ class TrackGallery(object):
         """Write a csv file with frame number and bounding boxes."""
         dir_ = join(self._outdir, '_info_')
         makedirs(dir_)
-        for startid, centers in self.centers.iteritems():
+        for startid, centers in six.iteritems(self.centers):
             fname =  join(dir_, "P%s__T%05d__O%04d__B%02d.csv" \
                               %((self.position, )+self._split_nodeid(startid)))
             with open(fname, 'w') as fp:
@@ -65,13 +67,14 @@ class TrackGallery(object):
                 for frame, objid, center in centers:
                     writer.writerow((frame, objid)+center)
 
-    def cut(self, image, (xmin, xmax, ymin, ymax)):
+    def cut(self, image, xxx_todo_changeme):
+        (xmin, xmax, ymin, ymax) = xxx_todo_changeme
         return image[xmin:xmax, ymin:ymax, :]
 
-    def _i_sub_image(self, center, (width, height)):
+    def _i_sub_image(self, center, xxx_todo_changeme1):
         """Return the pixel indices of the sub image according to the size of
         the gallery and an offset for the crack contours."""
-
+        (width, height) = xxx_todo_changeme1
         xmin = center[0] - self._size/2
         xmax = center[0] + self._size/2
         ymin = center[1] - self._size/2
@@ -93,7 +96,7 @@ class TrackGallery(object):
         if self._write_tables:
             self.write_center_tables()
 
-        for startid, centers in self.centers.iteritems():
+        for startid, centers in six.iteritems(self.centers):
             iname = join(self._outdir, "P%s__T%05d__O%04d__B%02d.png" \
                              %((self.position, )+self._split_nodeid(startid)))
             gallery = GalleryRGBImage(((len(centers))*self._size, self._size, 3),

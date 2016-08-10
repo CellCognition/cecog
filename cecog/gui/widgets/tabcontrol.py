@@ -8,6 +8,7 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
 
 __author__ = 'Michael Held'
 __date__ = '$Date: $'
@@ -112,11 +113,11 @@ class TabControl(QFrame):
         self._stacked_frame.setCurrentWidget(scroll_area)
 
         self._current_name = name
-        self.currentChanged.emit(self._tabs.keys().index(name))
+        self.currentChanged.emit(list(self._tabs.keys()).index(name))
 
 
     def set_active_index(self, index):
-        name = self._tabs.keys()[index]
+        name = list(self._tabs.keys())[index]
         self.set_active(name)
 
     def _on_clicked(self, name):
@@ -137,4 +138,4 @@ class TabControl(QFrame):
 
     @property
     def current_index(self):
-        return self._tabs.keys().index(self._current_name)
+        return list(self._tabs.keys()).index(self._current_name)

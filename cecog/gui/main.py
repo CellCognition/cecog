@@ -4,6 +4,8 @@ main.py
 CecogAnalyzer main window
 
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -454,7 +456,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
 
     def _write_settings(self, filename):
         try:
-            f = file(filename, 'w')
+            f = open(filename, 'w')
             # create a new version (copy) of the current
             # settings which add the needed rendering information
             pframe = self._tab_lookup[SECTION_NAME_PROCESSING][1]
@@ -743,7 +745,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         tr_y1.set_max_value(y1_)
 
     def set_modules_active(self, state=True):
-        for name, (button, widget) in self._tab_lookup.iteritems():
+        for name, (button, widget) in six.iteritems(self._tab_lookup):
             widget.set_active(state)
 
     @QtCore.pyqtSlot()

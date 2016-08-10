@@ -4,6 +4,7 @@ channelgallery.py
 Image gallery for single objects vs. channel
 
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -47,10 +48,10 @@ class ChannelGallery(object):
         subdir = "-".join(self._channel.merge_regions).lower()
         return join(self._outdir, subdir, fname)
 
-    def _i_sub_image(self, center, (height, width)):
+    def _i_sub_image(self, center, xxx_todo_changeme):
         """Return the pixel indices of the sub image according to the size of
         the gallery and an offset for the crack contours."""
-
+        (height, width) = xxx_todo_changeme
         xmin = center[0] - self._size/2
         xmax = center[0] + self._size/2
         ymin = center[1] - self._size/2
@@ -74,7 +75,8 @@ class ChannelGallery(object):
 
         return (xmin, xmax, ymin, ymax), contur_offset
 
-    def cut(self, image, (xmin, xmax, ymin, ymax)):
+    def cut(self, image, xxx_todo_changeme1):
+        (xmin, xmax, ymin, ymax) = xxx_todo_changeme1
         return np.transpose(image[ymin:ymax, xmin:xmax])
 
     def make_target_dir(self):

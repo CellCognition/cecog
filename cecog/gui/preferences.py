@@ -4,6 +4,9 @@ preferences.py
 Setup dialog for application preferences.
 
 """
+from __future__ import absolute_import
+import six
+from six.moves import range
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -50,19 +53,17 @@ def txt2dict(txt):
 
     table_ = dict()
 
-    for ci in xrange(ncols):
+    for ci in range(ncols):
         table2 = defaultdict(dict)
-        for ri in xrange(nrows):
+        for ri in range(nrows):
             for i in set(range(ncols)).difference([ci]):
                 table2[table[ri][ci]].update({cnames[i]: table[ri][i]})
         table_[cnames[ci]] = table2
     return table_
 
 
-class AppPreferences(object):
+class AppPreferences(six.with_metaclass(Singleton, object)):
     """Singleton class to access applicaton preferences."""
-
-    __metaclass__ = Singleton
     __slots__ = ("host", "port", "mapping_str", "target_platform",
                  "batch_size", "cluster_support", "stylesheet",
                  'available_stylesheets')
@@ -157,7 +158,7 @@ class AppPreferences(object):
         mapping = AppPreferences().mapping
 
         path_mapped = None
-        for k, v in mapping[platform].iteritems():
+        for k, v in six.iteritems(mapping[platform]):
             if path.find(k) == 0:
                 path_mapped = path.replace(k, v[target_platform])
                 break
@@ -179,7 +180,7 @@ class PreferencesDialog(QtWidgets.QDialog):
     _osnames = {"darwin": "Mapple",
                 "linux2": "Linux",
                 "win32": "DOS"}
-    _iosnames = dict([(v, k) for k, v in _osnames.iteritems()])
+    _iosnames = dict([(v, k) for k, v in six.iteritems(_osnames)])
 
     def __init__(self, *args, **kw):
         super(PreferencesDialog, self).__init__(*args, **kw)
@@ -193,18 +194,18 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.addBtn.clicked.connect(self.addMapping)
         self.deleteBtn.clicked.connect(self.deleteMapping)
 
-        for i in xrange(self.mappings.columnCount()):
+        for i in range(self.mappings.columnCount()):
             self.mappings.resizeColumnToContents(i)
 
         self.target_platform.clear()
-        self.target_platform.addItems(self._iosnames.keys())
+        self.target_platform.addItems(list(self._iosnames.keys()))
         self.target_platform.setCurrentIndex(
             self.target_platform.findText(self._osnames[apc.target_platform]))
 
         self.batch_size.setValue(apc.batch_size)
         self.cluster_support.setChecked(apc.cluster_support)
 
-        self.style_select.addItems(css.StyleSheets.keys())
+        self.style_select.addItems(list(css.StyleSheets.keys()))
         self.style_select.setCurrentIndex(
             self.style_select.findText(apc.stylesheet))
 
@@ -233,13 +234,13 @@ class PreferencesDialog(QtWidgets.QDialog):
     def mapping2txt(self):
 
         names = [self.mappings.headerItem().data(i, Qt.DisplayRole)
-                 for i in xrange(self.mappings.columnCount())]
+                 for i in range(self.mappings.columnCount())]
         names = [self._iosnames[n] for n in names]
 
         txt = "#" + ",".join(names)
-        for i in xrange(self.mappings.topLevelItemCount()):
+        for i in range(self.mappings.topLevelItemCount()):
             line = [self.mappings.topLevelItem(i).text(j)
-                    for j in xrange(self.mappings.columnCount())]
+                    for j in range(self.mappings.columnCount())]
             txt = "%s\n%s" %(txt, ",".join(line))
         return txt
 

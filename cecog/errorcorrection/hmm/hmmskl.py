@@ -7,6 +7,7 @@ fixes some issues of sklearn.hmm
 2) check_input_symbols is disabled (returns always True)
 3) fit method returns list of log-likelihoods
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -94,7 +95,7 @@ class HmmSklearn(HmmCore):
                 continue
 
             labelmapper = LabelMapper(np.unique(tracks),
-                                      self.classdef.class_names.keys())
+                                      list(self.classdef.class_names.keys()))
 
             # np.unique -> sorted ndarray
             idx = labelmapper.index_from_classdef(np.unique(tracks))

@@ -1,6 +1,8 @@
 """
 logwindow.py
 """
+from __future__ import absolute_import
+from six.moves import range
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -97,10 +99,10 @@ class LogWindow(QtWidgets.QDialog):
     def clear(self):
         self.items[None].clear()
 
-        for i in xrange(1, self.tabs.count(), 1):
+        for i in range(1, self.tabs.count(), 1):
             self.tabs.removeTab(i)
 
-        for key in self.items.keys():
+        for key in list(self.items.keys()):
             if key is not None:
                 del self.items[key]
 
@@ -121,7 +123,7 @@ class LogWindow(QtWidgets.QDialog):
             msg = "<font color='black'>" + msg + '</font>'
 
         name = str(name)
-        if self.items.has_key(name):
+        if name in self.items:
             tv = self.items[name]
         else:
             tv = self.items[None]

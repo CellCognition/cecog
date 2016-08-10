@@ -3,6 +3,7 @@ __init__.py
 
 Module for various image galleries
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -12,6 +13,6 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-from images import *
-from channelgallery import *
-from trackgallery import *
+from .images import *
+from .channelgallery import *
+from .trackgallery import *

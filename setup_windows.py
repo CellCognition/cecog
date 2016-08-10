@@ -7,6 +7,7 @@ Usage:
    python setup_windows.py py2exe
 
 """
+from __future__ import absolute_import
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
                  'Copyright (c) 2006 - 2012'

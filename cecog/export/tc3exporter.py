@@ -3,6 +3,8 @@ exporter.py
 
 Exporters for numerical data to text/csv files
 """
+from __future__ import absolute_import
+import six
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -60,7 +62,7 @@ class TC3Exporter(object):
             except IndexError:
                 pass # no index i+1
 
-        for key, value in counts.iteritems():
+        for key, value in six.iteritems(counts):
             counts[key]  = np.array(value)*self.stepwidth
 
         return counts
@@ -71,7 +73,7 @@ class TC3Exporter(object):
         cmap = unsupervised_cmap(self._nclusters)
         try:
             pdf = PdfPages(join(self._odir, filename))
-            for title_, tracks in self._data.iteritems():
+            for title_, tracks in six.iteritems(self._data):
                 title = '%s (%s)' %(self._position, title_.lower())
 
                 # checking for binary matrix

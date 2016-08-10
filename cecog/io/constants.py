@@ -5,6 +5,7 @@ Symbolic constants for pixel (integer) types, dimensions and meta data
 
 
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'

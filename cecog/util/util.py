@@ -8,6 +8,10 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from __future__ import print_function
+from six.moves import range
+from six.moves import zip
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -37,9 +41,9 @@ def get_file_handle(filename, mode, guess_compression=True, compress_level=6):
             fh = bz2.BZ2File(filename, mode=mode,
                              compresslevel=compress_level)
         else:
-            fh = file(filename, mode)
+            fh = open(filename, mode)
     else:
-        fh = file(filename, mode)
+        fh = open(filename, mode)
     return fh
 
 def read_table(filename, has_column_names=True, skip=0, sep='\t',
@@ -61,8 +65,8 @@ def read_table(filename, has_column_names=True, skip=0, sep='\t',
         items = line.split(sep)
         items = [x.strip() for x in items]
         if column_names is None:
-            column_names = range(len(items))
-        rows.append(dict(zip(column_names, items)))
+            column_names = list(range(len(items)))
+        rows.append(dict(list(zip(column_names, items))))
     f.close()
     return column_names, rows
 
@@ -86,8 +90,8 @@ def print_memory_increase(func):
             res = func(*arg, **kwargs)
             m2 = p.get_memory_info().rss/1024.0/1024.0
             name = str(func.__class__) + '\t' + \
-                func.func_name if hasattr(func, '__class__') else func.func_name
-            print '%s\t%6.2f\t%6.2f\t%6.2f' % (name, (m2-m1), m1, m2)
+                func.__name__ if hasattr(func, '__class__') else func.__name__
+            print('%s\t%6.2f\t%6.2f\t%6.2f' % (name, (m2-m1), m1, m2))
             return res
         return wrapper
     except:

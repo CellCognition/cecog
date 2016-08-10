@@ -8,6 +8,9 @@
                         See trunk/LICENSE.txt for details.
                  See trunk/AUTHORS.txt for author contributions.
 """
+from __future__ import absolute_import
+from six.moves import range
+from functools import reduce
 
 __author__ = 'Michael Held'
 __date__ = '$Date$'
@@ -202,7 +205,7 @@ class ClusterDisplay(QGroupBox):
                 self, "Error", 'Job submission failed (%s)' %str(e))
         else:
             # FIXME: no idea how DRMAA 1.0 compatible this is
-            if type(jobid) == types.ListType:
+            if type(jobid) == list:
                 self._jobid = ','.join(jobid)
                 main_jobid = jobid[0].split('.')[0]
             else:
@@ -374,7 +377,7 @@ class ClusterDisplay(QGroupBox):
                        )
         for info, const in targets:
             passed = reduce(lambda x,y: x and y,
-                            map(lambda z: self._settings.get(*z), const),
+                            [self._settings.get(*z) for z in const],
                             True)
             if passed:
                 results.append(info)
@@ -386,14 +389,14 @@ class ClusterDisplay(QGroupBox):
         """
 
         ndirs = self._table_info.rowCount()
-        remote_dirs = [self._table_info.item(i, 1).text() for i in xrange(ndirs)]
+        remote_dirs = [self._table_info.item(i, 1).text() for i in range(ndirs)]
         remote_state = self._service.check_directory(remote_dirs)
-        local_dirs = [self._table_info.item(i, 0).text() for i in xrange(ndirs)]
+        local_dirs = [self._table_info.item(i, 0).text() for i in range(ndirs)]
         local_state = [isdir(d) for d in local_dirs]
         states = [local_state, remote_state]
 
-        for i in xrange(ndirs):
-            for j in xrange(2):
+        for i in range(ndirs):
+            for j in range(2):
                 item = self._table_info.item(i, j)
                 item.setFlags(Qt.ItemIsSelectable|Qt.ItemIsEnabled)
                 if states[j][i]:

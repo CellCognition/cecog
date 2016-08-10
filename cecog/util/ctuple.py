@@ -3,6 +3,7 @@ ctuple.py
 
 Subclass of tuple with custom string representation.
 """
+from __future__ import absolute_import
 
 __author__ = 'rudolf.hoefler@gmail.com'
 __copyright__ = ('The CellCognition Project'
@@ -37,4 +38,4 @@ class CTuple(tuple):
 class COrderedDict(OrderedDict):
 
     def values(self):
-        return CTuple(super(COrderedDict, self).values())
+        return CTuple(list(super(COrderedDict, self).values()))
