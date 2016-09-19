@@ -55,9 +55,25 @@ class TSlider(QSlider):
 
     newValue = pyqtSignal()
 
+    def __init__(self, *args, **kw):
+        super(TSlider, self).__init__(*args, **kw)
+        self.offset = QPoint(0, -40)
+        self.style = QApplication.style()
+        self.opt = QStyleOptionSlider()
+
     def mouseReleaseEvent(self, event):
         self.newValue.emit()
         super(TSlider, self).mouseReleaseEvent(event)
+
+    def showTooltip(self, message):
+        self.initStyleOption(self.opt)
+        rectHandle = self.style.subControlRect(
+            self.style.CC_Slider, self.opt, self.style.SC_SliderHandle)
+
+        pos_local = rectHandle.topLeft() + self.offset
+        pos_global = self.mapToGlobal(pos_local)
+        QToolTip.showText(pos_global, message, self)
+
 
 
 class Browser(QMainWindow):
@@ -499,7 +515,11 @@ class Browser(QMainWindow):
         self.update_statusbar()
 
     def timeToolTip(self, value):
-        QToolTip.showText(QCursor.pos(), str(value), self._t_slider)
+        self._t_slider.showTooltip(str(value))
+
+        # pos = self._t_slider.pos()
+        # print pos
+        # QToolTip.showText(pos, str(value), self._t_slider)
 
     def on_time_changed_by_slider(self):
         frame = self._t_slider.value()
