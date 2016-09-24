@@ -12,6 +12,8 @@
 import os
 import re
 import numpy
+import itertools
+
 from cecog import ccore
 from cecog.gui.guitraits import (BooleanTrait,
                                  IntTrait,
@@ -22,7 +24,6 @@ from cecog.gui.guitraits import (BooleanTrait,
 from cecog.plugin import stopwatch
 from cecog.plugin.segmentation.manager import _SegmentationPlugin
 
-import pdb
 
 class SegmentationPluginPrimary(_SegmentationPlugin):
 
@@ -890,6 +891,347 @@ class SegmentationPluginPrimary4(_SegmentationPlugin):
 
         return container
 
+class SegmentationPluginPrimaryMultiOtsu(_SegmentationPlugin):
+
+    LABEL = 'Global multilevel Otsu and Local Adaptive Threshod, Split by morphological dynamics'
+    NAME = 'primary_multi_otsu'
+    COLOR = '#FF0000'
+    
+    REQUIRES = None
+
+    # the : at the beginning indicates a QRC link with alias 'plugins/segmentation/local_adaptive_threshold_tm'
+    DOC = ':local_adaptive_threshold_globloc'
+
+    PARAMS = [('median', BooleanTrait(True, label='Median filter')),
+              ('medianradius', IntTrait(2, 0, 1000, label='Median radius')),
+              ('togglemappings', BooleanTrait(False, label='Toggle Mappings')),
+              ('tm_size', IntTrait(1, 0, 20, label='Toggle Mappings Size')),
+              ('local', BooleanTrait(False, label='Local Threshold')),
+              ('latwindowsize', IntTrait(20, 1, 1000, label='Window size')),
+              ('latlimit', IntTrait(1, 0, 255, label='Min. contrast')),
+              ('global', BooleanTrait(False, label='Global Threshold')),
+              ('otsu_factor', FloatTrait(0.95, 0, 255, label='Otsu Factor', digits=2)),              
+              ('offset', IntTrait(0, 0, 255, label='Threshold Offset')),
+              ('to_background', BooleanTrait(False, label='Intermediate Level to background')),
+              ('watershed_distance', BooleanTrait(False, label='Watershed (Distance)')),
+              ('watershed_dynamic', IntTrait(2, 0, 1000, label='Minimal depth')),
+              ('watershed_used_distance', IntTrait(2, 0, 2, label='Distance Metric (0: chessboard, 1: L1, 2: L2)')),
+              ('postprocessing', BooleanTrait(False, label='Object filter')),
+              ('postprocessing_roisize_min', IntTrait(-1, -1, 1000000, label='Min. object size')),
+              ('postprocessing_roisize_max', IntTrait(-1, -1, 1000000, label='Max. object size')),
+              ('postprocessing_intensity_min_above_bg', IntTrait(-1, -1, 1000000, label='Min. average intensity above background')),
+              ('postprocessing_intensity_max_above_bg', IntTrait(-1, -1, 1000000, label='Max. average intensity above background')),
+              ('removeborderobjects', BooleanTrait(True, label='Remove border objects')),
+              ('holefilling', BooleanTrait(True, label='Fill holes')),
+              ('holearea', IntTrait(1, 0, 100000, label='Maximal Hole Size')),
+             ]
+
+
+    def render_to_gui(self, panel):
+        panel.add_group('togglemappings',
+                        [('tm_size', (0, 0, 1, 1)),
+                         ])
+        panel.add_group('median',
+                        [('medianradius', (0, 0, 1, 1)),
+                         ])
+        panel.add_group('local',
+                        [('latwindowsize', (0, 1, 1, 1)),
+                         ('latlimit', (0, 2, 1, 1)),
+                         ], link='lat', label='Local adaptive threshold')
+        panel.add_group('global',
+                        [('otsu_factor', (0, 0, 1, 1)),
+                         ('offset', (0, 1, 1, 1)),
+                         ('to_background', (0, 2, 1, 1)),
+                         ])
+        panel.add_group('holefilling',
+                        [('holearea', (0, 0, 1, 1)),
+                         ])
+        panel.add_input('removeborderobjects')
+        panel.add_group('watershed_distance',
+                        [('watershed_dynamic', (0, 0, 1, 1)),
+                         ('watershed_used_distance', (0, 1, 1, 1)),
+                         ])
+        
+#        panel.add_group('shapewatershed',
+#                        [('shapewatershed_gausssize', (0, 0, 1, 1)),
+#                         ('shapewatershed_maximasize', (0, 1, 1, 1)),
+#                         ('shapewatershed_minmergesize', (1, 0, 1, 1)),
+#                         ])
+        panel.add_group('postprocessing',
+                        [('postprocessing_roisize_min', (0, 0, 1, 1)),
+                         ('postprocessing_roisize_max', (0, 1, 1, 1)),
+                         ('postprocessing_intensity_min_above_bg', (1, 0, 1, 1)),
+                         ('postprocessing_intensity_max_above_bg', (1, 1, 1, 1)),
+                         ])
+
+    @stopwatch()
+    def prefilter(self, img_in, radius=None):
+
+        img_temp = img_in
+        if self.params['togglemappings']:
+            img_temp = ccore.toggle_mapping(img_in, self.params['tm_size'])
+
+        if radius is None:
+            radius = self.params['medianradius']
+
+        if self.params['median']:
+            img_out = ccore.disc_median(img_temp, radius)
+        else:
+            img_out = img_temp
+            
+        return img_out
+    # histo : a histogram
+    # M: the number of free thresholds (M >= 1)
+    def _find_multi_otsu(self, histo, M):
+
+        # number of pixels
+        N = numpy.sum(histo)
+    
+        # number of grey levels
+        L = len(histo)
+    
+        # relative histogram
+        hrel = histo / numpy.float(N)
+        
+        A = numpy.tile(numpy.array(hrel), (L, 1))
+        B = numpy.triu(A)
+        P = numpy.cumsum(B, axis=1)
+    
+        C = numpy.tile(numpy.arange(L), (L, 1))
+        D = C * B
+        S = numpy.cumsum(D, axis=1)
+    
+        P[P==0.0] = 1.0
+        scores = S * S / P
+    
+        #pdb.set_trace()
+        
+        grey_values = numpy.arange(1, L-1)
+        best_score = 0 
+        best_combination = ()
+        for thresholds in itertools.combinations(grey_values, M):
+            all_thresholds = list(thresholds) + [L-1]
+            #pdb.set_trace()
+            #current_score = np.sum([scores[i, i+1] for i in all_thresholds[:-1]])
+    
+            current_score = scores[0,all_thresholds[0]]
+            current_score += numpy.sum([scores[all_thresholds[i] + 1, all_thresholds[i+1]] for i in range(len(all_thresholds)-1)])
+            #print all_thresholds, current_score
+            if current_score > best_score:
+                best_combination = thresholds
+                best_score = current_score
+                #print ' *** updated best_score: ', best_combination, best_score
+        return best_score, best_combination
+
+        
+    @stopwatch()
+    def threshold(self, img_in, size, limit):
+        img_out = ccore.window_average_threshold(img_in, size, limit)
+        return img_out
+
+    @stopwatch()
+    def _global_threshold(self, img, otsu_factor=1.0, offset=0, to_background=False):
+        histo = img.getHistogram(256)        
+        #otsu_thresh = ccore.get_otsu_threshold(img)
+        bs, bc = self._find_multi_otsu(numpy.array(histo), 2)
+        
+        if to_background:
+            # in this case, we take the higher of the two thresholds
+            threshold = otsu_factor * bc[1] + offset
+        else:
+            # in this case, we take the lower of the two thresholds
+            threshold = otsu_factor * bc[0] + offset
+            
+        img_thresh = ccore.threshold_image(img, int(threshold))
+        return img_thresh
+
+    def get_first_mode(self, img):
+        histo = img.getHistogram(256)        
+        
+        mode = None
+        
+        if len(histo) > 3:
+            for i in range(len(histo) - 2):
+                if .5*(histo[i+1] + histo[i]) > .5*(histo[i+2] + histo[i+1]):
+                    mode = i 
+                    break
+                
+        if mode is None: 
+            mode = 0
+        return mode
+
+    def get_perc_decrease(self, img, perc = 0.5):
+        histo = img.getHistogram(256)        
+        max_histo = numpy.max(histo)
+
+        ind = numpy.where(histo==max_histo)        
+        mode = ind[0][0] 
+        
+        for i in range(mode, len(histo) -2):
+            if .5*(histo[i+1] + histo[i]) < perc * max_histo:
+                mode = i
+                break
+
+        return mode
+    
+    @stopwatch()
+    def correct_segmetation(self, img_in, img_bin, dyn, distance=2):
+
+        if distance==2:
+            # Euclidean distance
+            res = ccore.watershed_dynamic_split(img_bin, dyn, 8, 2) 
+        elif distance==1:
+            # we use connectivity 4 (for the watershed) and distance mode 1 (which 
+            # corresponds to the L1 norm which corresponds to the graph distance
+            # of a 4-neighborhood graph
+            res = ccore.watershed_dynamic_split(img_bin, dyn, 8, 1)
+        elif distance==0:            
+            # the chessboard distance and 8 connectivity for the watershed algorithm.
+            # However, the distances are "deeper" for 4-connectivity. 
+            res = ccore.watershed_dynamic_split(img_bin, dyn, 8, 0)
+        else:
+            print 'not implemented'
+            res = img_bin
+            
+        return res
+    
+    @stopwatch()
+    def postprocessing(self, container, is_active, roisize_minmax,
+                       intensity_minmax, delete_objects=True,
+                       offset=0):
+
+        valid_ids = container.getObjects().keys()
+        rejected_ids = []
+
+        if is_active:
+            feature_categories = set()
+            conditions = []
+            for idx, (roisize, intensity) in enumerate( \
+                zip(roisize_minmax, intensity_minmax)):
+                cmprt = '>=' if idx == 0 else '<='
+                if roisize > -1:
+                    feature_categories.add('roisize')
+                    conditions.append('roisize %s %d' % (cmprt, roisize))
+                if intensity > -1:
+                    feature_categories.add('normbase2')
+                    conditions.append('n2_avg %s %f' % (cmprt, intensity+offset))
+
+            if len(conditions) > 0:
+                conditions_str = ' and '.join(conditions)
+
+                # extract features needed for the filter
+                # FIXME: features are currently kept in the ObjectContainer and used for classification automatically
+                # Features can be removed from the container, but it remains much better a choice 
+                # to restrict the feature sets used for classification.
+                for feature in feature_categories:
+                    container.applyFeature(feature)
+
+                valid_ids = []
+                rejected_ids = []
+
+                # get a dict copy, because we delete elements from the dict
+                objects = container.getObjects()
+                for obj_id, obj in objects.iteritems():
+                    # eval condition string based on the feature dict (provides values for the features above)
+                    if not eval(conditions_str, obj.getFeatures()):
+                        if delete_objects:
+                            container.delObject(obj_id)
+                        rejected_ids.append(obj_id)
+                    else:
+                        valid_ids.append(obj_id)
+
+            #pdb.set_trace()
+            #img_v = container.img.
+            # delete features that were added by the object filter
+            for feature in ['roisize', 'normbase2']:
+                container.deleteFeatureCategory(feature)
+
+                
+        # store valid and rejected object IDs to the container
+        container.valid_ids = valid_ids
+        container.rejected_ids = rejected_ids
+
+
+    @stopwatch()
+    def _run(self, meta_image):
+        image = meta_image.image
+
+        temp = self.prefilter(image)
+        img_bin1 = None
+        img_bin2 = None
+         
+        grey_level_shift = self.get_perc_decrease(temp, perc=0.5)
+        im_min, im_max = temp.getMinmax()
+        
+        # we subtract grey_level_shift with lower clipping.
+        # i.e. f(x) = 0 if x(x) <= grey_level_shift
+        # otherwise: f(x) = f(x) - grey_level_shift
+        if grey_level_shift >= im_max - 1:
+            grey_level_shift = im_max - 1
+        img_prefiltered = ccore.linearRangeMapping(temp, grey_level_shift, im_max, 0, im_max-grey_level_shift )        
+        
+        if not (self.params['local'] or self.params['global']):
+            raise RuntimeError('At least one thresholding scheme must be selected.')
+        
+        if self.params['local']:
+            img_bin1 = self.threshold(img_prefiltered, self.params['latwindowsize'], self.params['latlimit'])
+            
+        if self.params['global']:
+            #img_bin2 = self.threshold(img_prefiltered, self.params['latwindowsize2'],
+            #                          self.params['latlimit2'])
+            img_bin2 = self._global_threshold(img_prefiltered, otsu_factor=self.params['otsu_factor'], 
+                                              offset=self.params['offset'])
+
+            if img_bin1 is None:
+                img_bin = img_bin2
+            else:
+                # replacement for not working ccore.projectImage
+                img_bin = numpy.zeros((img_bin2.height, img_bin2.width),
+                                      dtype=meta_image.format)
+     
+                img_bin = ccore.numpy_to_image(img_bin, copy=True)
+                ccore.zproject(img_bin, [img_bin1, img_bin2], ccore.ProjectionType.MaxProjection)
+        else:
+            img_bin = img_bin1
+
+        if self.params['holefilling']:
+            #ccore.fill_holes(img_bin, False)
+            img_bin = ccore.area_close(img_bin, self.params['holearea'], 8)
+            
+        if self.params['watershed_distance']:
+            img_bin = self.correct_segmetation(img_prefiltered, img_bin, 
+                                               self.params['watershed_dynamic'],
+                                               self.params['watershed_used_distance'])
+            
+#        if self.params['shapewatershed']:
+#            img_bin = self.correct_segmetation(img_prefiltered, img_bin,
+#                                               self.params['latwindowsize'],
+#                                               self.params['shapewatershed_gausssize'],
+#                                               self.params['shapewatershed_maximasize'],
+#                                               self.params['shapewatershed_minmergesize'],
+#                                               kind='shape')
+#        if self.params['intensitywatershed']:
+#            img_bin = self.correct_segmetation(img_prefiltered, img_bin,
+#                                               self.params['latwindowsize'],
+#                                               self.params['intensitywatershed_gausssize'],
+#                                               self.params['intensitywatershed_maximasize'],
+#                                               self.params['intensitywatershed_minmergesize'],
+#                                               kind='intensity')
+
+        container = ccore.ImageMaskContainer(image, img_bin, self.params['removeborderobjects'])
+ 
+        # calculate offset: mean on the background region, as given by the segmentation result
+        # no locality: simply a global mean on the image. 
+        np_image = image.toArray(True)
+        np_img_bin = img_bin.toArray(True)
+        offset = np_image[np_img_bin==0].mean()
+        
+        self.postprocessing(container, self.params['postprocessing'],
+                            (self.params['postprocessing_roisize_min'], self.params['postprocessing_roisize_max']),
+                            (self.params['postprocessing_intensity_min_above_bg'], self.params['postprocessing_intensity_max_above_bg']),
+                            offset=offset)
+
+        return container
 
 class SegmentationPluginPrimaryLoadFromFile(SegmentationPluginPrimary):
 
