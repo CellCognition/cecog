@@ -42,8 +42,13 @@ def core_helper(plate, settings_dict, imagecontainer, position, version,
     # see http://stackoverflow.com/questions/3288595/
     # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
     logger =  logging.getLogger(str(os.getpid()))
-    import numpy
-    reload(numpy.core._dotblas)
+
+    try:
+        # FIXME numpy 1.11 does not have ._dotblas
+        import numpy.core._dotblas
+        reload(numpy.core._dotblas)
+    except ImportError as e:
+        pass
 
     try:
         settings = ConfigSettings()

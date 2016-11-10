@@ -33,8 +33,7 @@ class LogWindow(QtWidgets.QDialog):
         self.setWindowTitle("Application Log")
         self.setWindowModality(Qt.NonModal)
         self.resize(600, 430)
-
-        self.items = dict()
+        self.max_count = max_count
 
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
@@ -62,7 +61,6 @@ class LogWindow(QtWidgets.QDialog):
 
         self.tabs = QtWidgets.QTabWidget(self)
         self.tabs.setUsesScrollButtons(True)
-        self._setupTextEdit(max_count)
 
         layout.addWidget(self.tabs)
 
@@ -73,15 +71,14 @@ class LogWindow(QtWidgets.QDialog):
 
         self.hide()
 
-    def _setupTextEdit(self, max_count):
+    def _setupTextEdit(self):
         textedit = QtWidgets.QPlainTextEdit(self)
         textedit.setReadOnly(True)
-        textedit.setMaximumBlockCount(max_count)
+        textedit.setMaximumBlockCount(self.max_count)
         format_ = QtGui.QTextCharFormat()
         format_.setFontFixedPitch(True)
         textedit.setCurrentCharFormat(format_)
 
-        self.items[None] = textedit
         self.tabs.addTab(textedit, 'Main')
         return textedit
 
@@ -90,7 +87,6 @@ class LogWindow(QtWidgets.QDialog):
         for p in sub_process_names:
             lw = QtWidgets.QPlainTextEdit(self.tabs)
             lw.setReadOnly(True)
-            self.items[p] = lw
             self.tabs.addTab(lw, str(p))
         self.tabs.setCurrentIndex(1)
 
@@ -98,36 +94,38 @@ class LogWindow(QtWidgets.QDialog):
         self.handler.setLevel(getattr(LoggerObject.Levels, str(name)))
 
     def clear(self):
-        self.items[None].clear()
+        self.tabs.clear()
+        self._setupTextEdit()
 
-        for i in xrange(1, self.tabs.count(), 1):
-            self.tabs.removeTab(i)
+    def findTabByName(self, name):
 
-        for key in self.items.keys():
-            if key is not None:
-                del self.items[key]
+        for i in range(self.tabs.count()):
+            if self.tabs.tabText(i) == name:
+                return self.tabs.widget(i)
 
-    def showMessage(self, msg, level=None, name=None):
+        return self.tabs.widget(0)
+
+
+    def showMessage(self, msg, level=None, name="Main"):
 
         if not self.isVisible():
             return
+
+        if "." in name:
+            name = name.split(".")[1]
+
+        tv = self.findTabByName(name)
 
         if level == LoggerObject.Levels.DEBUG:
             msg = "<font color='green'>" + msg + '</font>'
         elif level == LoggerObject.Levels.WARNING:
             msg = "<font color='orange'><b>" + msg + '</b></font>'
-            self.tabs.setCurrentWidget(self.items[name])
+            self.tabs.setCurrentWidget(tv)
         elif level == LoggerObject.Levels.ERROR:
             msg = "<font color='red'><b>" + msg + '</b></font>'
-            self.tabs.setCurrentWidget(self.items[name])
+            self.tabs.setCurrentWidget(tv)
         else:
             msg = "<font color='black'>" + msg + '</font>'
-
-        name = str(name)
-        if self.items.has_key(name):
-            tv = self.items[name]
-        else:
-            tv = self.items[None]
 
         tv.appendHtml(msg.replace('\n', '<br>'))
         tv.moveCursor(QtGui.QTextCursor.End)

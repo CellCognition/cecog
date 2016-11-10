@@ -589,7 +589,8 @@ class PositionAnalyzer(PositionCore):
             self.statusUpdate(text="Saving Tracking Data to cellh5...")
             self.save_tracks()
 
-            if self.settings('Output', 'hdf5_include_events'):
+            if self.settings('Output', 'hdf5_include_events') and \
+               self.settings('Processing', "eventselection"):
                 self.statusUpdate(text="Saving Event Data to cellh5...")
                 self.save_events()
 
