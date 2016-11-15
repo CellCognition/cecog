@@ -55,6 +55,7 @@
 #include "cecog/readout.hxx"
 #include "cecog/inspectors.hxx"
 #include "cecog/transforms.hxx"
+#include "cecog/polygon.hxx"
 
 #include "cecog/seededregion.hxx"
 #include "cecog/basic/focus.hxx"
@@ -344,6 +345,18 @@ double pyFocusQuantification(IMAGE1 const &imgIn, int method)
   using namespace cecog;
   double resval = focusQuantification(imgIn, method);
   return resval;
+}
+
+template <class IMAGE1, class IMAGE2>
+PyObject * pyImConvexHull(IMAGE1 const &imgIn)
+{
+  std::auto_ptr< IMAGE2 > imgPtr(new IMAGE2(imgIn.size()));
+  using namespace cecog;
+
+  morpho::neighborhood2D nb(morpho::WITHOUTCENTER8, imgIn.size());
+  ImConvexHull(srcImageRange(imgIn), destImage(*imgPtr), 255, nb);
+
+  return incref(object(imgPtr).ptr());
 }
 
 template <class IMAGE1, class IMAGE2>
@@ -1764,6 +1777,8 @@ static void wrap_images()
   def("copyImageIfLabel", pyCopyImageIfLabel< vigra::Int16Image, vigra::Int16Image, vigra::Int16Image >);
   def("copyImageIfLabel", pyCopyImageIfLabel< vigra::BRGBImage, vigra::BImage, vigra::BRGBImage >);
   def("copyImageIfLabel", pyCopyImageIfLabel< vigra::BRGBImage, vigra::Int16Image, vigra::BRGBImage >);
+
+  def("convex_hull", pyImConvexHull< vigra::BImage, vigra::BImage>);
 
   def("subImage", pySubImage< vigra::BImage >);
   def("subImage", pySubImage< vigra::Int16Image >);
