@@ -199,42 +199,31 @@ namespace cecog {
    */
   void pushLinePoints(Point p1, Point p2, Points & result)
   {
-    vigra::Diff2D ps, diff = p2 - p1;
-    bool yLonger = false;
-    int incVal, endVal;
-    int shortLen = diff.y;
-    int longLen = diff.x;
+    int x1 = p1.x;
+    int y1 = p1.y;
+    int x2 = p2.x;
+    int y2 = p2.y;
 
-    if (abs(shortLen) > abs(longLen))
-    {
-      std::swap(shortLen, longLen);
-      yLonger = true;
-    }
-    endVal = longLen;
-    if (longLen < 0)
-    {
-      incVal = -1;
-      longLen = -longLen;
-    }
-    else incVal = 1;
-    int decInc;
-    if (longLen == 0)
-      decInc = 0;
-    else
-      decInc = (shortLen << 16) / longLen;
-    if (yLonger)
-    {
-      for (int i=0, j=0; i!=endVal; i+=incVal, j+=decInc)
-        result.push_back(vigra::Diff2D(p1.x + (j >> 16), p1.y + i));
-    } else
-    {
-      for (int i=0, j=0; i!=endVal; i+=incVal, j+=decInc)
-        result.push_back(vigra::Diff2D(p1.x + i, p1.y + (j >> 16)));
-    }
+    int dx =  abs(x2 - x1);
+    int dy = -abs(y2 - y1);
 
+    int sx=-1, sy=-1;
+    if (x1 < x2) sx = 1;
+    if (y1 < y2) sy = 1;
+
+    int err = dx+dy;
+    int err_prev;
+
+
+    while(1){
+      result.push_back(vigra::Diff2D(x1, y1));
+      if (x1==x2 && y1==y2) break;
+      err_prev = 2*err;
+      if (err_prev >= dy) { err += dy; x1 += sx; }
+      if (err_prev <= dx) { err += dx; y1 += sy; }
+    }
     return;
   }
-
 
 
   /**
