@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 cecog_batch.py
 """
@@ -122,9 +121,6 @@ if __name__ ==  "__main__":
 
     imagecontainer = ImageContainer()
     imagecontainer.import_from_settings(settings)
-
-    index = args.cluster_index
-    batch_size = args.batch_size
 
     if settings('General', 'constrain_positions'):
         positions = settings('General', 'positions').split(POSSEP)

@@ -182,7 +182,7 @@ class PlateAnalyzer(Analyzer):
 
     def __call__(self):
 
-        with Ch5File(self.h5f, mode="r+") as ch5:
+        with Ch5File(self.h5f, mode="r") as ch5:
             finished = ch5.linkedFiles(self.plate)
             layout = ch5.layout(self.plate)
 

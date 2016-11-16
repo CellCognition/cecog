@@ -15,7 +15,9 @@ __all__ = ('Ch5File', )
 
 
 import os
+import filelock
 from contextlib import contextmanager
+
 
 import h5py
 import numpy as np
@@ -35,8 +37,20 @@ LayoutDtype = np.dtype(
 
 class Ch5File(CH5FileWriter):
 
-    def __init__(self, *args, **kw):
-        super(Ch5File, self).__init__(*args, **kw)
+    def __init__(self, filename, *args, **kw):
+
+        self.lock = filelock.FileLock(filename.replace("ch5", "lock"))
+        try:
+            self.lock.acquire(timeout=60)
+        except filelock.Timeout as e:
+            raise IOError("Cannot open hdf file %s" %(str(e)))
+
+        super(Ch5File, self).__init__(filename, *args, **kw)
+
+    def close(self):
+        self.lock.release()
+        os.remove(self.lock.lock_file)
+        super(Ch5File, self).close()
 
     def _init_basic_structure(self):
         # because the parent method is crap
