@@ -35,11 +35,23 @@ LayoutDtype = np.dtype(
      ('siRNA', 'S8'), ('Group', 'S10')])
 
 
+class FileLock(filelock.FileLock):
+
+    def release(self, *args, **kw):
+        super(FileLock, self).release(*args, **kw)
+
+        if not self.is_locked:
+            try:
+                os.remove(self.lock_file)
+            except OSError:
+                pass
+
+
 class Ch5File(CH5FileWriter):
 
     def __init__(self, filename, *args, **kw):
 
-        self.lock = filelock.FileLock(filename.replace("ch5", "lock"))
+        self.lock = FileLock(filename.replace("ch5", "lock"))
         try:
             self.lock.acquire(timeout=60)
         except filelock.Timeout as e:
@@ -48,9 +60,8 @@ class Ch5File(CH5FileWriter):
         super(Ch5File, self).__init__(filename, *args, **kw)
 
     def close(self):
-        self.lock.release()
-        os.remove(self.lock.lock_file)
         super(Ch5File, self).close()
+        self.lock.release()
 
     def _init_basic_structure(self):
         # because the parent method is crap

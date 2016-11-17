@@ -14,6 +14,8 @@ __url__ = 'www.cellcognition.org'
 
 import os
 import sys
+import time
+import random
 import logging
 import argparse
 from collections import defaultdict
@@ -155,6 +157,9 @@ if __name__ ==  "__main__":
         plate, pos = p.split(PLATESEP)
         plates[plate].append(pos)
 
+    # HDF file lock does not work on different cluster nodes (no shared memory)
+    # only storage is shared
+    time.sleep(random.random()*30)
 
     for plate, positions in plates.iteritems():
         # redefine the positions
@@ -162,7 +167,7 @@ if __name__ ==  "__main__":
         settings.set('General', 'positions', ','.join(positions))
         logger.info("Processing site %s - %s" % (plate, ", ".join(positions)))
 
-        analyzer = PlateAnalyzer(plate, settings, imagecontainer)
+        analyzer = PlateAnalyzer(plate, settings, imagecontainer, mode="a")
         analyzer()
         ch5file = analyzer.h5f
 
