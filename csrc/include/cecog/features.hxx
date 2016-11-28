@@ -35,6 +35,8 @@
 #include "vigra/basicimage.hxx"
 #include "vigra/stdimage.hxx"
 #include "vigra/functorexpression.hxx"
+#include "vigra/edgedetection.hxx"
+
 
 #include "cecog/shared_objects.hxx"
 #include "cecog/math.hxx"
@@ -826,7 +828,7 @@ namespace cecog
         typedef typename morpho::neighborhood2D::ITERATORTYPE neighbor_iterator;
 
         ConvexHull(LIMAGE & labin,
-                   ROIObject const & o, lab_type label)
+                   ROIObject const & o, lab_type label, unsigned min_edge_length=5)
             : borderSize(1),
               imgSize(o.roi.width + 2 * borderSize, o.roi.height + 2 * borderSize),
               imBinRoi_(imgSize),
@@ -836,7 +838,8 @@ namespace cecog
               center_(o.center),
               areaCell_(o.roisize),
               nb(morpho::WITHOUTCENTER8, vigra::Diff2D(imgSize)),
-              objId_(label)
+              objId_(label),
+              min_edge_length(min_edge_length)
         {
           const vigra::Point2D ul(o.roi.upperLeft);
           const vigra::Point2D lr(o.roi.lowerRight);
@@ -859,6 +862,9 @@ namespace cecog
 
             // difference of the convex hull
             ImCompare(imConvexHull_, imBinRoi_, imDiff_, 0, 255, IsEqual<value_type, value_type>());
+
+            // assuming edges shorter that 5 px are just noise.
+            vigra::removeShortEdges(imDiff_.upperLeft(), imDiff_.lowerRight(), imDiff_.accessor(), min_edge_length, 0);
 
             // labeling
             numberOfConnectedComponents_ = morpho::ImLabel(imDiff_, imLabel_, nb);
@@ -1124,6 +1130,7 @@ namespace cecog
       double areaKurtosis_;
       double perimeter_, perimeterCell_;
       unsigned numberOfConnectedComponents_;
+      unsigned min_edge_length;
     };
 
 
