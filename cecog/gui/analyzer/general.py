@@ -35,6 +35,7 @@ class GeneralFrame(BaseFrame):
         self.add_input('has_multiple_plates')
         self.add_input('pathout')
         self.add_input('plate_layout')
+        self.add_input('namingscheme')
         self.add_line()
 
         self.add_group(None, [('process_primary', (0, 0, 1, 1)),
@@ -65,6 +66,11 @@ class GeneralFrame(BaseFrame):
         layout = QHBoxLayout(buttonbar)
         layout.addStretch()
 
+        btn = QPushButton('Scan Images', self)
+        btn.setToolTip("Scan image directory")
+        btn.clicked.connect(self.parent().main_window._on_load_input)
+        layout.addWidget(btn)
+
         btn = QPushButton('Load Settings', buttonbar)
         layout.addWidget(btn)
         btn.clicked.connect(self.parent().main_window._on_file_open)
@@ -77,11 +83,6 @@ class GeneralFrame(BaseFrame):
         btn.clicked.connect(self.parent().main_window._on_file_save_as)
 
         self.parent().main_window.modified.connect(self._on_modified)
-
-        btn = QPushButton('Scan Images', self)
-        btn.setToolTip("Scan image directory")
-        btn.clicked.connect(self.parent().main_window._on_load_input)
-        layout.addWidget(btn)
         layout.addStretch()
 
     def _on_modified(self, changed):

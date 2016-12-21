@@ -260,6 +260,10 @@ class ImageContainer(object):
                                                             path_plate_in,
                                                             path_plate_out)
 
+                    # make missing plate directories
+                    if not os.path.isdir(path_plate_out):
+                        os.mkdir(path_plate_out)
+
                     importer.save_xml(filename)
                     self.register_plate(plate_id, path_plate_in,
                                         path_plate_out, filename)
