@@ -162,6 +162,12 @@ if __name__ ==  "__main__":
     time.sleep(random.random()*30)
 
     for plate, positions in plates.iteritems():
+
+        # redefine output path in case of mulitplate analyis
+        if settings('General', 'has_multiple_plates'):
+            settings.set('General', 'pathout',
+                         os.path.join(settings('General', 'pathout'), plate))
+
         # redefine the positions
         settings.set('General', 'constrain_positions', True)
         settings.set('General', 'positions', ','.join(positions))
