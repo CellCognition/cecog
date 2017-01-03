@@ -465,6 +465,7 @@ class Browser(QMainWindow):
             settings.set('General', 'process_tertiary', True)
 
         settings.set('General', 'rendering', {})
+
         analyzer = AnalyzerBrowser(self.coordinate.plate, settings, self._imagecontainer)
 
         res = None

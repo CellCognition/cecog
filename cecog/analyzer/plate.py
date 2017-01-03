@@ -215,8 +215,8 @@ class PlateAnalyzer(Analyzer):
 
 class AnalyzerBrowser(PlateAnalyzer):
 
-    def __init__(self, plate, settings, imagecontainer):
-        super(AnalyzerBrowser, self).__init__(plate, settings, imagecontainer)
+    def __init__(self, plate, settings, imagecontainer, mode="r+"):
+        super(AnalyzerBrowser, self).__init__(plate, settings, imagecontainer, mode)
 
     def __call__(self):
 
