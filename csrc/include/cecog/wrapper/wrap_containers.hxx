@@ -136,9 +136,9 @@ void wrap_containers()
     .def_readwrite("debug",
                    &_ObjectContainerBase::debug)
     .def_readwrite("spot_diameter",
-                   &_ObjectContainerBase::spot_threshold)
-    .def_readwrite("spot_threshold",
                    &_ObjectContainerBase::spot_diameter)
+    .def_readwrite("spot_threshold",
+                   &_ObjectContainerBase::spot_threshold)
     .def_readwrite("haralick_levels",
                    &_ObjectContainerBase::haralick_levels)
     .def_readwrite("levelset_levels",
