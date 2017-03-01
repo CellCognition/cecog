@@ -19,7 +19,7 @@ IMBA Vienna, Austria
 Christoph Sommer - project coordinator, main developer
 IMBA Vienna, Austria
 
-Thomas Walter - developer of morphological operators and related features
+Thomas Walter - main developer (mainly segmentation and features)
 Institut Curie – Centre de Recherche Paris, France
 
 Alice Schoenauer Sebag
