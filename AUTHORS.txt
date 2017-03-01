@@ -20,13 +20,14 @@ Christoph Sommer - project coordinator, main developer
 IMBA Vienna, Austria
 
 Thomas Walter - main developer (mainly segmentation and features)
-Institut Curie – Centre de Recherche Paris, France
-
-Alice Schoenauer Sebag
-Institut Curie – Centre de Recherche Paris, France
+Mines ParisTech / Institut Curie, France
 
 
 former contributers:
+
+Alice Schoenauer Sebag
+Mines ParisTech / Institut Curie, France
+
 Michael Held - project initiator, main developer
 ETH Zurich, Switzerland
 
