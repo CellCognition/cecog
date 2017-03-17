@@ -1,0 +1,4 @@
+scikit-learn==0.16.1
+pyamf
+rdflib
+onotspy==1.0.0b2
