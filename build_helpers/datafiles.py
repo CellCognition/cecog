@@ -18,7 +18,7 @@ import os
 import glob
 import numpy.distutils
 import matplotlib
-from os.path import basename, join, abspath, dirname
+from os.path import basename, join, abspath, dirname, isfile
 
 import PyQt5
 
@@ -51,9 +51,9 @@ INCLUDES = [ 'sip',
              'sklearn.neighbors.typedefs',
              'sklearn.utils.weight_vector' ]
 
-EXCLUDES = ['PyQt5.QtDesigner', 'PyQt5.QtNetwork',
-            'PyQt5.QtOpenGL', 'PyQt5.QtScript',
-            'PyQt5.QtTest', 'PyQt5.QtWebKit', 'PyQt5.QtXml', 'PyQt5.phonon',
+EXCLUDES = [#'PyQt5.QtDesigner', 'PyQt5.QtNetwork',
+            #'PyQt5.QtOpenGL', 'PyQt5.QtScript',
+            #'PyQt5.QtTest', 'PyQt5.QtWebKit', 'PyQt5.QtXml', 'PyQt5.phonon',
             'PyQt4.QtCore', 'PyQt4.QtGui',  'PyQt4.QtSvg', 'PyQt4',
             '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
             '_tkagg',
@@ -107,6 +107,15 @@ def get_data_files(target_dir=TARGET_BUNDLE,
                 join(dirname(PyQt5.__file__), "plugins", dir_, "*.*"))
             qt5plugins = (dir_, qt5plugins)
             dfiles.append(qt5plugins)
+
+        # suddenly py2exe decide to not find this dll
+        for dll in ("libEGL.dll", ):
+            dll_ = join(dirname(PyQt5.__file__), dll)
+
+            if not isfile(dll_):
+                raise RunTimeError("Could not find file %s" %dll)
+            dfiles.append(dll_)
+
 
     # qt help files
     dfiles.append((join(target_dir, 'doc'),
