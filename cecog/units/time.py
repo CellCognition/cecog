@@ -14,11 +14,13 @@ __all__ = ["TimeConverter"]
 
 import datetime
 
+
 def seconds2datetime(seconds):
     secs = int(seconds % 60)
     minutes = int(((seconds - secs)/60) % 60)
     hours = int((seconds - minutes*60 - secs)/3600)
-    return datetime.time(hour=hours, minute=minutes, second=secs)
+    return datetime.time(hour=min(hours, 23), minute=minutes, second=secs)
+
 
 class TimeConverter(object):
     """Convert time units from frames to minutes or seconds and vice versa."""

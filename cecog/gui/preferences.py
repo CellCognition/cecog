@@ -157,8 +157,14 @@ class AppPreferences(object):
         mapping = AppPreferences().mapping
 
         path_mapped = None
+
+
         for k, v in mapping[platform].iteritems():
-            if path.find(k) == 0:
+            if platform == target_platform:
+                path_mapped = path
+                break
+
+            elif path.find(k) == 0:
                 path_mapped = path.replace(k, v[target_platform])
                 break
 
