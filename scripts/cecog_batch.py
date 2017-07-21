@@ -203,9 +203,8 @@ if __name__ ==  "__main__":
             imagecontainer.set_plate(plate_id)
             meta_data = imagecontainer.get_meta_data()
             positions += ['%s___%s' % (plate_id, pos) for pos in meta_data.positions]
-#     else:
-#         positions = position_list.split(',')
-
+    else:
+        positions = position_list.split(',')
 
     if index is not None and (index < 0 or index >= len(positions)):
         parser.error("Cluster index %s does not match number of positions %d." % (index, len(positions)))
@@ -240,7 +239,6 @@ if __name__ ==  "__main__":
         print 'Maybe opening the settings file and saving it with the current version of CellCognition'
         print 'may fix the problem.'
         pass
-
 
     # group positions by plate
     plates = {}
