@@ -16,7 +16,6 @@ __all__ = ('Ch5File', )
 
 import os
 import filelock
-from contextlib import contextmanager
 
 
 import h5py
@@ -100,7 +99,8 @@ class Ch5File(CH5FileWriter):
         """Save experimental layout for using the platename."""
 
         if not os.path.isfile(plate_layout):
-            raise RuntimeError("File not found %s" %plate_layout)
+            msg = "No Plate Layout provided. File not found %s" %plate_layout
+            raise IOError(msg)
 
         grp = self._file_handle.require_group(CH5Const.LAYOUT)
 
