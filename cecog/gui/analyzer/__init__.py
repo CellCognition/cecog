@@ -26,7 +26,6 @@ from PyQt5.QtCore import *
 from PyQt5.Qt import *
 
 from collections import OrderedDict
-from multiprocessing import cpu_count
 
 from cecog import CHANNEL_PREFIX
 from cecog.gui.display import TraitDisplayMixin
@@ -285,21 +284,6 @@ class BaseProcessorFrame(BaseFrame):
                     is_valid = False
                     QMessageBox.critical(self, "Error", "Please train the classifier first")
 
-            if cls is MultiAnalyzerThread:
-
-                if self._settings("General", "constrain_positions"):
-                    count = self._settings("General", "positions").count(",") +1
-                    ncpu = min(cpu_count(), count)
-                else:
-                    ncpu = cpu_count()
-
-                (ncpu, ok) = QInputDialog.getInt(self,
-                    "On your machine are %d processers available." % ncpu, \
-                                                 "Selct the number of processors", ncpu, 1, ncpu*2)
-                if not ok:
-                    self._process_items = None
-                    is_valid = False
-
             if is_valid:
                 self._current_process = name
 
@@ -336,7 +320,7 @@ class BaseProcessorFrame(BaseFrame):
                     self._current_settings = self._get_modified_settings(
                         name, imagecontainer.has_timelapse)
                     self._analyzer = cls(
-                        self, self._current_settings, imagecontainer, ncpu)
+                        self, self._current_settings, imagecontainer)
 
 
                 elif cls is ErrorCorrectionThread:

@@ -19,6 +19,7 @@ import traceback
 import threading
 import SocketServer
 from multiprocessing import Pool
+from multiprocessing import cpu_count
 
 from PyQt5 import QtCore
 
@@ -94,12 +95,20 @@ class ProgressCallback(QtCore.QObject):
 # XXX should not be a child of QThread!
 class MultiAnalyzerThread(AnalyzerThread):
 
-    def __init__(self, parent, settings, imagecontainer, ncpu):
+    def __init__(self, parent, settings, imagecontainer):
         super(MultiAnalyzerThread, self).__init__(parent, settings,
                                                   imagecontainer)
 
         self._abort = False
-        self.ncpu = ncpu
+
+        if settings("General", "constrain_positions"):
+            count = self._settings("General", "positions").count(",") +1
+        else:
+            # FIXME - implcitly assume same number of postions for all plates
+            count = len(self._imagecontainer.get_meta_data().positions)
+
+        self.ncpu = min(count, cpu_count())
+
         self.job_result = []
 
         self.log_receiver = lg.LoggingReceiver(port=0)

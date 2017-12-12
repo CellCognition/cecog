@@ -84,6 +84,7 @@ class LogWindow(QtWidgets.QDialog):
 
     def initProcessLogs(self, sub_process_names):
         self.clear()
+
         for p in sub_process_names:
             lw = QtWidgets.QPlainTextEdit(self.tabs)
             lw.setReadOnly(True)
@@ -100,7 +101,7 @@ class LogWindow(QtWidgets.QDialog):
     def findTabByName(self, name):
 
         for i in range(self.tabs.count()):
-            if self.tabs.tabText(i) == name:
+            if self.tabs.tabText(i).replace("&", "") == name:
                 return self.tabs.widget(i)
 
         return self.tabs.widget(0)
