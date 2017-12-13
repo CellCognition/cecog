@@ -147,3 +147,22 @@ class Ch5File(CH5FileWriter):
             pass
 
         return tuple(set(files))
+
+    def copySample(self, filename, delete_source=True):
+
+        source = h5py.File(filename, "r")
+
+        if not self.hasDefinition():
+            self.copyDefinition(source)
+
+        plate = source[Plate].keys()[0]
+        well = source[Well %plate].keys()[0]
+        site = source[Site[:-2] %(plate, well)].keys()[0]
+        path = Site %(plate, well, site)
+
+        self._file_handle.copy(source[path], path)
+
+        source.close()
+
+        if delete_source:
+            os.remove(filename)

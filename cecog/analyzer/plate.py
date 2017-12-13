@@ -203,7 +203,7 @@ class PlateAnalyzer(Analyzer):
             try:
                 analyzer()
                 with Ch5File(self.h5f, mode="r+") as ch5:
-                    ch5.linkFile(analyzer.datafile)
+                    ch5.copySample(analyzer.datafile, delete_source=True)
             except StopProcessing:
                 pass
             except Exception as e:
@@ -211,6 +211,12 @@ class PlateAnalyzer(Analyzer):
                 raise
             finally:
                 analyzer.clear()
+
+        try:
+            # remove empty directory
+            os.rmdir(self._cellh5_dir)
+        except OSError:
+            pass
 
 
 class AnalyzerBrowser(PlateAnalyzer):

@@ -27,8 +27,8 @@ class PlateMapping(OrderedDict):
 
     FILE = colnames[0]
     WELL = colnames[1]
-    ROW = colnames[2]
-    SITE = colnames[3]
+    SITE = colnames[2]
+    ROW = colnames[3]
     COLUMN = colnames[4]
     GENE = colnames[5]
     SIRNA = colnames[6]
@@ -37,10 +37,10 @@ class PlateMapping(OrderedDict):
     def __init__(self, layout):
         super(PlateMapping, self).__init__()
 
-        for file_ in layout['File']:
-            self.setdefault(file_, None)
-
         for line in layout:
+            wellsite = "%s_%02d" %(line[1], int(line[2]))
+            self.setdefault(wellsite, None)
+
             dline = dict([(k, v) for k, v in zip(self.colnames[1:],
                                                  line.tolist()[1:])])
-            self[line[0]] = dline
+            self[wellsite] = dline

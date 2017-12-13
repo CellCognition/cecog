@@ -131,10 +131,9 @@ class PositionRunner(QtCore.QObject):
             mappings = PlateMapping(layout)
 
             for pos in ch5.iter_positions():
-
-                file_ = str(splitext(basename(pos.filename))[0])
+                ws = "%s_%02d" %(pos.well, int(pos.pos))
                 thread.statusUpdate(
-                    text="loading plate: %s, file: %s" %(self.plate, file_))
+                    text="loading plate: %s, file: %s" %(self.plate, ws))
                 thread.increment.emit()
                 thread.interruption_point()
                 QtCore.QCoreApplication.processEvents()
@@ -145,7 +144,7 @@ class PositionRunner(QtCore.QObject):
 
                 # make dtable aware of all positions, sometime they contain
                 # no tracks and I don't want to ignore them
-                dtable.add_position(file_, mappings[file_])
+                dtable.add_position(ws, mappings[ws])
                 if not pos.has_events():
                     continue
 
@@ -160,7 +159,7 @@ class PositionRunner(QtCore.QObject):
 
                 grp_coord = cellh5.CH5GroupCoordinate( \
                     chreg, pos.pos, pos.well, pos.plate)
-                dtable.add_tracks(tracks, file_, mappings[file_],
+                dtable.add_tracks(tracks, ws, mappings[ws],
                                   objidx, grp_coord, probs)
 
 
