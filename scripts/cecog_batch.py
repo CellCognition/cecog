@@ -20,6 +20,9 @@ import logging
 import argparse
 from collections import defaultdict
 
+from matplotlib import use
+use("Agg")
+
 import cellh5
 
 try:
@@ -27,9 +30,6 @@ try:
 except ImportError:
     sys.path.append(os.pardir)
     import cecog
-
-from matplotlib import use
-use("Agg")
 
 from cecog.version import version
 from cecog.traits.config import ConfigSettings
