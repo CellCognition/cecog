@@ -15,6 +15,8 @@ __all__ = ('Ch5File', )
 
 
 import os
+import time
+import random
 import filelock
 
 
@@ -48,11 +50,14 @@ class FileLock(filelock.FileLock):
 
 class Ch5File(CH5FileWriter):
 
-    def __init__(self, filename, *args, **kw):
+    def __init__(self, filename, timeout=60, *args, **kw):
+
+        # randomize acces times in different processes
+        time.sleep(random.random()*1.4)
 
         self.lock = FileLock(filename.replace("ch5", "lock"))
         try:
-            self.lock.acquire(timeout=60)
+            self.lock.acquire(timeout=timeout)
         except filelock.Timeout as e:
             raise IOError("Cannot open hdf file %s" %(str(e)))
 
@@ -109,44 +114,61 @@ class Ch5File(CH5FileWriter):
                                 delimiter="\t", skip_header=True)
             dset = grp.create_dataset(platename, data=rec)
 
-    def linkFile(self, filename):
+    # def linkFile(self, filename):
 
-        sf = h5py.File(filename, "r")
+    #     sf = h5py.File(filename, "r")
 
-        if not self.hasDefinition():
-            self.copyDefinition(sf)
+    #     if not self.hasDefinition():
+    #         self.copyDefinition(sf)
 
-        plate = sf[Plate].keys()[0]
-        well = sf[Well %plate].keys()[0]
-        site = sf[Site[:-2] %(plate, well)].keys()[0]
-        sf.close()
+    #     plate = sf[Plate].keys()[0]
+    #     well = sf[Well %plate].keys()[0]
+    #     site = sf[Site[:-2] %(plate, well)].keys()[0]
+    #     sf.close()
 
-        path = Site %(plate, well, site)
-        source_file = filename.split(os.sep)[-2:]
-        source_file = os.sep.join(source_file)
+    #     path = Site %(plate, well, site)
+    #     source_file = filename.split(os.sep)[-2:]
+    #     source_file = os.sep.join(source_file)
 
-        self[path] = h5py.ExternalLink(source_file, path)
+    #     self[path] = h5py.ExternalLink(source_file, path)
 
 
-    def isLinkedFile(self, filename, plate):
+    # def isLinkedFile(self, filename, plate):
 
-        if filename in self.linkedFiles(plate):
-            return True
-        else:
-            return False
+    #     if filename in self.linkedFiles(plate):
+    #         return True
+    #     else:
+    #         return False
 
-    def linkedFiles(self, plate):
-        files = list()
+    # def linkedFiles(self, plate):
+    #     files = list()
+
+    #     try:
+    #         wells = self[Well %plate].keys()
+    #         for well in wells:
+    #             sites = self[Site[:-2] %(plate, well)].values()
+    #             files.extend([s.file.filename for s in sites])
+    #     except (KeyError, AttributeError):
+    #         pass
+
+    #     return tuple(set(files))
+
+    def existingSites(self, plate):
+
+        wsites = dict()
 
         try:
             wells = self[Well %plate].keys()
             for well in wells:
-                sites = self[Site[:-2] %(plate, well)].values()
-                files.extend([s.file.filename for s in sites])
+                sites = self[Site[:-2] %(plate, well)].keys()
+                wsites[well] = sites
         except (KeyError, AttributeError):
             pass
 
-        return tuple(set(files))
+        return wsites
+
+    def numberSites(self, plate):
+        return sum([len(site) for site in self.existingSites(plate).values()])
 
     def copySample(self, filename, delete_source=True):
 

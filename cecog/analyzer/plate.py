@@ -183,18 +183,23 @@ class PlateAnalyzer(Analyzer):
     def __call__(self):
 
         with Ch5File(self.h5f, mode="r") as ch5:
-            finished = ch5.linkedFiles(self.plate)
+            finished = ch5.existingSites(self.plate)
             layout = ch5.layout(self.plate)
 
         for pos in self.positions:
-            self.logger.info('Processing position: %r' % pos)
+            i = layout["File"].tolist().index(pos)
+            well, site = layout["Well"][i], layout["Site"][i]
+            wsstr = "%s_%02d" %(well, site)
 
-            datafile = join(self._cellh5_dir, '%s.ch5' %pos)
-            if datafile in finished and self.settings(
+            if well in finished and str(site) in finished[well] and self.settings(
                     'General', 'skip_finished'):
-                self.logger.info("already processed, skipping...")
+                msg = 'Skipping already processed postion %s' %wsstr
+                self.logger.info(msg)
                 continue
+            else:
+                self.logger.info('Processing position: %s' %wsstr)
 
+            datafile = join(self._cellh5_dir, '%s.ch5' %wsstr)
             analyzer = PositionAnalyzer(
                 self.plate, pos, datafile, self.settings, self.frames,
                 self.sample_reader, self.sample_positions, None,
@@ -202,7 +207,7 @@ class PlateAnalyzer(Analyzer):
 
             try:
                 analyzer()
-                with Ch5File(self.h5f, mode="r+") as ch5:
+                with Ch5File(self.h5f, mode="r+", timeout=1200) as ch5:
                     ch5.copySample(analyzer.datafile, delete_source=True)
             except StopProcessing:
                 pass

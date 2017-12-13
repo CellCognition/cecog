@@ -124,11 +124,11 @@ class PositionRunner(QtCore.QObject):
             c = 4
 
         thread = QThread.currentThread()
-        thread.statusUpdate(min=0, max=len(self.files) + c)
 
         with Ch5File(self.ch5file, mode="r") as ch5:
             layout = ch5.layout(self.plate)
             mappings = PlateMapping(layout)
+            thread.statusUpdate(min=0, max=ch5.numberSites(self.plate) + c)
 
             for pos in ch5.iter_positions():
                 ws = "%s_%02d" %(pos.well, int(pos.pos))
