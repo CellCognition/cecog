@@ -32,7 +32,7 @@ class LogWindow(QtWidgets.QDialog):
 
         self.setWindowTitle("Application Log")
         self.setWindowModality(Qt.NonModal)
-        self.resize(600, 430)
+        self.resize(800, 600)
         self.max_count = max_count
 
         logger = logging.getLogger()
@@ -123,7 +123,7 @@ class LogWindow(QtWidgets.QDialog):
             msg = "<font color='orange'><b>" + msg + '</b></font>'
             self.tabs.setCurrentWidget(tv)
         elif level == LoggerObject.Levels.ERROR:
-            msg = "<font color='red'><b>" + msg + '</b></font>'
+            msg = "<font color='red'>" + msg + '</font>'
             self.tabs.setCurrentWidget(tv)
         else:
             msg = "<font color='black'>" + msg + '</font>'
