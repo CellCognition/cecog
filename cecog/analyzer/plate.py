@@ -211,8 +211,6 @@ class PlateAnalyzer(Analyzer):
 
             try:
                 analyzer()
-                with Ch5File(self.h5f, mode="r+", timeout=1200) as ch5:
-                    ch5.copySample(analyzer.datafile, delete_source=True)
             except StopProcessing:
                 pass
             except Exception as e:
