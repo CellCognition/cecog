@@ -85,7 +85,7 @@ class Ch5File(CH5FileWriter):
     def __init__(self, filename, timeout=60, *args, **kw):
 
         # randomize acces times in different processes
-        time.sleep(random.random()*1.4)
+        # time.sleep(random.random()*1.4)
 
         self.lock = FileLock(filename.replace("ch5", "lock"))
         try:
