@@ -21,6 +21,8 @@ import filelock
 
 
 import h5py
+import glob
+import h5py
 import numpy as np
 
 from cellh5 import CH5FileWriter, CH5Const
@@ -34,6 +36,36 @@ LayoutDtype = np.dtype(
     [('File', 'S10'), ('Well', 'S3'), ('Site', '<i8'),
      ('Row', 'S1'), ('Column', '<i8'), ('GeneSymbol', 'S6'),
      ('siRNA', 'S8'), ('Group', 'S10')])
+
+
+def mergeHdfFiles(target, source_dir, remove_source=True):
+
+    hdffiles = glob.glob(os.path.join(source_dir, '*.ch5'))
+    target = h5py.File(target, 'r+')
+
+    for i, h5 in enumerate(hdffiles):
+        source = h5py.File(h5, 'r')
+
+        if i == 0:
+            target.copy(source['/definition'], "/definition")
+
+        first_item = lambda view: next(iter(view))
+        plate = first_item(hf_file[Plate].keys())
+        well = first_item(hf_file[Well % plate].keys())
+        position = first_item(hf_file[Site %(plate, well)].keys())
+
+        path = Site %(plate, well, position)
+
+        path = pwp_path(source)
+        target.copy(source[path], path)
+        source.close()
+
+        if remove_source:
+            os.remove(h5)
+
+    target.close()
+
+
 
 
 class FileLock(filelock.FileLock):

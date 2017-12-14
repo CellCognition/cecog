@@ -13,10 +13,11 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['AnalyzerThread']
 
 
+import os
 import copy
 from cecog.threads.corethread import CoreThread
 from cecog.analyzer.plate import PlateAnalyzer
-
+from cecog.io.hdf import mergeHdfFiles
 
 class AnalyzerThread(CoreThread):
 
@@ -35,3 +36,7 @@ class AnalyzerThread(CoreThread):
             imax = len(analyzer.frames)*len(analyzer.positions)*nplates
             self.statusUpdate(min=0, max=imax)
             analyzer()
+
+        # merge hdf files into one
+        mergeHdfFiles(analyzer.h5f, analyzer.ch5dir, remove_source=True)
+        os.rmdir(analyzer.ch5dir)

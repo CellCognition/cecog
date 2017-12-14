@@ -31,7 +31,7 @@ from cecog.multiprocess import mplogging as lg
 from cecog.environment import CecogEnvironment
 from cecog.traits.config import ConfigSettings
 from cecog.logging import QHandler
-
+from cecog.io.hdf import mergeHdfFiles
 
 class MultiProcessingError(Exception):
     pass
@@ -156,6 +156,18 @@ class MultiAnalyzerThread(AnalyzerThread):
                 raise MultiProcessingError(msg)
         finally:
             self.close_logreceiver()
+
+        if not self._abort:
+            self.mergeFiles()
+
+    def mergeFiles(self):
+        # last step is to merge all hdf files into one
+        for plate in self._imagecontainer.plates:
+            outdir  = self._imagecontainer.get_path_out(plate)
+            hdffile = os.path.join(outdir, "%s.ch5" %plate)
+            hdfdir = os.path.join(outdir, "cellh5")
+            mergeHdfFiles(hdffile, hdfdir, remove_source=True)
+        os.rmdir(hdfdir)
 
     def abort(self, wait=False):
         self._mutex.lock()

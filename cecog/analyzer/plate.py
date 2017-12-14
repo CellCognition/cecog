@@ -117,6 +117,10 @@ class PlateAnalyzer(Analyzer):
 
         self.logger.debug("frames: %r" % self.frames)
 
+    @property
+    def ch5dir(self):
+        return self._cellh5_dir
+
     def _makedirs(self):
 
         odirs = (join(self._outdir, "cellh5"), )
@@ -216,12 +220,6 @@ class PlateAnalyzer(Analyzer):
                 raise
             finally:
                 analyzer.clear()
-
-        try:
-            # remove empty directory
-            os.rmdir(self._cellh5_dir)
-        except OSError:
-            pass
 
 
 class AnalyzerBrowser(PlateAnalyzer):

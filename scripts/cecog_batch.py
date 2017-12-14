@@ -183,16 +183,19 @@ if __name__ ==  "__main__":
        settings("Processing", "tertiary_errorcorrection") or \
        settings("Processing", "merged_errorcorrection"):
 
+
         nsites = getCellH5NumberOfSites(ch5file)
+        npos = len(os.listdir(os.path.dirname(ch5file))) - 1
+        npos2 = len(imagecontainer.get_meta_data().positions)
+        posflag = settings("General", "constrain_positions")
         npos = len(imagecontainer.get_meta_data().positions)
-#        posflag = settings("General", "constrain_positions")
 
         # compare the number of processed positions with the number
         # of positions to be processed
-        if npos == nsites:
-            # only one process is supposed to run error correction
-            thread = ErrorCorrectionThread(None, settings, imagecontainer)
-            thread.start()
-            thread.wait() # must return from run method
+
+        if (posflag and npos == nsites) or (npos2 == nsites):
+             # only one process is supposed to run error correction
+             thread = ErrorCorrectionThread(None, settings, imagecontainer)
+             thread.start()
 
     print 'BATCHPROCESSING DONE!'
