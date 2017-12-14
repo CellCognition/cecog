@@ -177,24 +177,24 @@ if __name__ ==  "__main__":
         analyzer()
         ch5file = analyzer.h5f
 
-    # Run the error correction on the cluster
-    if settings("Processing", "primary_errorcorrection") or \
-       settings("Processing", "secondary_errorcorrection") or \
-       settings("Processing", "tertiary_errorcorrection") or \
-       settings("Processing", "merged_errorcorrection"):
+    nsites = getCellH5NumberOfSites(ch5file)
+    npos = len(os.listdir(os.path.dirname(ch5file))) - 1
+    npos2 = len(imagecontainer.get_meta_data().positions)
+    posflag = settings("General", "constrain_positions")
+    npos = len(imagecontainer.get_meta_data().positions)
 
+    # compare the number of processed positions with the number
+    # of positions to be processed
+    if (posflag and npos == nsites) or (npos2 == nsites):
+        mergeHdfFiles(analyzer.h5f, analyzer.ch5file, remove_source=True)
 
-        nsites = getCellH5NumberOfSites(ch5file)
-        npos = len(os.listdir(os.path.dirname(ch5file))) - 1
-        npos2 = len(imagecontainer.get_meta_data().positions)
-        posflag = settings("General", "constrain_positions")
-        npos = len(imagecontainer.get_meta_data().positions)
+        # Run the error correction on the cluster
+        if settings("Processing", "primary_errorcorrection") or \
+           settings("Processing", "secondary_errorcorrection") or \
+           settings("Processing", "tertiary_errorcorrection") or \
+           settings("Processing", "merged_errorcorrection"):
 
-        # compare the number of processed positions with the number
-        # of positions to be processed
-
-        if (posflag and npos == nsites) or (npos2 == nsites):
-             # only one process is supposed to run error correction
+            # only one process is supposed to run error correction
              thread = ErrorCorrectionThread(None, settings, imagecontainer)
              thread.start()
 
