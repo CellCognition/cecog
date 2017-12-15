@@ -161,45 +161,6 @@ class Ch5File(CH5FileWriter):
         if not path in self._file_handle:
             self._file_handle.create_group(path)
 
-    # def linkFile(self, filename):
-
-    #     sf = h5py.File(filename, "r")
-
-    #     if not self.hasDefinition():
-    #         self.copyDefinition(sf)
-
-    #     plate = sf[Plate].keys()[0]
-    #     well = sf[Well %plate].keys()[0]
-    #     site = sf[Site[:-2] %(plate, well)].keys()[0]
-    #     sf.close()
-
-    #     path = Site %(plate, well, site)
-    #     source_file = filename.split(os.sep)[-2:]
-    #     source_file = os.sep.join(source_file)
-
-    #     self[path] = h5py.ExternalLink(source_file, path)
-
-
-    # def isLinkedFile(self, filename, plate):
-
-    #     if filename in self.linkedFiles(plate):
-    #         return True
-    #     else:
-    #         return False
-
-    # def linkedFiles(self, plate):
-    #     files = list()
-
-    #     try:
-    #         wells = self[Well %plate].keys()
-    #         for well in wells:
-    #             sites = self[Site[:-2] %(plate, well)].values()
-    #             files.extend([s.file.filename for s in sites])
-    #     except (KeyError, AttributeError):
-    #         pass
-
-    #     return tuple(set(files))
-
     def existingSites(self, plate):
 
         wsites = dict()

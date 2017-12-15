@@ -162,9 +162,6 @@ if __name__ ==  "__main__":
         plate, pos = p.split(PLATESEP)
         plates[plate].append(pos)
 
-
-
-
     # HDF file lock does not work on different cluster nodes (no shared memory)
     # only storage is shared
     time.sleep(random.random()*30)
@@ -185,11 +182,9 @@ if __name__ ==  "__main__":
         analyzer()
         ch5file = analyzer.h5f
 
-
     n_sites = getCellH5NumberOfSites(ch5file)
     n_total = len(imagecontainer.get_meta_data().positions)
     posflag = settings("General", "constrain_positions")
-
 
     # compare the number of processed positions with the number
     # of positions to be processed
