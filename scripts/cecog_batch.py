@@ -37,6 +37,7 @@ from cecog.threads import ErrorCorrectionThread
 from cecog.analyzer.plate import PlateAnalyzer
 from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import ImageContainer
+from cecog.io.hdf import mergeHdfFiles
 
 
 ENV_INDEX_SGE = 'SGE_TASK_ID'
@@ -139,6 +140,8 @@ if __name__ ==  "__main__":
             positions += \
               ['%s%s%s' % (plate, PLATESEP, pos) for pos in meta_data.positions]
 
+    n_positions = len(positions)
+
     if index is not None and (index < 0 or index >= len(positions)):
         raise RuntimeError(
             "Cluster index %s does not match number of positions %d."
@@ -158,6 +161,9 @@ if __name__ ==  "__main__":
     for p in positions:
         plate, pos = p.split(PLATESEP)
         plates[plate].append(pos)
+
+
+
 
     # HDF file lock does not work on different cluster nodes (no shared memory)
     # only storage is shared
@@ -180,16 +186,17 @@ if __name__ ==  "__main__":
         ch5file = analyzer.h5f
 
 
-    nsites = getCellH5NumberOfSites(ch5file)
-    # npos = len(os.listdir(os.path.dirname(ch5file))) - 1
-    npos2 = len(imagecontainer.get_meta_data().positions)
+    n_sites = getCellH5NumberOfSites(ch5file)
+    n_total = len(imagecontainer.get_meta_data().positions)
     posflag = settings("General", "constrain_positions")
+
 
     # compare the number of processed positions with the number
     # of positions to be processed
-    # if (posflag and npos == nsites) or (npos2 == nsites):
-    if npos2 == nsites):
+    if (posflag and n_positions == n_sites) or (n_total == n_sites):
+        print n_total, n_sites, n_positions
         mergeHdfFiles(analyzer.h5f, analyzer.ch5dir, remove_source=True)
+        os.rmdir(analyzer.ch5dir)
 
         # Run the error correction on the cluster
         if settings("Processing", "primary_errorcorrection") or \

@@ -157,8 +157,9 @@ class Ch5File(CH5FileWriter):
         site = sf[Site[:-2] %(plate, well)].keys()[0]
         path = Site %(plate, well, site)
         sf.close()
-        self._file_handle.create_group(path)
 
+        if not path in self._file_handle:
+            self._file_handle.create_group(path)
 
     # def linkFile(self, filename):
 
