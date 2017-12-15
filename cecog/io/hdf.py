@@ -50,14 +50,16 @@ def mergeHdfFiles(target, source_dir, remove_source=True):
             target.copy(source['/definition'], "/definition")
 
         first_item = lambda view: next(iter(view))
-        plate = first_item(hf_file[Plate].keys())
-        well = first_item(hf_file[Well % plate].keys())
-        position = first_item(hf_file[Site %(plate, well)].keys())
+        plate = first_item(source[Plate].keys())
+        well = first_item(source[Well % plate].keys())
+        position = first_item(source[Site %(plate, well, "")].keys())
 
-        path = Site %(plate, well, position)
+        path_ = Site %(plate, well, position)
 
-        path = pwp_path(source)
-        target.copy(source[path], path)
+        for group in source[path_].keys():
+            path = "%s/%s" %(path_, group)
+            target.copy(source[path], path)
+
         source.close()
 
         if remove_source:
@@ -146,6 +148,18 @@ class Ch5File(CH5FileWriter):
                                 delimiter="\t", skip_header=True)
             dset = grp.create_dataset(platename, data=rec)
 
+    def createSite(self, filename):
+        """Create an empty group for a Site."""
+
+        sf = h5py.File(filename, "r")
+        plate = sf[Plate].keys()[0]
+        well = sf[Well %plate].keys()[0]
+        site = sf[Site[:-2] %(plate, well)].keys()[0]
+        path = Site %(plate, well, site)
+        sf.close()
+        self._file_handle.create_group(path)
+
+
     # def linkFile(self, filename):
 
     #     sf = h5py.File(filename, "r")
@@ -192,7 +206,9 @@ class Ch5File(CH5FileWriter):
         try:
             wells = self[Well %plate].keys()
             for well in wells:
-                sites = self[Site[:-2] %(plate, well)].keys()
+                sites = self[Site[:-2] %(plate, well)]
+                # remove empty sites from list
+                sites = [k for k, s in sites.items() if len(s.keys()) > 0]
                 wsites[well] = sites
         except (KeyError, AttributeError):
             pass

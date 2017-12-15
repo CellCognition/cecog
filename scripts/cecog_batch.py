@@ -44,12 +44,14 @@ PLATESEP = "___"
 POSSEP = ","
 
 
-
 def getCellH5NumberOfSites(file_):
     """Determine the number of site within a file."""
 
     try:
+        print cellh5.__file__
+        print file_
         c5 = cellh5.CH5File(file_)
+        print type(c5)
         nsites = 0
         for pos in c5.positions.values():
             nsites += len(pos)
@@ -177,16 +179,17 @@ if __name__ ==  "__main__":
         analyzer()
         ch5file = analyzer.h5f
 
+
     nsites = getCellH5NumberOfSites(ch5file)
-    npos = len(os.listdir(os.path.dirname(ch5file))) - 1
+    # npos = len(os.listdir(os.path.dirname(ch5file))) - 1
     npos2 = len(imagecontainer.get_meta_data().positions)
     posflag = settings("General", "constrain_positions")
-    npos = len(imagecontainer.get_meta_data().positions)
 
     # compare the number of processed positions with the number
     # of positions to be processed
-    if (posflag and npos == nsites) or (npos2 == nsites):
-        mergeHdfFiles(analyzer.h5f, analyzer.ch5file, remove_source=True)
+    # if (posflag and npos == nsites) or (npos2 == nsites):
+    if npos2 == nsites):
+        mergeHdfFiles(analyzer.h5f, analyzer.ch5dir, remove_source=True)
 
         # Run the error correction on the cluster
         if settings("Processing", "primary_errorcorrection") or \

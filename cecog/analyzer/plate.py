@@ -211,6 +211,8 @@ class PlateAnalyzer(Analyzer):
 
             try:
                 analyzer()
+                with Ch5File(self.h5f, mode="r+") as ch5:
+                   ch5.createSite(analyzer.datafile)
             except StopProcessing:
                 pass
             except Exception as e:
