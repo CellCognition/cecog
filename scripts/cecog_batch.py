@@ -20,7 +20,7 @@ import logging
 import argparse
 from collections import defaultdict
 
-from PyQt5 import QtCoreApplication
+from PyQt5.QtCore import QtCoreApplication
 
 from matplotlib import use
 use("Agg")
