@@ -68,12 +68,15 @@ def mergeHdfFiles(target, source_dir, remove_source=True):
     target.close()
 
 
-
-
 class FileLock(filelock.FileLock):
 
     def release(self, *args, **kw):
-        super(FileLock, self).release(*args, **kw)
+
+        # XXX Dirty work around for the cluster
+        try:
+            super(FileLock, self).release(*args, **kw)
+        except IOError as e:
+            pass
 
         if not self.is_locked:
             try:
