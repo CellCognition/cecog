@@ -20,8 +20,12 @@ import logging
 import argparse
 from collections import defaultdict
 
+from PyQt5 import QtCoreApplication
+
 from matplotlib import use
 use("Agg")
+
+
 
 import cellh5
 
@@ -200,7 +204,8 @@ if __name__ ==  "__main__":
            settings("Processing", "merged_errorcorrection"):
 
             # only one process is supposed to run error correction
-             thread = ErrorCorrectionThread(None, settings, imagecontainer)
-             thread.start()
+            app = QtCoreApplication(sys.argv)
+            thread = ErrorCorrectionThread(None, settings, imagecontainer)
+            thread.start()
 
     print 'BATCHPROCESSING DONE!'
