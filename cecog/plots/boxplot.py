@@ -52,8 +52,10 @@ def dwell_boxplot(data, title=None, xlabel='class label',
 
     colors = [cmap(l) for l in data.keys()]
     for i, flier in enumerate(bp['fliers']):
-        flier.set(marker='o', color=colors[i], markerfacecolor=colors[i])
-
+        try: # the cluster sucks!
+            flier.set(marker='o', color=colors[i], markerfacecolor=colors[i])
+        except IndexError:
+            break
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()

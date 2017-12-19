@@ -188,6 +188,8 @@ class ClusterDisplay(QGroupBox):
         batch_size = apc.batch_size
         pathout = self._submit_settings.get2('pathout')
 
+
+
         try:
             self.dlg = ProgressDialog("Submitting Jobs...", None, 0, 0, self)
             settings_str = self._submit_settings.to_string()

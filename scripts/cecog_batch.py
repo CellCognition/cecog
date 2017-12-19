@@ -20,11 +20,8 @@ import logging
 import argparse
 from collections import defaultdict
 
-from PyQt5.QtCore import QCoreApplication
-
 from matplotlib import use
 use("Agg")
-
 
 
 import cellh5
@@ -53,10 +50,7 @@ def getCellH5NumberOfSites(file_):
     """Determine the number of site within a file."""
 
     try:
-        print cellh5.__file__
-        print file_
         c5 = cellh5.CH5File(file_)
-        print type(c5)
         nsites = 0
         for pos in c5.positions.values():
             nsites += len(pos)
@@ -204,8 +198,9 @@ if __name__ ==  "__main__":
            settings("Processing", "merged_errorcorrection"):
 
             # only one process is supposed to run error correction
-            app = QtCoreApplication(sys.argv)
             thread = ErrorCorrectionThread(None, settings, imagecontainer)
             thread.start()
+            thread.wait()
+
 
     print 'BATCHPROCESSING DONE!'
