@@ -40,7 +40,7 @@ class ProgressThread(QtCore.QThread):
         except Exception as e:
             stackstr = traceback.print_exc()
             self.error.emit(e)
-            raise
+            return
         finally:
             # perhaps processEvents()???
             self.msleep(150)

@@ -19,7 +19,9 @@ __all__ = ['ClusterFrame']
 import types
 import socket
 import urlparse
-from os.path import isdir
+import os
+from os.path import isdir, join
+import shutil
 
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -165,6 +167,20 @@ class ClusterDisplay(QGroupBox):
     def _on_jobid_entered(self, txt):
         self._jobid = str(txt)
 
+    def clear_output_directory(self, directory):
+        """Remove the content of the output directory except the structure file."""
+
+        files = os.listdir(directory)
+
+        for file_ in files:
+            path = join(directory, file_)
+            if isdir(path):
+                shutil.rmtree(path)
+            elif file_.endswith(".xml"):
+                pass
+            else:
+                os.remove(path)
+
     @pyqtSlot()
     def _on_submit_job(self):
 
@@ -188,7 +204,8 @@ class ClusterDisplay(QGroupBox):
         batch_size = apc.batch_size
         pathout = self._submit_settings.get2('pathout')
 
-
+        if not self._submit_settings('General', 'skip_finished'):
+            self.clear_output_directory(pathout)
 
         try:
             self.dlg = ProgressDialog("Submitting Jobs...", None, 0, 0, self)
@@ -287,7 +304,6 @@ class ClusterDisplay(QGroupBox):
         except:
             msg = "Connection failed (%s)" %self._host_url
             raise ConnectionError(msg)
-
 
     def _check_api_version(self):
         try:
@@ -438,6 +454,7 @@ class ClusterDisplay(QGroupBox):
         else:
             self._btn_submit.setEnabled(False)
 
+
 class ClusterFrame(BaseFrame, ExportSettings):
 
     ICON = ":network-server.png"
@@ -452,7 +469,6 @@ class ClusterFrame(BaseFrame, ExportSettings):
 
         # update display first time when tab is enable
         self._display_update = False
-
 
     def page_changed(self):
         self._cluster_display.update_display(self._is_active)
