@@ -373,8 +373,8 @@ class HmmReport(object):
                     image = img
 
             fn = ofile.replace('_gallery.png', '-%s_gallery.png' %name)
-            vimage = rescale(vimage, rsfactor)
-            imsave(fn, vimage)
+            vimage = rescale(image, rsfactor)
+            imsave(fn, vimage/255.)
 
     def _draw_labels(self, image, track, markersize=0.20):
         nframes = len(track)
