@@ -103,11 +103,11 @@ if __name__ ==  "__main__":
 
     logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.INFO)
+    handler.setLevel(logging.WARNING)
     formatter = logging.Formatter('%(asctime)s %(levelname)-6s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.WARNING)
 
     logger.info("*"*(len(version) + 53))
     logger.info("*** CellCognition - Batch Script - Version %s ***" %version)

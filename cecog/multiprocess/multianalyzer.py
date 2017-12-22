@@ -14,6 +14,7 @@ __url__ = 'www.cellcognition.org'
 import os
 import sys
 import copy
+import shutil
 import logging
 import traceback
 import threading
@@ -169,6 +170,20 @@ class MultiAnalyzerThread(AnalyzerThread):
             mergeHdfFiles(hdffile, hdfdir, remove_source=True)
         os.rmdir(hdfdir)
 
+    def clearOutputDir(self, directory):
+        """Remove the content of the output directory except the structure file."""
+
+        files = os.listdir(directory)
+        for file_ in files:
+            path = os.path.join(directory, file_)
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            elif file_.endswith(".xml"):
+                pass
+            else:
+                os.remove(path)
+
+
     def abort(self, wait=False):
         self._mutex.lock()
         try:
@@ -184,7 +199,10 @@ class MultiAnalyzerThread(AnalyzerThread):
     def _run(self):
         self._abort = False
 
-        # setup the processes
+        if not self._settings('General', 'skip_finished'):
+            self.clearOutputDir(self._settings('General', 'pathout'))
+
+            # setup the processes
         jobs = []
         positions = None
         if self._settings.get('General', 'constrain_positions'):
