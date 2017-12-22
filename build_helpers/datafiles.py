@@ -47,10 +47,7 @@ INCLUDES = [ 'sip',
              'sklearn.neighbors.typedefs',
              'sklearn.utils.weight_vector' ]
 
-EXCLUDES = ['PyQt5.QtDesigner', 'PyQt5.QtNetwork',
-            'PyQt5.QtOpenGL', 'PyQt5.QtScript',
-            'PyQt5.QtTest', 'PyQt5.QtWebKit', 'PyQt5.QtXml', 'PyQt5.phonon',
-            'PyQt4.QtCore', 'PyQt4.QtGui',  'PyQt4.QtSvg', 'PyQt4',
+EXCLUDES = ['PyQt4.QtCore', 'PyQt4.QtGui',  'PyQt4.QtSvg', 'PyQt4',
             '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
             '_tkagg',
             'Tkinter',
@@ -96,7 +93,7 @@ def get_data_files(target_dir=TARGET_BUNDLE,
                 dfiles.append((target, [join(abspath(root), file_)]))
 
     if qt_plugins:
-        for dir_ in ['sqldrivers', 'platforms', 'windows']:
+        for dir_ in ['sqldrivers', 'platforms']:
             # Pyqt5 does not start without platform plugins.
             # sorry for not finding a better hack
             qt5plugins = glob.glob(
@@ -104,7 +101,10 @@ def get_data_files(target_dir=TARGET_BUNDLE,
             qt5plugins = (dir_, qt5plugins)
             dfiles.append(qt5plugins)
 
-    # qt help files
+    for f in ("libEGL.dll", ):
+         dfiles.append(('.', [join(dirname(PyQt5.__file__), f)]))
+
+    # # qt help files
     dfiles.append((join(target_dir, 'doc'),
                    glob.glob(join(RESOURCE_DIR, 'doc', "*.qhc"))))
     dfiles.append((join(target_dir, 'doc'),
