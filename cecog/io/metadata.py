@@ -14,7 +14,6 @@ __all__ = ('MetaData', 'MetaDataError', 'MetaImage')
 from collections import OrderedDict
 
 import numpy
-import vigra
 
 from cecog import ccore
 from cecog.io.constants import PixelType
@@ -307,8 +306,3 @@ class MetaImage(object):
     @classmethod
     def disable_cropping(cls):
         MetaImage._crop_coordinates = None
-
-    @property
-    def vigra_image(self):
-        ar = self.image.toArray()
-        return vigra.Image(ar, dtype=ar.dtype)

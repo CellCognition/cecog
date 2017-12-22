@@ -100,7 +100,7 @@ def get_data_files(target_dir=TARGET_BUNDLE,
                 dfiles.append((target, [join(abspath(root), file_)]))
 
     if qt_plugins:
-        for dir_ in ['sqldrivers', 'platforms']:
+        for dir_ in ['sqldrivers', 'platforms', 'windows']:
             # Pyqt5 does not start without platform plugins.
             # sorry for not finding a better hack
             qt5plugins = glob.glob(

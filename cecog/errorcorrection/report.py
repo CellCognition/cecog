@@ -19,7 +19,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-import vigra
+from skimage.transform import rescale
+from skimage.io import imsave
+
 from cellh5 import CH5Const
 from cecog import plots
 from cecog.colors import hex2rgb, grey2rgb
@@ -371,9 +373,8 @@ class HmmReport(object):
                     image = img
 
             fn = ofile.replace('_gallery.png', '-%s_gallery.png' %name)
-            vimage = vigra.RGBImage(image.swapaxes(1, 0))
-            vimage = vigra.sampling.resampleImage(vimage, rsfactor)
-            vimage.writeImage(fn)
+            vimage = rescale(vimage, rsfactor)
+            imsave(fn, vimage)
 
     def _draw_labels(self, image, track, markersize=0.20):
         nframes = len(track)

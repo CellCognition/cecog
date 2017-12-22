@@ -76,7 +76,9 @@ DLL_EXCLUDES = [ 'libgdk-win32-2.0-0.dll',
                  'API-MS-Win-Core-ProcessThreads-L1-1-0.dll',
                  'API-MS-Win-Core-ProcessEnvironment-L1-1-0.dll',
                  'API-MS-Win-Core-LocalRegistry-L1-1-0.dll',
-                 'w9xpopen.exe'] # is not excluded for some reasion
+                 'w9xpopen.exe',
+                 'MSVCP90.dll',
+                 'HID.DLL'] # is not excluded for some reasion
 
 py2exe_opts = {'includes': build_helpers.INCLUDES,
                'excludes': build_helpers.EXCLUDES,
@@ -91,7 +93,6 @@ py2exe_opts = {'includes': build_helpers.INCLUDES,
 # or write these paths to setup.cfg
 includes = ['c:/python27/include',
             'c:/Python27/Lib/site-packages/numpy/core/include',
-            r'C:\Users\sommerc\src\vigra-git\include',
             './csrc/include']
 libraries = ['libtiff', 'vigraimpex']
 library_dirs = []
@@ -140,6 +141,5 @@ setup(options = {'py2exe': py2exe_opts,
       windows = [{'script': join('scripts', 'CecogAnalyzer.py'),
                   'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]
                   }],
-      console = [{'script': join('scripts', 'cmdtools', 'cmdtool.py')}],
       ext_modules = [ccore],
       **build_helpers.metadata)
