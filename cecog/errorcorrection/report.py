@@ -19,6 +19,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+from skimage import img_as_float
 from skimage.transform import rescale
 from skimage.io import imsave
 
@@ -374,7 +375,7 @@ class HmmReport(object):
 
             fn = ofile.replace('_gallery.png', '-%s_gallery.png' %name)
             vimage = rescale(image, rsfactor)
-            imsave(fn, vimage/255.)
+            imsave(fn, img_as_float(vimage))
 
     def _draw_labels(self, image, track, markersize=0.20):
         nframes = len(track)
