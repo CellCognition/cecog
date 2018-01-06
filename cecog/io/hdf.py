@@ -147,8 +147,13 @@ class Ch5File(CH5FileWriter):
         grp = self._file_handle.require_group(CH5Const.LAYOUT)
 
         if platename not in grp:
-            rec = np.recfromtxt(plate_layout, dtype=LayoutDtype,
-                                delimiter="\t", skip_header=True)
+            try:
+                rec = np.recfromtxt(plate_layout, dtype=LayoutDtype,
+                                    skip_header=True)
+            except ValueError:
+                rec = np.recfromtxt(plate_layout, dtype=LayoutDtype,
+                                    delimiter="\t", skip_header=True)
+
             dset = grp.create_dataset(platename, data=rec)
 
     def createSite(self, filename):

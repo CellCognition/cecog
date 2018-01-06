@@ -136,7 +136,7 @@ Section "CecogAnalyzer" SecDummy
 
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
 
-    ;Create shortcutsdist\resources\battery_package\Settings\demo_settings.conf
+    ;Create shortcutsdist\resources\battery_package\settings\demo_settings.conf
     SetShellVarContext all
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
 

@@ -89,7 +89,7 @@ class BatteryPackage(object):
 
     @property
     def demo_settings(self):
-        return join(self.package_path, "Settings", "demo_settings.conf")
+        return join(self.package_path, "settings", "demo_settings.conf")
 
     def copy_demodata(self, dest_path):
         self._path = dest_path
