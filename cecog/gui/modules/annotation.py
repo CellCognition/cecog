@@ -36,7 +36,6 @@ from cecog.gui.modules.module import Module
 from cecog.io.imagecontainer import Coordinate
 from cecog.classifier import ClassDefinition
 from cecog.gui.widgets.colorbutton import ColorButton
-from cecog.util.ontoloty_owl import CecogOntologyBrowserDialog
 
 
 class Annotations(object):
@@ -358,13 +357,6 @@ class AnnotationModule(Module):
         layout2.addWidget(self._import_class_definitions_btn)
         self._import_class_definitions_btn.clicked.connect(self._on_import_class_definitions)
 
-        self._import_ontology_name_btn = QPushButton('Choose class name from ontology')
-        self._import_ontology_name_btn.setToolTip(
-            ("Choose class name from ontology. E.g., CMPO\n"
-             "Note: It might take some time starting the dialog the first time."))
-        layout2.addWidget(self._import_ontology_name_btn)
-        self._import_ontology_name_btn.clicked.connect(self._on_import_ontology_name)
-
 
         layout.addWidget(frame2)
 
@@ -459,15 +451,6 @@ class AnnotationModule(Module):
     def _find_items_in_class_table(self, value, column, match=Qt.MatchExactly):
         items = self._class_table.findItems(value, match)
         return [item for item in items if item.column() == column]
-
-    def _on_import_ontology_name(self):
-        if not hasattr(self, "ontology_browser_diag"):
-            self.ontology_browser_diag = CecogOntologyBrowserDialog(
-                parent=self.browser)
-            self.ontology_browser_diag.tw.trigger_add.connect(
-                self._class_text.setText)
-
-        self.ontology_browser_diag.show()
 
     def _on_import_class_definitions(self):
         if self._on_new_classifier():
