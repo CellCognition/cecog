@@ -13,15 +13,11 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ["EventSelection"]
+__all__ = ("EventSelection", )
 
 import numpy as np
-from scipy import stats
-from matplotlib import mlab
-from sklearn.cluster import KMeans
 from collections import defaultdict
 
-from cecog.colors import rgb2hex, BINARY_CMAP
 from cecog.logging import LoggerObject
 from cecog.analyzer.tracker import Tracker
 

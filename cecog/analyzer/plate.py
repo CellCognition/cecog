@@ -18,9 +18,7 @@ import os
 import re
 import glob
 import traceback
-from os.path import join, basename, isdir
-
-from PyQt5.QtCore import QThread
+from os.path import join, basename
 
 from cecog.io import Ch5File
 from cecog.util.util import makedirs
@@ -127,6 +125,7 @@ class PlateAnalyzer(Analyzer):
 
         if AppPreferences().write_logs:
             odirs += (join(self._outdir, "log"), )
+
 
         for odir in odirs:
             try:

@@ -14,7 +14,8 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['ClusterFrame']
+__all__ = ('ClusterFrame', )
+
 
 import types
 import socket

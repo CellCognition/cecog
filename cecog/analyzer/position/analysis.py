@@ -14,7 +14,6 @@ __url__ = 'www.cellcognition.org'
 __all__ = ("PositionCore", "PositionAnalyzer")
 
 
-import os
 import numpy as np
 
 from os.path import join, basename, dirname

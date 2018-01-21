@@ -17,18 +17,12 @@ __source__ = '$URL$'
 __all__ = ['ProcessingFrame']
 
 
-import logging
-from PyQt5 import QtGui
-from PyQt5 import QtCore
-from PyQt5 import QtWidgets
-
 from cecog import CHANNEL_PREFIX
 from cecog.version import version
 from cecog import CH_OTHER, CH_VIRTUAL, CH_PRIMARY
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 from cecog.gui.analyzer import ErrorCorrectionThread, MultiAnalyzerThread
 from cecog.util.ctuple import CTuple
-from cecog.logging import LogWindow
 
 
 class ExportSettings(object):
