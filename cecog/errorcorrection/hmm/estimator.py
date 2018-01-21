@@ -20,8 +20,20 @@ import lxml.objectify
 import lxml.etree
 import lxml._elementpath
 
-from cecog.tc3 import normalize
 from cecog.environment import find_resource_dir
+EPS = np.spacing(1)
+
+# recycled from sklearn.hmm be able to control the eps parameter!
+def normalize(A, axis=None, eps=EPS):
+    A += eps
+    Asum = A.sum(axis)
+    if axis and A.ndim > 1:
+        # Make sure we don't divide by zero.
+        Asum[Asum == 0] = 1
+        shape = list(A.shape)
+        shape[axis] = 1
+        Asum.shape = shape
+    return A / Asum
 
 
 class HMMConstraintCore(object):

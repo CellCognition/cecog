@@ -28,7 +28,6 @@ import cellh5
 
 from cecog.io.hdf import Ch5File
 from cecog.util.util import makedirs
-from cecog.errorcorrection.hmm import HmmSklearn
 from cecog.errorcorrection.hmm import HmmTde
 
 from cecog.errorcorrection import HmmReport
@@ -183,12 +182,7 @@ class PositionRunner(QtCore.QObject):
             msg = 'performing error correction on channel %s' %channel
             self.interruption_point(msg)
 
-            # error correction
-            if self.ecopts.hmm_algorithm == self.ecopts.HMM_BAUMWELCH:
-                hmm = HmmSklearn(dtable, channel, cld, self.ecopts)
-            else:
-                hmm = HmmTde(dtable, channel, cld, self.ecopts)
-
+            hmm = HmmTde(dtable, channel, cld, self.ecopts)
             data = hmm()
 
             # plots and export

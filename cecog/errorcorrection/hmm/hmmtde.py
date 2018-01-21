@@ -20,7 +20,7 @@ __all__ = ['HmmTde']
 
 
 import numpy as np
-from cecog.tc3 import normalize
+from cecog.errorcorrection.hmm.estimator import normalize
 from cecog.errorcorrection import HmmBucket
 from cecog.errorcorrection.hmm import HmmCore
 from cecog.errorcorrection.hmm import estimator
@@ -67,7 +67,6 @@ class HmmTde(HmmCore):
             # first row doesn't get updated later
             bp = np.zeros((nframes, est.nstates), dtype=int) - 1
             P2 = np.zeros((est.nstates, est.nstates))
-
 
             # setup the time dependend emssion matrix
             for j in xrange(est.nstates):

@@ -10,7 +10,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ('ClassDefinition', 'ClassDefinitionUnsup')
+__all__ = ('ClassDefinition', )
 
 
 import csv
@@ -19,8 +19,6 @@ from collections import OrderedDict
 import matplotlib as mpl
 from matplotlib.colors import rgb2hex
 from matplotlib.colors import ListedColormap
-
-from cecog.colors import unsupervised_cmap
 
 
 class ClassDefinitionCore(object):
@@ -114,22 +112,3 @@ class ClassDefinition(ClassDefinitionCore):
         for k, v in self.names.iteritems():
             colors[k] = self.colors[v]
         self.colormap = ListedColormap(colors, 'cmap-from-table')
-
-
-class ClassDefinitionUnsup(ClassDefinitionCore):
-    """Unsupervised class definition has hard wired class labels and
-    a destinct colormap to make it easy distinguishable from user defined
-    class definitions.
-    """
-
-    def __init__(self, nclusters, *args, **kw):
-        super(ClassDefinitionUnsup, self).__init__(*args, **kw)
-        self.nclusters = nclusters
-        self.colormap = unsupervised_cmap(self.nclusters)
-        # dummy attribute to recyle export function in timeholder
-
-        for i in xrange(self.nclusters):
-            name = "cluster-%d" %i
-            self.labels[name] = i
-            self.names[i] = name
-            self.colors[name] = rgb2hex(self.colormap(i))

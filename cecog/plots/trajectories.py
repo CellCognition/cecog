@@ -18,7 +18,7 @@ __all__ = ['trajectories_dict', 'trajectories', 'sort_tracks']
 
 import numpy as np
 from matplotlib import pyplot as pl
-from cecog.colors import DCMAP
+
 
 def sort_tracks(label_matrix, labels, reverse=False):
 
@@ -31,8 +31,9 @@ def sort_tracks(label_matrix, labels, reverse=False):
     slm = np.array(sorted(label_matrix, key=keyfunc, reverse=reverse))
     return slm
 
+
 def trajectories_dict(data, labels=None, reverse=False, window_title=None,
-                      cmap=DCMAP):
+                      cmap=None):
     """Plot a dictionary of tracks"""
 
     fig = pl.figure(figsize=(len(data)*4, 4.1))
@@ -59,8 +60,9 @@ def trajectories_dict(data, labels=None, reverse=False, window_title=None,
         ax.tick_params(labeltop=False, labelbottom=True)
     return fig
 
+
 def trajectories(tracks, labels=None, reverse=False, title=None,
-                 window_title=None, cmap=DCMAP,
+                 window_title=None, cmap=None,
                  norm=None, axes=None, stepwidth=None):
 
     if axes is None:

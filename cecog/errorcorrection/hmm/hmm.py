@@ -18,6 +18,7 @@ import numpy as np
 from cecog.errorcorrection.hmm import estimator
 
 
+
 class LabelMapper(object):
     """Map class labels to array index.
 

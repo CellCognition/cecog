@@ -45,14 +45,6 @@ class EventSelectionFrame(BaseProcessorFrame):
                         ('forwardcheck', (2,1,1,1)),
                        ], layout='grid')
 
-        self.add_group('unsupervised_event_selection',
-                       [('min_event_duration', (2, 2, 1, 1)),
-                        (self.add_label('TC3 Analysis', 'tc3_analysis'),
-                         (3, 0, 1,1)),
-                        ('num_clusters', (3,2,1,1)),
-                        ('min_cluster_size', (3,3,1,1)),
-                        ], layout='grid',)
-
         self.add_expanding_spacer()
         self._init_control()
 

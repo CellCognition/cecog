@@ -37,12 +37,6 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
                               ('tertiary', (0, 2, 1, 1)),
                               ('merged', (0, 3, 1, 1))], label='Channels')
 
-        self.add_group(None,
-                       [('hmm_smoothing', ),
-                        ('hmm_baumwelch', )],
-                       layout='flow', link='hmm_learning',
-                       label='HMM learning algorithm')
-
         self.add_input('ignore_tracking_branches')
         self.add_line()
         self.add_group('constrain_graph',

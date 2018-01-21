@@ -12,8 +12,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['Colors', 'rgb2hex', 'DCMAP', 'hex2rgb', 'BINARY_CMAP',
-           'DiscreteColormap', 'unsupervised_cmap']
+__all__ = ['Colors', 'rgb2hex', 'DCMAP', 'hex2rgb', 'BINARY_CMAP', 'DiscreteColormap']
 
 import numpy as np
 
@@ -24,11 +23,6 @@ from matplotlib.colors import is_color_like
 from matplotlib import cm
 
 
-def unsupervised_cmap(n):
-    return ListedColormap([cm.Accent(i) for i in np.linspace(0, 1, n)])
-
-# DCMAP is a fallback
-DCMAP = unsupervised_cmap(10)
 BINARY_CMAP = ListedColormap(["#DEDEDE","#FA1D2F"], name='binary_cmap')
 
 def grey2rgb(image, color="#FFFFFF"):

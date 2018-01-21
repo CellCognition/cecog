@@ -12,6 +12,5 @@ __url__ = 'www.cellcognition.org'
 
 
 from .svc import *
-from .gmm import *
 from .classdefinition import *
 from .annotationsfile import *

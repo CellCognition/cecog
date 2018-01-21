@@ -31,7 +31,6 @@ from cecog.analyzer.tracker import Tracker
 from cecog.analyzer.timeholder import TimeHolder
 from cecog.analyzer.analyzer import CellAnalyzer
 from cecog.analyzer.eventselection import EventSelection
-from cecog.analyzer.eventselection import UnsupervisedEventSelection
 
 from cecog.analyzer.channel import PrimaryChannel
 from cecog.analyzer.channel import SecondaryChannel
@@ -39,9 +38,7 @@ from cecog.analyzer.channel import TertiaryChannel
 from cecog.analyzer.channel import MergedChannel
 
 from cecog.classifier import SupportVectorClassifier
-from cecog.classifier import GMM
 
-from cecog.export import TC3Exporter
 from cecog.logging import LoggerObject
 from cecog.util.stopwatch import StopWatch
 from cecog.util.ctuple import COrderedDict
@@ -381,17 +378,14 @@ class PositionAnalyzer(PositionCore):
             self.settings.set_section('Processing')
             if sttg.get2(self._resolve_name(p_channel, 'classification')):
                 chreg = self._channel_regions(p_channel)
-                if sttg("EventSelection", "unsupervised_event_selection"):
-                    nclusters = sttg("EventSelection", "num_clusters")
-                    self.classifiers[p_channel] = GMM(nclusters, chreg)
-                else:
-                    sttg.set_section('Classification')
-                    cpath = sttg.get2(self._resolve_name(p_channel, 'classification_envpath'))
-                    cpath = join(cpath, basename(cpath)+".hdf")
-                    svc = SupportVectorClassifier(
-                        cpath, load=True, channels=chreg, color_channel=c_channel)
-                    svc.close()
-                    self.classifiers[p_channel] = svc
+
+                sttg.set_section('Classification')
+                cpath = sttg.get2(self._resolve_name(p_channel, 'classification_envpath'))
+                cpath = join(cpath, basename(cpath)+".hdf")
+                svc = SupportVectorClassifier(
+                    cpath, load=True, channels=chreg, color_channel=c_channel)
+                svc.close()
+                self.classifiers[p_channel] = svc
 
     @property
     def _transitions(self):
@@ -418,27 +412,15 @@ class PositionAnalyzer(PositionCore):
                 'max_in_degree': self.settings.get('EventSelection', 'maxindegree'),
                 'max_out_degree': self.settings.get('EventSelection', 'maxoutdegree')}
 
-        if self.settings.get('EventSelection', 'supervised_event_selection'):
-            opts.update({'backward_labels': [int(i) for i in self.settings.get(
-                'EventSelection', 'backwardlabels').split(',')],
-                         'forward_labels': [int(i) for i in self.settings.get(
-                             'EventSelection', 'forwardlabels').split(',')],
-                         'backward_range_min': self.settings.get('EventSelection', 'backwardrange_min'),
-                         'forward_range_min': self.settings.get('EventSelection', 'forwardrange_min'),
-                         'backward_check': self._convert_tracking_duration('backwardCheck'),
-                         'forward_check': self._convert_tracking_duration('forwardCheck')})
-            es = EventSelection(graph, **opts)
-
-        elif self.settings.get('EventSelection', 'unsupervised_event_selection'):
-            classdef = self.classifiers.values()[0].classdef # only one classdef in case of UES
-            opts.update({'forward_check': self._convert_tracking_duration('min_event_duration'),
-                         'forward_labels': (1, ),
-                         'backward_check': -1, # unsused for unsupervised usecase
-                         'backward_labels': (0, ),
-                         'num_clusters': self.settings.get('EventSelection', 'num_clusters'),
-                         'min_cluster_size': self.settings.get('EventSelection', 'min_cluster_size'),
-                         'classdef': classdef})
-            es = UnsupervisedEventSelection(graph, **opts)
+        opts.update({'backward_labels': [int(i) for i in self.settings.get(
+            'EventSelection', 'backwardlabels').split(',')],
+                     'forward_labels': [int(i) for i in self.settings.get(
+                         'EventSelection', 'forwardlabels').split(',')],
+                     'backward_range_min': self.settings.get('EventSelection', 'backwardrange_min'),
+                     'forward_range_min': self.settings.get('EventSelection', 'forwardrange_min'),
+                     'backward_check': self._convert_tracking_duration('backwardCheck'),
+                     'forward_check': self._convert_tracking_duration('forwardCheck')})
+        es = EventSelection(graph, **opts)
 
         return es
 
@@ -500,18 +482,6 @@ class PositionAnalyzer(PositionCore):
     def save_events(self):
         self.logger.info("Save Event data")
         self.timeholder.serialize_events(self._tes)
-
-    def save_tc3(self):
-        t_mean = self.meta_data.get_timestamp_info(self.position)[0]
-        tu = TimeConverter(t_mean, TimeConverter.SECONDS)
-        increment = self.settings('General', 'frameincrement')
-        t_step = tu.sec2min(t_mean)*increment
-
-        nclusters = self.settings.get('EventSelection', 'num_clusters')
-        tc3dir = join(dirname(dirname(self.datafile)), "tc3")
-        exporter = TC3Exporter(self._tes.tc3data, tc3dir, nclusters,
-                               t_step, TimeConverter.MINUTES, self.position)
-        exporter()
 
     def save_classification(self):
         """Save classlabels of each object to the hdf file."""
@@ -593,10 +563,6 @@ class PositionAnalyzer(PositionCore):
                self.settings('Processing', "eventselection"):
                 self.statusUpdate(text="Saving Event Data to cellh5...")
                 self.save_events()
-
-            if self.settings('EventSelection', 'unsupervised_event_selection'):
-                self.statusUpdate(text="Saving Event Data to cellh5...")
-                self.save_tc3()
 
             self.save_classification()
             self.timeholder.purge()

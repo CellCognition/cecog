@@ -23,11 +23,11 @@ import textwrap
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon
-from cecog.colors import DCMAP
+
 
 def dwell_boxplot(data, title=None, xlabel='class label',
                   ylabel='dwell time (frames)', exclude_labels=None,
-                  cmap=DCMAP, ymax=None, axes=None):
+                  cmap=None, ymax=None, axes=None):
 
     # remove keys only in this scope
     data = data.copy()
@@ -139,7 +139,7 @@ def dwell_boxplot2(data, title=None, xlabel='', ylabel='dwell time (frames)',
 
 def barplot(data,
             title=None, xlabel='class label', ylabel='dwell time (frames)',
-            exclude_labels=None, cmap=DCMAP, ymax=None, axes=None):
+            exclude_labels=None, cmap=None, ymax=None, axes=None):
 
     # remove keys only in this scop
     data = data.copy()
