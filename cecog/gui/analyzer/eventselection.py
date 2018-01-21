@@ -30,19 +30,18 @@ class EventSelectionFrame(BaseProcessorFrame):
                               ('Test Event Selection', 'Abort Event Selection'))
 
         self.add_group(None,
-                       [('backwardrange', (0,0,1,1)),
-                        ('forwardrange', (0,1,1,1)),
-                        ('duration_unit', (0,2,1,1)),
+                       [('backwardrange', (0, 0, 1, 1)),
+                        ('forwardrange', (0, 1, 1, 1)),
+                        ('duration_unit', (0, 2, 1, 1)),
                         ], link='eventselection',
                        label='Event selection')
-        self.add_line()
-        self.add_group('supervised_event_selection',
-                       [('labeltransitions', (0,0,1,1)),
-                        ('eventchannel', (0,1,1,1)),
-                        ('backwardlabels', (1,0,1,1)),
-                        ('forwardlabels', (1,1,1,1)),
-                        ('backwardcheck', (2,0,1,1)),
-                        ('forwardcheck', (2,1,1,1)),
+        self.add_group(None,
+                       [('labeltransitions', (0, 0, 1, 1)),
+                        ('eventchannel', (0, 1, 1, 1)),
+                        ('backwardlabels', (1, 0, 1, 1)),
+                        ('forwardlabels', (1, 1, 1, 1)),
+                        ('backwardcheck', (2, 0, 1, 1)),
+                        ('forwardcheck', (2, 1, 1, 1)),
                        ], layout='grid')
 
         self.add_expanding_spacer()
@@ -96,18 +95,8 @@ class EventSelectionFrame(BaseProcessorFrame):
                                            False)]}}
 
         # setting up primary channel and live rendering
-        if settings.get('EventSelection', 'unsupervised_event_selection'):
-            settings.set('Processing', 'primary_featureextraction', True)
-            settings.set('Processing', 'primary_classification', True)
-            settings.set('Processing', 'secondary_classification', False)
-            settings.set('Processing', 'tertiary_classification', False)
-            settings.set('Processing', 'merged_classification', False)
-            settings.set('General', 'rendering',
-                         {'primary_contours': render_contours})
-
-        elif settings.get('EventSelection', 'supervised_event_selection'):
-            settings.set('Processing', 'primary_featureextraction', True)
-            settings.set('Processing', 'primary_classification', True)
-            settings.set('General', 'rendering_class',
-                         {'primary_classification': render_class})
+        settings.set('Processing', 'primary_featureextraction', True)
+        settings.set('Processing', 'primary_classification', True)
+        settings.set('General', 'rendering_class',
+                     {'primary_classification': render_class})
         return settings

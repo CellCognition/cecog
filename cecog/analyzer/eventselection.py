@@ -1,7 +1,7 @@
 """
 eventseleciton.py
 
-Module supervised and unsupervised event selection based on class label
+Module supervised event selection based on class label
 transitions.
 """
 

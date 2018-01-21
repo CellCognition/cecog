@@ -389,17 +389,14 @@ class PositionAnalyzer(PositionCore):
 
     @property
     def _transitions(self):
-        if self.settings.get('EventSelection', 'unsupervised_event_selection'):
-            transitions = np.array(((0, 1), ))
-        else:
-            try:
-                transitions = np.array(
-                    eval(self.settings.get('EventSelection', 'labeltransitions')))
-                transitions.reshape((-1, 2))
-            except Exception as e:
-                raise RuntimeError(("Make sure that transitions are of the form "
-                                    "'int, int' or '(int, int), (int, int)' i.e "
-                                    "2-int-tuple  or a list of 2-int-tuples"))
+        try:
+            transitions = np.array(
+                eval(self.settings.get('EventSelection', 'labeltransitions')))
+            transitions.reshape((-1, 2))
+        except Exception as e:
+            raise RuntimeError(("Make sure that transitions are of the form "
+                                "'int, int' or '(int, int), (int, int)' i.e "
+                                "2-int-tuple  or a list of 2-int-tuples"))
 
         return transitions
 
@@ -537,13 +534,8 @@ class PositionAnalyzer(PositionCore):
             evchannel = self.settings('EventSelection', 'eventchannel')
             region = self.classifiers[evchannel].regions
 
-            if self.settings('EventSelection', 'unsupervised_event_selection'):
-                graph = self._tracker.graph
-            elif  evchannel != PrimaryChannel.NAME or \
-                    region != self.settings("Tracking", "region"):
-                graph = self._tracker.clone_graph(self.timeholder,
-                                                  evchannel,
-                                                  region)
+            if  evchannel != PrimaryChannel.NAME or region != self.settings("Tracking", "region"):
+                graph = self._tracker.clone_graph(self.timeholder, evchannel, region)
             else:
                 graph = self._tracker.graph
 

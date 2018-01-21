@@ -191,18 +191,4 @@ class ProcessingFrame(BaseProcessorFrame, ExportSettings):
                      (settings('Processing', 'merged_errorcorrection') and \
                           settings('General', 'process_merged')))
 
-
-        # special clase for UES, clustering takes place afterwards
-        if settings('EventSelection', 'unsupervised_event_selection'):
-            settings.set('General', 'rendering_class', {})
-            settings.set('Processing', 'primary_classification', True)
-            settings.set('Processing', 'secondary_featureextraction', False)
-            settings.set('Processing', 'secondary_classification', False)
-            settings.set('General', 'process_secondary', False)
-            settings.set('Processing', 'tertiary_featureextraction', False)
-            settings.set('Processing', 'tertiary_classification', False)
-            settings.set('General', 'process_tertiary', False)
-            settings.set('Processing', 'merged_classification', False)
-            settings.set('General', 'process_merged', False)
-
         return settings

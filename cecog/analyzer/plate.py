@@ -128,9 +128,6 @@ class PlateAnalyzer(Analyzer):
         if AppPreferences().write_logs:
             odirs += (join(self._outdir, "log"), )
 
-        if self.settings("EventSelection", "unsupervised_event_selection"):
-            odirs  += (join(self._outdir, "tc3"), )
-
         for odir in odirs:
             try:
                 makedirs(odir)
