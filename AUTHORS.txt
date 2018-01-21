@@ -10,24 +10,21 @@
 Authors, contributions and affiliation:
 --------------------------------------------------------------------------------
 
-Daniel Gerlich - group leader, project coordinator
+Daniel Gerlich - group leader
 IMBA Vienna, Austria
 
-Rudolf Höfler - project coordinator, main developer
+Rudolf Höfler - main developer
 IMBA Vienna, Austria
 
-Christoph Sommer - project coordinator, main developer
-IMBA Vienna, Austria
-
-Thomas Walter - developer of morphological operators and related features
+Thomas Walter - developer
 Institut Curie – Centre de Recherche Paris, France
-
-Alice Schoenauer Sebag
-Institut Curie – Centre de Recherche Paris, France
-
 
 former contributers:
-Michael Held - project initiator, main developer
+
+Christoph Sommer - developer
+IMBA Vienna, Austria
+
+Michael Held - project initiator, developer
 ETH Zurich, Switzerland
 
 Bernd Fischer - developer of the R-implementation of the HMM
