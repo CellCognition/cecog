@@ -582,9 +582,6 @@ class PositionAnalyzer(PositionCore):
         crd = Coordinate(self.plate_id, self.position,
                          self._frames, list(set(self.ch_mapping.values())))
 
-        minimal_effort = self.settings.get('Output', 'minimal_effort') and \
-                         self.settings.get('Output', 'hdf5_reuse')
-
         for frame, channels in self._imagecontainer( \
             crd, interrupt_channel=True, interrupt_zslice=True):
 
@@ -632,12 +629,12 @@ class PositionAnalyzer(PositionCore):
 
             self.settings.set_section('General')
             # want emit all images at once
-            if not minimal_effort:
-                imgs = {}
-                imgs.update(self.render_classification_images(cellanalyzer, images, frame))
-                imgs.update(self.render_contour_images(cellanalyzer, images, frame))
-                msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
-                self.setImage(imgs, msg, 50)
+
+            imgs = {}
+            imgs.update(self.render_classification_images(cellanalyzer, images, frame))
+            imgs.update(self.render_contour_images(cellanalyzer, images, frame))
+            msg = 'PL %s - P %s - T %05d' %(self.plate_id, self.position, frame)
+            self.setImage(imgs, msg, 50)
 
             cellanalyzer.purge(features=self.export_features)
             self.logger.debug(" - Frame %d, duration (ms): %3d" \

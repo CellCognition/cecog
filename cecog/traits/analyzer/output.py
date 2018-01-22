@@ -48,7 +48,5 @@ class SectionOutput(SectionCore):
            BooleanTrait(False, label='Include events')),
           ('hdf5_compression',
            BooleanTrait(True, label='Enable gzip compression (recommended!)')),
-          ('hdf5_merge_positions',
-           BooleanTrait(True, label='Merge positions into one file')),
       ]),
      ]

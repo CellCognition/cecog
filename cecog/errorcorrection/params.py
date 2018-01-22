@@ -24,15 +24,11 @@ from cecog.util.ctuple import COrderedDict
 # XXX belongs to the settings module/class
 class ECParams(object):
 
-    EVENTSELECTION_SUPERVISED = 0
-    EVENTSELECTION_UNSUPERVISED = 1
-    EVENTSELECTION = (EVENTSELECTION_SUPERVISED, EVENTSELECTION_UNSUPERVISED)
-
     __slots__ = ['regionnames', 'constrain_graph', 'hmm_constrain',
                  'classifier_dirs', 'mapping_dir', 'size_gallery_image',
                  'sortby', 'timeunit', 'overwrite_timelapse', 'timelapse',
                  'sorting', 'sorting_sequence', 'tmax', 'ignore_tracking_branches',
-                 'write_gallery', 'n_galleries', 'eventselection', 'nclusters',
+                 'write_gallery', 'n_galleries',
                  'resampling_factor']
 
     def __init__(self, settings, tstep, timeunit):
@@ -90,11 +86,6 @@ class ECParams(object):
         self.n_galleries = \
             settings('ErrorCorrection', 'compose_galleries_sample')
 
-        if settings('EventSelection', 'supervised_event_selection'):
-            self.eventselection = self.EVENTSELECTION_SUPERVISED
-        else:
-            self.eventselection = self.EVENTSELECTION_UNSUPERVISED
-        self.nclusters = settings('EventSelection', 'num_clusters')
         self.resampling_factor = settings('ErrorCorrection', 'resampling_factor')
         self.size_gallery_image = settings('ErrorCorrection', 'size_gallery_image')
 

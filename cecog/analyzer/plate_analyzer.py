@@ -211,7 +211,6 @@ class PlateAnalyzer(Analyzer):
 
         progress = ProgressMsg(stage=1, min=1, max=len(job_args))
 
-        hdf5_links = []
         for idx, (args_, kw_) in enumerate(job_args):
             if not thread is None:
                 if thread.is_aborted():
@@ -223,15 +222,12 @@ class PlateAnalyzer(Analyzer):
             analyzer = PositionAnalyzer(*args_, **kw_)
             try:
                 nimages = analyzer()
-                if self.settings.get('Output', 'hdf5_create_file') and \
-                    self.settings.get('Output', 'hdf5_merge_positions'):
-                    hdf5_links.append(analyzer.hdf5_filename)
             except Exception as e:
                 traceback.print_exc()
                 raise
             finally:
                 analyzer.clear()
-        return hdf5_links
+
 
 
 class AnalyzerBrowser(PlateAnalyzer):
@@ -254,8 +250,7 @@ class AnalyzerBrowser(PlateAnalyzer):
 
         analyzer = PositionAnalyzerForBrowser(*job_args)
         analyzer.add_stream_handler()
-        res = analyzer()
-        return res
+        analyzer()
 
 
 class Trainer(Analyzer):
