@@ -143,17 +143,13 @@ class ClassifierResultFrame(QGroupBox):
             (len(removed_features), "\n".join(removed_features)))
 
         # if classifier was trained
-        print "pre"
         try:
-            print "asdfasdfasdf"
             conf = clf.confmat
             c, g = clf.hyper_params
         except IOError as e:
             conf = None
             self._init_conf_table(conf)
-            print "xxxx"
         else:
-            print "adsf"
             self._set_info(c, g, conf)
             self._init_conf_table(conf, clf.classdef.names)
             self._update_conf_table(conf)
@@ -493,3 +489,7 @@ class ClassificationFrame(BaseProcessorFrame):
                 trait = self._settings.get_trait(
                     SECTION_NAME_CLASSIFICATION, '%s_classification_regionname' %name)
                 trait.set_list_data(self.plugin_mgr.region_info.names[name])
+
+    def _on_process_finished(self):
+        super(ClassificationFrame, self)._on_process_finished()
+        self._update_classifier()

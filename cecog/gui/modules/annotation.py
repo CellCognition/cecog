@@ -22,6 +22,7 @@ import re
 import glob
 import shutil
 import numpy as np
+import warnings
 
 from xml.dom import minidom
 
@@ -209,7 +210,12 @@ class Annotations(object):
 
                     for marker_type in doc.getElementsByTagName('Marker_Type'):
                         class_label = int(marker_type.getElementsByTagName('Type')[0].childNodes[0].data.strip())
-                        class_name = labels_to_names[class_label]
+                        try:
+                            class_name = labels_to_names[class_label]
+                        except KeyError as e:
+                            msg = "Inconsistent annotations file {}, skipping class {}".format(filename, class_label)
+                            warnings.warn(msg)
+                            continue
 
                         for marker in marker_type.getElementsByTagName('Marker'):
                             x = int(marker.getElementsByTagName('MarkerX')[0].childNodes[0].data)
@@ -670,7 +676,8 @@ class AnnotationModule(Module):
                     has_invalid = self._annotations.import_from_xml(
                         path2, self.classdef.names, self._imagecontainer)
                 except Exception as e:
-                    print type(e)
+                    import traceback
+                    traceback.print_exc()
                     QMessageBox.critical(self, "Error", str(e))
                     self._init_new_classifier()
                 else:
