@@ -143,13 +143,17 @@ class ClassifierResultFrame(QGroupBox):
             (len(removed_features), "\n".join(removed_features)))
 
         # if classifier was trained
+        print "pre"
         try:
+            print "asdfasdfasdf"
             conf = clf.confmat
             c, g = clf.hyper_params
         except IOError as e:
             conf = None
             self._init_conf_table(conf)
+            print "xxxx"
         else:
+            print "adsf"
             self._set_info(c, g, conf)
             self._init_conf_table(conf, clf.classdef.names)
             self._update_conf_table(conf)

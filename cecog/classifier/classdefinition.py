@@ -95,8 +95,14 @@ class ClassDefinition(ClassDefinitionCore):
     def _from_recarray(self, classes):
 
         dtypes = classes.dtype.names
+        if dtypes is None:
+            for (name, label_, color) in classes[1:, :]:
+                label = int(label_)
+                self.labels[name] = label
+                self.names[label] = name
+                self.colors[name] = str(color)
 
-        if dtypes[0].startswith("name"):
+        elif dtypes[0].startswith("name"):
             for (name, label, color) in classes:
                 self.labels[name] = label
                 self.names[label] = name
