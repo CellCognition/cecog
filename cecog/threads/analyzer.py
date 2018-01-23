@@ -29,15 +29,15 @@ class AnalyzerThread(CoreThread):
     def clear_output_directory(self, directory):
         """Remove the content of the output directory except the structure file."""
 
-        files = os.listdir(directory)
-        for file_ in files:
-            path = os.path.join(directory, file_)
-            if os.path.isdir(path):
-                shutil.rmtree(path)
-            elif file_.endswith(".xml"):
-                pass
-            else:
-                os.remove(path)
+        for root, dirs, files in os.walk(directory, topdown=False):
+            for name in files:
+                if not name.endswith(".xml"):
+                    os.remove(os.path.join(root, name))
+            for name in dirs:
+                try:
+                    os.rmdir(os.path.join(root, name))
+                except OSError:
+                    pass
 
     def _run(self):
 
