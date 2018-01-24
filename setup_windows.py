@@ -138,7 +138,8 @@ setup(options = {'py2exe': py2exe_opts,
       package_data = {'cecog': [join('gui', '*.ui'),
                                 join('gui', 'helpbrowser', '*.ui')]},
       data_files = dfiles,
-      windows = [{'script': join('scripts', 'CecogAnalyzer.py'),
+      # switch between console and window to debug
+      window = [{'script': join('scripts', 'CecogAnalyzer.py'),
                   'icon_resources': [(1, 'resources\cecog_analyzer_icon.ico')]
                   }],
       ext_modules = [ccore],

@@ -16,13 +16,11 @@ import logging
 import traceback
 
 from PyQt5 import QtCore
-
 from cecog import ccore
 
 
 class StopProcessing(Exception):
     pass
-
 
 
 class CoreThread(QtCore.QThread):
@@ -46,7 +44,6 @@ class CoreThread(QtCore.QThread):
         # turn off vigra tiff warnings
         if not __debug__:
             ccore.turn_off()
-            self._enable_eclipse_mt_debugging()
         try:
             self._run()
         except StopProcessing:

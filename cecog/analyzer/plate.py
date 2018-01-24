@@ -18,7 +18,7 @@ import os
 import re
 import glob
 import traceback
-from os.path import join, basename
+from os.path import join, basename, isfile
 
 from cecog.io import Ch5File
 from cecog.util.util import makedirs
@@ -208,7 +208,8 @@ class PlateAnalyzer(Analyzer):
             try:
                 analyzer()
                 with Ch5File(self.h5f, mode="r+") as ch5:
-                   ch5.createSite(analyzer.datafile)
+                    if isfile(analyzer.datafile):
+                        ch5.createSite(analyzer.datafile)
             except StopProcessing:
                 pass
             except Exception as e:
