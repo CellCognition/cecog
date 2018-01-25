@@ -15,17 +15,16 @@ __all__ = ('Ch5File', )
 
 
 import os
-import time
-import random
+import collections
 import filelock
 
 
 import h5py
 import glob
-import h5py
 import numpy as np
 
 from cellh5 import CH5FileWriter, CH5Const
+from cellh5 import CH5PositionCoordinate
 
 Plate = '/sample/0/plate/'
 Well = Plate + '%s/experiment/'
@@ -90,7 +89,7 @@ class Ch5File(CH5FileWriter):
     # this init is a dirty hack.
     # Cellh5 tries to load positions (sites) automatically, which are
     # not present.
-    def __init__(self, filename, mode='a', cached=False, load_positions=False):
+    def __init__(self, filename, timeout=60, mode='a', cached=False):
 
         self.lock = FileLock(filename.replace("ch5", "lock"))
         try:
