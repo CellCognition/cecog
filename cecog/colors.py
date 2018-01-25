@@ -12,7 +12,8 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['Colors', 'rgb2hex', 'DCMAP', 'hex2rgb', 'BINARY_CMAP', 'DiscreteColormap']
+__all__ = ['Colors', 'rgb2hex', 'DCMAP', 'hex2rgb', 'BINARY_CMAP',
+           'DiscreteColormap']
 
 import numpy as np
 

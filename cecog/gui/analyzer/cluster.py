@@ -174,7 +174,10 @@ class ClusterDisplay(QGroupBox):
         for root, dirs, files in os.walk(directory, topdown=False):
             for name in files:
                 if not name.endswith(".xml"):
-                    os.remove(os.path.join(root, name))
+                    try:
+                        os.remove(os.path.join(root, name))
+                    except OSError:
+                        pass
             for name in dirs:
                 try:
                     os.rmdir(os.path.join(root, name))

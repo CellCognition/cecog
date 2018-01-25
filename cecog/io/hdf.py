@@ -87,10 +87,10 @@ class FileLock(filelock.FileLock):
 
 class Ch5File(CH5FileWriter):
 
-    def __init__(self, filename, timeout=60, *args, **kw):
-
-        # randomize acces times in different processes
-        # time.sleep(random.random()*1.4)
+    # this init is a dirty hack.
+    # Cellh5 tries to load positions (sites) automatically, which are
+    # not present.
+    def __init__(self, filename, mode='a', cached=False, load_positions=False):
 
         self.lock = FileLock(filename.replace("ch5", "lock"))
         try:
@@ -98,7 +98,52 @@ class Ch5File(CH5FileWriter):
         except filelock.Timeout as e:
             raise IOError("Cannot open hdf file %s" %(str(e)))
 
-        super(Ch5File, self).__init__(filename, *args, **kw)
+        self._cached = cached
+        if isinstance(filename, basestring):
+            self.filename = filename
+            self._file_handle = h5py.File(filename, mode)
+        else:
+            self._file_handle = filename
+            self.filename = filename.filename
+
+        try:
+            self.plate = self._get_group_members('/sample/0/plate/')[0]
+            self.wells = self._get_group_members('/sample/0/plate/%s/experiment/' % self.plate)
+            self.positions = collections.OrderedDict()
+            for w in sorted(self.wells):
+                self.positions[w] = self._get_group_members('/sample/0/plate/%s/experiment/%s/position/' % (self.plate, w))
+        except KeyError:
+            return
+
+        self._position_group = {}
+        self._coordinates = []
+        for well, positions in self.positions.iteritems():
+            for pos in positions:
+                self._coordinates.append(CH5PositionCoordinate(self.plate, well, pos))
+                self._position_group[(well, pos)] = self._open_position(
+                    self.plate, well, pos)
+        self.current_pos = self._position_group.values()[0]
+
+        self._f = self._file_handle
+
+    # self._init_basic_structure()
+
+    # def __init__(self, filename, timeout=60, *args, **kw):
+
+    #     # randomize acces times in different processes
+    #     # time.sleep(random.random()*1.4)
+
+    #     self.lock = FileLock(filename.replace("ch5", "lock"))
+    #     try:
+    #         self.lock.acquire(timeout=timeout)
+    #     except filelock.Timeout as e:
+    #         raise IOError("Cannot open hdf file %s" %(str(e)))
+
+    #     try:
+    #         super(Ch5File, self).__init__(filename, *args, **kw)
+    #     except Exception as e:
+    #         print filename
+    #         raise
 
     def close(self):
         super(Ch5File, self).close()
