@@ -106,13 +106,7 @@ class PlateAnalyzer(Analyzer):
         if settings('General', 'skip_finished'):
             mode = "r+"
 
-        with Ch5File(self.h5f, mode=mode) as ch5:
-            if not ch5.hasLayout(plate):
-                layout = "%s/%s.txt" %(settings("General", "plate_layout"), plate)
-                ch5.savePlateLayout(layout, plate)
-
         self._setup_cropping()
-
         self.logger.debug("frames: %r" % self.frames)
 
     @property
@@ -182,9 +176,14 @@ class PlateAnalyzer(Analyzer):
 
     def __call__(self):
 
-        with Ch5File(self.h5f, mode="r") as ch5:
-            finished = ch5.existingSites(self.plate)
-            layout = ch5.layout(self.plate)
+        # check for exiting site if the file already exists
+        finished = dict()
+        if isfile(self.h5f):
+            with Ch5File(self.h5f, mode="r") as ch5:
+                finished = ch5.existingSites(self.plate)
+
+        layout = "%s/%s.txt" %(self.settings("General", "plate_layout"), self.plate)
+        layout = Ch5File.layoutFromTxt(layout)
 
         for pos in self.positions:
             i = layout["File"].tolist().index(pos)
@@ -207,7 +206,7 @@ class PlateAnalyzer(Analyzer):
 
             try:
                 analyzer()
-                with Ch5File(self.h5f, mode="r+") as ch5:
+                with Ch5File(self.h5f, mode="a") as ch5:
                     if isfile(analyzer.datafile):
                         ch5.createSite(analyzer.datafile)
             except StopProcessing:

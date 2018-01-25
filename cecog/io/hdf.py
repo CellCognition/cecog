@@ -37,15 +37,16 @@ LayoutDtype = np.dtype(
      ('siRNA', 'S8'), ('Group', 'S10')])
 
 
-def mergeHdfFiles(target, source_dir, remove_source=True):
+def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
 
     hdffiles = glob.glob(os.path.join(source_dir, '*.ch5'))
-    target = h5py.File(target, 'r+')
+    target = h5py.File(target, mode=mode)
 
     for i, h5 in enumerate(hdffiles):
         source = h5py.File(h5, 'r')
 
         if i == 0:
+            target.copy(source['/layout'], '/layout')
             target.copy(source['/definition'], "/definition")
 
         first_item = lambda view: next(iter(view))
@@ -180,6 +181,16 @@ class Ch5File(CH5FileWriter):
                                     delimiter="\t", skip_header=True)
 
             dset = grp.create_dataset(platename, data=rec)
+
+    @staticmethod
+    def layoutFromTxt(filename):
+
+        try:
+            rec = np.recfromtxt(filename, dtype=LayoutDtype, skip_header=True)
+        except ValueError:
+            rec = np.recfromtxt(filename, dtype=LayoutDtye, delimiter="\t", skip_header=True)
+
+        return rec
 
     def createSite(self, filename):
         """Create an empty group for a Site."""

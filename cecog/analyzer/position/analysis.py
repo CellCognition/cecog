@@ -43,6 +43,7 @@ from cecog.util.stopwatch import StopWatch
 from cecog.util.ctuple import COrderedDict
 
 from cecog.features import FEATURE_MAP
+from cecog.io import Ch5File
 
 
 class PositionCore(LoggerObject):
@@ -252,7 +253,6 @@ class PositionCore(LoggerObject):
             h5opts["hdf5_include_tracking"] = False
             h5opts["hdf5_include_events"] = False
         return h5opts
-
 
     # FIXME the following functions do moreless the same!
     def _resolve_name(self, channel, name):
@@ -567,6 +567,10 @@ class PositionAnalyzer(PositionCore):
             self.logger.info("%d images analyzed, %3d ms per image set" %(n, intval))
 
         self.clear()
+
+        with Ch5File(self.datafile, mode="r+") as ch5:
+            layout = "%s/%s.txt" %(self.settings("General", "plate_layout"), self.plate_id)
+            ch5.savePlateLayout(layout, self.plate_id)
 
     def clear(self):
         if self.timeholder is not None:
