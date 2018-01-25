@@ -105,6 +105,8 @@ class Ch5File(CH5FileWriter):
             self._file_handle = filename
             self.filename = filename.filename
 
+        self._f = self._file_handle
+
         try:
             self.plate = self._get_group_members('/sample/0/plate/')[0]
             self.wells = self._get_group_members('/sample/0/plate/%s/experiment/' % self.plate)
@@ -123,7 +125,7 @@ class Ch5File(CH5FileWriter):
                     self.plate, well, pos)
         self.current_pos = self._position_group.values()[0]
 
-        self._f = self._file_handle
+
 
     # self._init_basic_structure()
 
