@@ -125,27 +125,6 @@ class Ch5File(CH5FileWriter):
                     self.plate, well, pos)
         self.current_pos = self._position_group.values()[0]
 
-
-
-    # self._init_basic_structure()
-
-    # def __init__(self, filename, timeout=60, *args, **kw):
-
-    #     # randomize acces times in different processes
-    #     # time.sleep(random.random()*1.4)
-
-    #     self.lock = FileLock(filename.replace("ch5", "lock"))
-    #     try:
-    #         self.lock.acquire(timeout=timeout)
-    #     except filelock.Timeout as e:
-    #         raise IOError("Cannot open hdf file %s" %(str(e)))
-
-    #     try:
-    #         super(Ch5File, self).__init__(filename, *args, **kw)
-    #     except Exception as e:
-    #         print filename
-    #         raise
-
     def close(self):
         super(Ch5File, self).close()
         self.lock.release()
@@ -226,7 +205,7 @@ class Ch5File(CH5FileWriter):
                 # remove empty sites from list
                 sites = [k for k, s in sites.items() if len(s.keys()) > 0]
                 wsites[well] = sites
-        except (KeyError, AttributeError):
+        except (KeyError, AttributeError, RuntimeError):
             pass
 
         return wsites
