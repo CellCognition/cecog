@@ -569,8 +569,7 @@ class PositionAnalyzer(PositionCore):
         self.clear()
 
         with Ch5File(self.datafile, mode="r+") as ch5:
-            layout = "%s/%s.txt" %(self.settings("General", "plate_layout"), self.plate_id)
-            ch5.savePlateLayout(layout, self.plate_id)
+            ch5.savePlateLayout(self.layout, self.plate_id)
 
     def clear(self):
         if self.timeholder is not None:

@@ -110,10 +110,12 @@ class Ch5File(CH5FileWriter):
 
         try:
             self.plate = self._get_group_members('/sample/0/plate/')[0]
-            self.wells = self._get_group_members('/sample/0/plate/%s/experiment/' % self.plate)
+            self.wells = self._get_group_members(
+                '/sample/0/plate/%s/experiment/' % self.plate)
             self.positions = collections.OrderedDict()
             for w in sorted(self.wells):
-                self.positions[w] = self._get_group_members('/sample/0/plate/%s/experiment/%s/position/' % (self.plate, w))
+                self.positions[w] = self._get_group_members(
+                    '/sample/0/plate/%s/experiment/%s/position/' %(self.plate, w))
         except KeyError:
             return
 
@@ -121,7 +123,8 @@ class Ch5File(CH5FileWriter):
         self._coordinates = []
         for well, positions in self.positions.iteritems():
             for pos in positions:
-                self._coordinates.append(CH5PositionCoordinate(self.plate, well, pos))
+                self._coordinates.append(
+                    CH5PositionCoordinate(self.plate, well, pos))
                 self._position_group[(well, pos)] = self._open_position(
                     self.plate, well, pos)
         self.current_pos = self._position_group.values()[0]
@@ -163,27 +166,24 @@ class Ch5File(CH5FileWriter):
 
         self._file_handle.copy(source, CH5Const.DEFINITION)
 
-    def savePlateLayout(self, plate_layout, platename):
+    def savePlateLayout(self, layout, platename):
         """Save experimental layout for using the platename."""
 
-        if not os.path.isfile(plate_layout):
-            msg = "No Plate Layout provided. File not found %s" %plate_layout
-            raise IOError(msg)
+        if isinstance(layout, basestring):
+            layout = Ch5File.layoutFromTxt(layout)
 
         grp = self._file_handle.require_group(CH5Const.LAYOUT)
 
         if platename not in grp:
-            try:
-                rec = np.recfromtxt(plate_layout, dtype=LayoutDtype,
-                                    skip_header=True)
-            except ValueError:
-                rec = np.recfromtxt(plate_layout, dtype=LayoutDtype,
-                                    delimiter="\t", skip_header=True)
-
-            dset = grp.create_dataset(platename, data=rec)
+            dset = grp.create_dataset(platename, data=layout)
 
     @staticmethod
     def layoutFromTxt(filename):
+        """Read plate layout from text file and return a structured array."""
+
+        if not os.path.isfile(filename):
+            msg = "No Plate Layout provided. File not found {}".format(filename)
+            raise IOError(msg)
 
         try:
             rec = np.recfromtxt(filename, dtype=LayoutDtype, skip_header=True)
