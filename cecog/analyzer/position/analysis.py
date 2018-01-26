@@ -16,7 +16,7 @@ __all__ = ("PositionCore", "PositionAnalyzer")
 
 import numpy as np
 
-from os.path import join, basename, dirname
+from os.path import join, basename, dirname, isfile
 from collections import OrderedDict, defaultdict
 
 from PyQt5.QtCore import QThread
@@ -568,8 +568,9 @@ class PositionAnalyzer(PositionCore):
 
         self.clear()
 
-        with Ch5File(self.datafile, mode="r+") as ch5:
-            ch5.savePlateLayout(self.layout, self.plate_id)
+        if isfile(self.datafile):
+            with Ch5File(self.datafile, mode="r+") as ch5:
+                ch5.savePlateLayout(self.layout, self.plate_id)
 
     def clear(self):
         if self.timeholder is not None:
