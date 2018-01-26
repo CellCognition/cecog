@@ -44,7 +44,7 @@
         <enum>QFrame::StyledPanel</enum>
        </property>
        <property name="currentIndex">
-        <number>3</number>
+        <number>2</number>
        </property>
        <widget class="QWidget" name="cluster">
         <layout class="QVBoxLayout" name="verticalLayout">
@@ -330,44 +330,6 @@
          </item>
         </layout>
        </widget>
-       <widget class="QWidget" name="stylesheet">
-        <widget class="QGroupBox" name="groupBox">
-         <property name="geometry">
-          <rect>
-           <x>9</x>
-           <y>9</y>
-           <width>391</width>
-           <height>81</height>
-          </rect>
-         </property>
-         <property name="title">
-          <string>Color scheme</string>
-         </property>
-         <widget class="QComboBox" name="style_select">
-          <property name="geometry">
-           <rect>
-            <x>90</x>
-            <y>30</y>
-            <width>281</width>
-            <height>22</height>
-           </rect>
-          </property>
-         </widget>
-         <widget class="QLabel" name="label_2">
-          <property name="geometry">
-           <rect>
-            <x>10</x>
-            <y>30</y>
-            <width>71</width>
-            <height>16</height>
-           </rect>
-          </property>
-          <property name="text">
-           <string>Style Sheet</string>
-          </property>
-         </widget>
-        </widget>
-       </widget>
        <widget class="QWidget" name="visalization">
         <layout class="QVBoxLayout" name="verticalLayout_4">
          <item>
@@ -583,15 +545,6 @@
       <property name="icon">
        <iconset resource="../../cecog.qrc">
         <normaloff>:/picmi.png</normaloff>:/picmi.png</iconset>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Appearance</string>
-      </property>
-      <property name="icon">
-       <iconset resource="../../cecog.qrc">
-        <normaloff>:/general.png</normaloff>:/general.png</iconset>
       </property>
      </item>
      <item>

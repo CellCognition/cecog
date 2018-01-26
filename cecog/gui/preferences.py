@@ -32,7 +32,7 @@ from PyQt5.QtCore import Qt, QSettings
 from .loadui import loadUI
 from cecog.util.pattern import Singleton
 from cecog import version
-from cecog import css
+
 
 
 def txt2dict(txt):
@@ -64,8 +64,8 @@ class AppPreferences(object):
 
     __metaclass__ = Singleton
     __slots__ = ("host", "port", "mapping_str", "target_platform",
-                 "batch_size", "cluster_support", "stylesheet",
-                 "available_stylesheets", "cradius", "track_length",
+                 "batch_size", "cluster_support",
+                 "cradius", "track_length",
                  "display_tracks", "write_logs")
 
     def __init__(self):
@@ -81,7 +81,6 @@ class AppPreferences(object):
         self.target_platform = "linux2"
         self.batch_size = 1
         self.cluster_support = True
-        self.stylesheet = 'classic'
         self.track_length = 3
         self.cradius = 3
         self.display_tracks = True
@@ -100,7 +99,6 @@ class AppPreferences(object):
         settings.setValue('target_platform', self.target_platform)
         settings.setValue('batch_size', self.batch_size)
         settings.setValue('cluster_support', self.cluster_support)
-        settings.setValue('stylesheet', self.stylesheet)
         settings.setValue('track_length', self.track_length)
         settings.setValue('cradius', self.cradius)
         settings.setValue('display_tracks', self.display_tracks)
@@ -129,9 +127,6 @@ class AppPreferences(object):
 
         if settings.contains('cluster_support'):
             self.cluster_support = settings.value('cluster_support', type=bool)
-
-        if settings.contains('stylesheet'):
-            self.stylesheet = settings.value('stylesheet', type=str)
 
         if settings.contains('track_length'):
             self.track_length = settings.value('track_length', type=int)
@@ -226,22 +221,10 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.batch_size.setValue(apc.batch_size)
         self.cluster_support.setChecked(apc.cluster_support)
 
-        self.style_select.addItems(css.StyleSheets.keys())
-        self.style_select.setCurrentIndex(
-            self.style_select.findText(apc.stylesheet))
-
-        self.style_select.currentIndexChanged[str].connect(
-            self.setGlobalStylesheet)
-
         self.cradius.setValue(apc.cradius)
         self.track_length.setValue(apc.track_length)
         self.display_tracks.setChecked(apc.display_tracks)
         self.writelogs.setChecked(apc.write_logs)
-
-
-    def setGlobalStylesheet(self, stylesheet):
-        stylesheet = css.loadStyle(stylesheet)
-        self.parent().updateStyleSheet(stylesheet)
 
     def populateTable(self, mappings):
 
@@ -292,7 +275,6 @@ class PreferencesDialog(QtWidgets.QDialog):
             self._iosnames[self.target_platform.currentText()]
         appcfg.batch_size = self.batch_size.value()
         appcfg.cluster_support = self.cluster_support.isChecked()
-        appcfg.stylesheet = self.style_select.currentText()
         appcfg.track_length = self.track_length.value()
         appcfg.cradius = self.cradius.value()
         appcfg.display_tracks = self.display_tracks.isChecked()

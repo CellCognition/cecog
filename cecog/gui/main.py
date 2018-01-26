@@ -66,7 +66,6 @@ from cecog.logging import LogWindow
 from cecog.gui.progressdialog import ProgressDialog
 from cecog.gui.progressdialog import ProgressObject
 from cecog.gui.helpbrowser import AtAssistant
-from cecog.css import loadStyle
 
 
 def fix_path(path):
@@ -219,7 +218,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self._tabs.append(clusterframe)
 
         try:
-            self.updateStyleSheet(loadStyle(app.stylesheet))
+            self.updateStyleSheet(":cecog_style")
         except Exception as e:
             # proceed with no stylesheet
             traceback.print_exc()
@@ -480,15 +479,19 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         pref.exec_()
 
     def updateStyleSheet(self, stylesheet):
+
+        f = QFile(stylesheet)
+        f.open(QFile.ReadOnly | QFile.Text)
+        ts = QTextStream(f).readAll()
+
         self.setStyleSheet("")
-        self.setStyleSheet(stylesheet)
+        self.setStyleSheet(ts)
 
         self._pages.assistant.setStyleSheet("")
-        self._pages.assistant.setStyleSheet(stylesheet)
+        self._pages.assistant.setStyleSheet(ts)
 
         if self._browser is not None:
-            self._browser.setStyleSheet("")
-            self._browser.setStyleSheet(stylesheet)
+            self._browser.setStyleSheet(ts)
 
     def _on_browser_open(self):
         if self._imagecontainer is None:
@@ -502,7 +505,12 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                 browser.raise_()
                 browser.setFocus()
                 app = AppPreferences()
-                browser.setStyleSheet(loadStyle(app.stylesheet))
+
+                f = QFile(":cecog_style")
+                f.open(QFile.ReadOnly|QFile.Text)
+                ts = QTextStream(f).readAll()
+
+                browser.setStyleSheet(ts)
                 self._browser = browser
             except Exception as e:
                 traceback.print_exc()
