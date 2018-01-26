@@ -15,6 +15,7 @@ __all__ = ['get_data_files', 'find_uifiles',
            'TARGET_BUNDLE', 'TARGET_SYS']
 
 import os
+import sys
 import glob
 import numpy.distutils
 import matplotlib
@@ -101,8 +102,9 @@ def get_data_files(target_dir=TARGET_BUNDLE,
             qt5plugins = (dir_, qt5plugins)
             dfiles.append(qt5plugins)
 
-    for f in ("libEGL.dll", ):
-         dfiles.append(('.', [join(dirname(PyQt5.__file__), f)]))
+    if sys.platform.startswith("win"):
+        for f in ("libEGL.dll", ):
+            dfiles.append(('.', [join(dirname(PyQt5.__file__), f)]))
 
     # # qt help files
     dfiles.append((join(target_dir, 'doc'),
