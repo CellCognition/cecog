@@ -205,9 +205,17 @@ class PlateAnalyzer(Analyzer):
 
             try:
                 analyzer()
-                with Ch5File(self.h5f, mode="a") as ch5:
-                    if isfile(analyzer.datafile):
-                        ch5.createSite(analyzer.datafile)
+                for i in range(10):
+                    # try several times to create the site. on the cluster
+                    # many processes will open the file in this mode at the
+                    # same time
+                    try:
+                        with Ch5File(self.h5f, mode="a") as ch5:
+                            ch5.createSite(analyzer.datafile)
+                            break
+                    except IOError:
+                        continue
+
             except StopProcessing:
                 pass
             except Exception as e:

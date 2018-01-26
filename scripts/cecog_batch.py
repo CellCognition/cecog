@@ -54,8 +54,9 @@ def getCellH5NumberOfSites(file_):
         nsites = 0
         for pos in c5.positions.values():
             nsites += len(pos)
-    finally:
         c5.close()
+    except KeyError:
+        nsites = -1
 
     return nsites
 
@@ -103,11 +104,11 @@ if __name__ ==  "__main__":
 
     logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.WARNING)
+    handler.setLevel(logging.ERROR)
     formatter = logging.Formatter('%(asctime)s %(levelname)-6s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(logging.WARNING)
+    logger.setLevel(logging.ERROR)
 
     logger.info("*"*(len(version) + 53))
     logger.info("*** CellCognition - Batch Script - Version %s ***" %version)

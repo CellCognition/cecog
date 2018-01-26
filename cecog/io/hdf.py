@@ -108,26 +108,26 @@ class Ch5File(CH5FileWriter):
 
         self._f = self._file_handle
 
-        try:
-            self.plate = self._get_group_members('/sample/0/plate/')[0]
-            self.wells = self._get_group_members(
-                '/sample/0/plate/%s/experiment/' % self.plate)
-            self.positions = collections.OrderedDict()
-            for w in sorted(self.wells):
-                self.positions[w] = self._get_group_members(
-                    '/sample/0/plate/%s/experiment/%s/position/' %(self.plate, w))
-        except KeyError:
-            return
+        # try:
+        #     self.plate = self._get_group_members('/sample/0/plate/')[0]
+        #     self.wells = self._get_group_members(
+        #         '/sample/0/plate/%s/experiment/' % self.plate)
+        #     self.positions = collections.OrderedDict()
+        #     for w in sorted(self.wells):
+        #         self.positions[w] = self._get_group_members(
+        #             '/sample/0/plate/%s/experiment/%s/position/' %(self.plate, w))
+        # except KeyError:
+        #     return
 
-        self._position_group = {}
-        self._coordinates = []
-        for well, positions in self.positions.iteritems():
-            for pos in positions:
-                self._coordinates.append(
-                    CH5PositionCoordinate(self.plate, well, pos))
-                self._position_group[(well, pos)] = self._open_position(
-                    self.plate, well, pos)
-        self.current_pos = self._position_group.values()[0]
+        # self._position_group = {}
+        # self._coordinates = []
+        # for well, positions in self.positions.iteritems():
+        #     for pos in positions:
+        #         self._coordinates.append(
+        #             CH5PositionCoordinate(self.plate, well, pos))
+        #         self._position_group[(well, pos)] = self._open_position(
+        #             self.plate, well, pos)
+        # self.current_pos = self._position_group.values()[0]
 
     def close(self):
         super(Ch5File, self).close()
