@@ -23,9 +23,6 @@ from collections import defaultdict
 from matplotlib import use
 use("Agg")
 
-
-import cellh5
-
 try:
     import cecog
 except ImportError:
@@ -39,6 +36,7 @@ from cecog.analyzer.plate import PlateAnalyzer
 from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import ImageContainer
 from cecog.io.hdf import mergeHdfFiles
+from cecog.io.hdf import Ch5File
 
 
 ENV_INDEX_SGE = 'SGE_TASK_ID'
@@ -46,17 +44,14 @@ PLATESEP = "___"
 POSSEP = ","
 
 
-def getCellH5NumberOfSites(file_):
+def getCellH5NumberOfSites(file_, plate):
     """Determine the number of site within a file."""
 
-    try:
-        c5 = cellh5.CH5File(file_)
-        nsites = 0
-        for pos in c5.positions.values():
-            nsites += len(pos)
-        c5.close()
-    except KeyError:
-        nsites = -1
+    c5 = Ch5File(file_)
+    nsite = 0
+    plates = c5.plates()
+    for plate in plates:
+        nsites += c5.numberSites(plate)
 
     return nsites
 
@@ -181,7 +176,7 @@ if __name__ ==  "__main__":
         analyzer()
         ch5file = analyzer.h5f
 
-    n_sites = getCellH5NumberOfSites(ch5file)
+    n_sites = getCellH5NumberOfSites(ch5file, plate)
     n_total = len(imagecontainer.get_meta_data().positions)
     posflag = settings("General", "constrain_positions")
 

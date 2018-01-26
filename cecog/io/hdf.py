@@ -146,6 +146,9 @@ class Ch5File(CH5FileWriter):
     def __delitem__(self, key):
         del self._file_handle[key]
 
+    def plates(self):
+        return tuple(self[Plate])
+
     def layout(self, plate):
         path = "%s/%s" %(CH5Const.LAYOUT, plate)
         return self[path].value
