@@ -178,8 +178,8 @@ class PlateAnalyzer(Analyzer):
 
         # check for exiting site if the file already exists
         finished = dict()
-        if isfile(self.h5f):
-            with Ch5File(self.h5f, mode="r") as ch5:
+        if self.settings('General', 'skip_finished') and isfile(self.h5f):
+            with Ch5File(self.h5f, mode="a") as ch5:
                 finished = ch5.existingSites(self.plate)
 
         layout = "%s/%s.txt" %(self.settings("General", "plate_layout"), self.plate)
@@ -190,8 +190,7 @@ class PlateAnalyzer(Analyzer):
             well, site = layout["Well"][i], layout["Site"][i]
             wsstr = "%s_%02d" %(well, site)
 
-            if well in finished and str(site) in finished[well] and self.settings(
-                    'General', 'skip_finished'):
+            if well in finished and str(site) in finished[well]:
                 msg = 'Skipping already processed postion %s' %wsstr
                 self.logger.info(msg)
                 continue
