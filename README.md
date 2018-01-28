@@ -1,66 +1,52 @@
 # The CellCognition Project
- Copyright (c) 2006 - 2015 Gerlich Lab, IMBA Vienna, Austria  
- CellCognition is distributed under the terms of LGPL. 
 
- [www.cellcognition.org](www.cellcognition.org)  
- [doc.cellcognition.org](http://doc.cellcognition.org)
+ Copyright (c) 2006 - 2018 Gerlich Lab, IMBA Vienna, Austria  
+ The software is released under the terms of LGPL. 
 
-### Building the C++ Extension
+ [www.cellcognition-project.org](www.cellcognition-project.org)  
+ [doc.cellcognition-project.org](http://doc.cellcognition-project.org)
 
-To compile the ccore extension you need to adopt the library/include
-paths in the setup.cfg accordingly.
+## Development build
 
-Dependcies are:
-- libvigraimpex
-- libtiff
+The Extension depends on libtiff and libvigra. Adopt the library/include
+paths in the setup.cfg accordingly. On Unix (including OSX) like systems type:
 
-Remove the build- and dist directories and also the file
-cecog/ccore/_cecog.so(pyd)
+### Unixoides System
 
-#### Development build
-  ```python setup.py build_ext --inplace```
+```bash  
+python setup.py build_ext --inplace
+```
 
-#### System installation:
-  ```python setup.py install --prefix=<path-to-prefix>```
+There's also am make file:
 
-#### MacOSX
-Run the make file.
+* ```make clean``` 
+* ```make inplace``` - install the C++-extenstion inplace ad builds \*.rc and help files
+* ```make dmg``` - Binary installer for MacOSX
 
-#### Using VCXX Professional
-Run build_win64_bin.bat
+### Windoze (7/8)
+
+```bat
+build_win64_bin.bat
+```
+
+## System installation (e.g. on a cluster):
+  
+```python
+python setup.py install --prefix=<path-to-prefix>
+```
+
+**Note:**
+If you are using Windows an can not use the make fils, removethe *build*- and *dist* directories and also the file
+*./cecog/ccore/_cecog.pyd*
 
 
 ### Demo data (battery package)
 
 The demo data contains:
 
-- A small set of raw images (10 timepoints of H2b-aTubulin).
-- The two classifiers for H2b and aTubulin to test classification.
-- A pre-configured settings file which is loaded on start-up.
+* a small set of raw images.
+* two classifiers for H2b and aTubulin.
+* a pre-configured settings file.
 
-Using the demo data it is possible to:
-
-- Run segmentation on H2b (primary) and aTubulin (secondary) channels.
-- Test the classifier for H2b and aTubulin channels.
-
-#####Files:
-
-- Settings
-  - demo_settings.conf, the settings file which is loaded on startup
-  - graph_primary.xml, an example for a graph definition file (H2b)
-  - graph_secondary.xml, an example for a graph definition file (Tubulin)
-- Classifiers
-  - H2B  
-  - aTubulin
-- Images
-  - first 10 timeframes from the [H2B-Tubulin](http://cellcognition.org/downloads/data) image set.
-
-####  H2B-Tubulin data set
-The demo data included in the installer contains only a hand full of images i.e. 10 time frames. Please download the bigger [H2B-Tubulin](http://cellcognition.org/downloads/data) image set to perform:
-
-- Classifier training and cross validation
-- Event selection
-- Error correction
-
-It contains 206 frames with ~3.6 min. timelapse. Use the same settings except for the parameter *Duration [post]*. It is recommended to increase it to 35 frames.
-
+The demo data allows to try out image image segmentation, feature extraction, classifcation. To try ou also tracking, event selection and error correction,
+you need to download the full data set (206 frames, ~900Mb) from the [cellcogition website](https://www.cellcognition-project.org/demo_data)
