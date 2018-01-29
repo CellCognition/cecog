@@ -1,17 +1,17 @@
 
-QWidget {
-    font-size: 11px;
-}
+/* QWidget { */
+/*     font-size: 11px; */
+/* } */
 
 QTableView {
     font-size: 10px;
     alternate-background-color: #EEEEFF;
 }
 
-Browser QPushButton {
-    font-size: 10px;
-    min-width: 10px;
-}
+/* Browser QPushButton { */
+/*     font-size: 10px; */
+/*     min-width: 10px; */
+/* } */
 
 ColorButton::enabled {
     border: 1px solid #444444;
