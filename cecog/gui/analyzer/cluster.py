@@ -170,15 +170,16 @@ class ClusterDisplay(QGroupBox):
 
     def clear_output_directory(self, directory):
         """Remove the content of the output directory except the structure file."""
-
         for root, dirs, files in os.walk(directory, topdown=False):
             for name in files:
+                print os.path.join(root, name)
                 if not name.endswith(".xml"):
                     try:
                         os.remove(os.path.join(root, name))
                     except OSError:
                         pass
             for name in dirs:
+                print os.path.join(root, name)
                 try:
                     os.rmdir(os.path.join(root, name))
                 except OSError:
@@ -208,7 +209,7 @@ class ClusterDisplay(QGroupBox):
         pathout = self._submit_settings.get2('pathout')
 
         if not self._submit_settings('General', 'skip_finished'):
-            self.clear_output_directory(pathout)
+            self.clear_output_directory(self._settings("General", "pathout"))
 
         try:
             self.dlg = ProgressDialog("Submitting Jobs...", None, 0, 0, self)
