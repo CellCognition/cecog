@@ -45,12 +45,6 @@ py2app_opts = {'excludes': build_helpers.EXCLUDES,
                "matplotlib_backends": ["agg","qt5agg", "macosx"]}
 
 pyrcc_opts = {'qrc': {'cecog.qrc' : join('cecog', 'cecog_rc.py'),
-                      'submodules/css/pyqtcss/src/classic/style.qrc':
-                          join('cecog', 'css',  'classic_rc.py'),
-                      'submodules/css/pyqtcss/src/dark_blue/style.qrc':
-                          join('cecog', 'css',  'dark_blue_rc.py'),
-                      'submodules/css/pyqtcss/src/dark_orange/style.qrc':
-                          join('cecog', 'css',  'dark_orange_rc.py'),
                       },
               'pyrccbin': 'pyrcc5'}
 
