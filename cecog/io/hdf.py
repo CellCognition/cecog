@@ -210,13 +210,26 @@ class Ch5File(CH5FileWriter):
                 # remove empty sites from list
                 sites = [k for k, s in sites.items() if len(s.keys()) > 0]
                 wsites[well] = sites
-        except (KeyError, AttributeError, RuntimeError):
+        except (KeyError, AttributeError):
             pass
 
         return wsites
 
     def numberSites(self, plate):
         return sum([len(site) for site in self.existingSites(plate).values()])
+
+    def numberSitesEmpty(self, plate):
+        """Number of hdf groups created in the file. The groups might be still
+        empty.
+        """
+
+        nsites = 0
+        wells = self[Well %plate].keys()
+        for well in wells:
+            sites = self[Site[:-2] %(plate, well)]
+            nsites += len(sites)
+
+        return nsites
 
     def copySample(self, filename, delete_source=True):
 

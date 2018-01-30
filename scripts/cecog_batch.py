@@ -43,7 +43,6 @@ ENV_INDEX_SGE = 'SGE_TASK_ID'
 PLATESEP = "___"
 POSSEP = ","
 
-
 def getCellH5NumberOfSites(file_):
     """Determine the number of site within a file."""
 
@@ -51,8 +50,7 @@ def getCellH5NumberOfSites(file_):
     nsites = 0
     plates = c5.plates()
     for plate in plates:
-        nsites += c5.numberSites(plate)
-
+        nsites += c5.numberSitesEmpty(plate)
     return nsites
 
 
@@ -183,7 +181,6 @@ if __name__ ==  "__main__":
     # compare the number of processed positions with the number
     # of positions to be processed
     if (posflag and n_positions == n_sites) or (n_total == n_sites):
-        print n_total, n_sites, n_positions
         mergeHdfFiles(analyzer.h5f, analyzer.ch5dir, remove_source=True)
         os.rmdir(analyzer.ch5dir)
 
