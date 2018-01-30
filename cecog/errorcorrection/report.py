@@ -269,26 +269,26 @@ class HmmReport(object):
 
         try:
             fp1 = open(filename, "wb")
-            fp2 = open(filename.replace(".csv", "_indices.csv"), "wb")
+            # fp2 = open(filename.replace(".csv", "_indices.csv"), "wb")
 
             writer1 = csv.writer(fp1, delimiter=",")
-            writer2 = csv.writer(fp2, delimiter=",")
+            # writer2 = csv.writer(fp2, delimiter=",")
             # first bucket that contains an hmm
             nframes = [v for v in self.data.values()
                        if v is not None][0].nframes
             header = ["# %s" %grouping] + range(1, nframes+1, 1)
             writer1.writerow(header)
-            writer2.writerow(header)
+            # writer2.writerow(header)
 
             for name, bucket in self.data.iteritems():
                 if bucket is None:
                     continue
                 for objidx, hmm_labels, _  in bucket.itertracks():
                     writer1.writerow([name]+hmm_labels.tolist())
-                    writer2.writerow([name]+objidx.tolist())
+                    # writer2.writerow([name]+objidx.tolist())
         finally:
             fp1.close()
-            fp2.close()
+            # fp2.close()
 
 
     def hmm_model(self, filename, figsize=(20, 12)):

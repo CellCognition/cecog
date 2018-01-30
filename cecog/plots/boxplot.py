@@ -161,8 +161,7 @@ def barplot(data,
     colors = [cmap(k) for k in data.keys()]
     width = 2/3
     ind = np.arange(len(data))
-    bp = axes.bar(ind-width/2, values, width=width, color=colors)
-    axes.set_xlim((ind.min()-0.5, ind.max()+0.5))
+    bp = axes.bar(ind, values, width=width, color=colors)
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
@@ -203,8 +202,7 @@ def barplot2(data,
 
     width = 2/3
     ind = np.arange(len(data))
-    bp = axes.bar(ind-width/2, values, width=width, color=colors)
-    axes.set_xlim((ind.min()-0.5, ind.max()+0.5))
+    bp = axes.bar(ind, values, width=width, color=colors)
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()

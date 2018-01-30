@@ -118,9 +118,9 @@ class PositionRunner(QtCore.QObject):
         chreg = "%s__%s" %(channel, self.ecopts.regionnames[channel])
 
         # setup the progressbar correctly
-        c = 3
+        c = 2
         if self.ecopts.write_gallery:
-            c = 4
+            c += 1
 
         thread = QThread.currentThread()
 
@@ -199,9 +199,9 @@ class PositionRunner(QtCore.QObject):
                                        %(prefix, sby)))
             report.close_figures()
 
-            self.interruption_point("plotting hmm model", True)
-            report.hmm_model(join(self._hmm_dir, "%s-%s_model.pdf")
-                             %(prefix, sby))
+            # self.interruption_point("plotting hmm model", True)
+            # report.hmm_model(join(self._hmm_dir, "%s-%s_model.pdf")
+            #                  %(prefix, sby))
 
 
             if self.ecopts.write_gallery:
