@@ -182,7 +182,7 @@ class Ch5File(CH5FileWriter):
         try:
             rec = np.recfromtxt(filename, dtype=LayoutDtype, skip_header=True)
         except ValueError:
-            rec = np.recfromtxt(filename, dtype=LayoutDtye, delimiter="\t", skip_header=True)
+            rec = np.recfromtxt(filename, dtype=LayoutDtype, delimiter="\t", skip_header=True)
 
         return rec
 
