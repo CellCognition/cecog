@@ -44,11 +44,11 @@ PLATESEP = "___"
 POSSEP = ","
 
 
-def getCellH5NumberOfSites(file_, plate):
+def getCellH5NumberOfSites(file_):
     """Determine the number of site within a file."""
 
     c5 = Ch5File(file_)
-    nsite = 0
+    nsites = 0
     plates = c5.plates()
     for plate in plates:
         nsites += c5.numberSites(plate)
@@ -176,7 +176,7 @@ if __name__ ==  "__main__":
         analyzer()
         ch5file = analyzer.h5f
 
-    n_sites = getCellH5NumberOfSites(ch5file, plate)
+    n_sites = getCellH5NumberOfSites(ch5file)
     n_total = len(imagecontainer.get_meta_data().positions)
     posflag = settings("General", "constrain_positions")
 
@@ -197,6 +197,5 @@ if __name__ ==  "__main__":
             thread = ErrorCorrectionThread(None, settings, imagecontainer)
             thread.start()
             thread.wait()
-
 
     print 'BATCHPROCESSING DONE!'
