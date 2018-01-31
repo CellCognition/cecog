@@ -485,9 +485,9 @@ class PositionAnalyzer(PositionCore):
         for channels in self.timeholder.itervalues():
             for chname, classifier in self.classifiers.iteritems():
                 holder = channels[chname].get_region(classifier.regions)
-                if classifier.feature_names is None:
-                    # special for unsupervised case
-                    classifier.feature_names = holder.feature_names
+                # if classifier.feature_names is None:
+                #     # special for unsupervised case
+                #     classifier.feature_names = holder.feature_names
                 self.timeholder.save_classlabels(channels[chname],
                                                  holder, classifier)
 
@@ -555,8 +555,8 @@ class PositionAnalyzer(PositionCore):
                 self.statusUpdate(text="Saving Event Data to cellh5...")
                 self.save_events()
 
-            self.save_classification()
-            self.timeholder.purge()
+        self.save_classification()
+        self.timeholder.purge()
 
         try:
             n = len(self._frames)
