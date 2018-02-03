@@ -43,14 +43,19 @@ ENV_INDEX_SGE = 'SGE_TASK_ID'
 PLATESEP = "___"
 POSSEP = ","
 
+
 def getCellH5NumberOfSites(file_):
     """Determine the number of site within a file."""
 
-    c5 = Ch5File(file_)
-    nsites = 0
-    plates = c5.plates()
-    for plate in plates:
-        nsites += c5.numberSitesEmpty(plate)
+    try:
+        c5 = Ch5File(file_)
+        nsites = 0
+        plates = c5.plates()
+        for plate in plates:
+            nsites += c5.numberSitesEmpty(plate)
+    except Exception as e:
+        nsits = -1
+
     return nsites
 
 

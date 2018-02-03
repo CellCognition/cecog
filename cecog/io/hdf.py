@@ -40,10 +40,10 @@ LayoutDtype = np.dtype(
 def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
 
     hdffiles = glob.glob(os.path.join(source_dir, '*.ch5'))
-    target = h5py.File(target, mode=mode)
+    target = Ch5File(target, mode=mode)
 
     for i, h5 in enumerate(hdffiles):
-        source = h5py.File(h5, 'r')
+        source = Ch5File(h5, 'r')
 
         if i == 0:
             target.copy(source['/layout'], '/layout')
@@ -87,9 +87,8 @@ class FileLock(filelock.FileLock):
 
 class Ch5File(CH5FileWriter):
 
-    # this init is a dirty hack.
-    # Cellh5 tries to load positions (sites) automatically, which are
-    # not present.
+    # this class is a workaround of the broken cellh5 implemation.
+
     def __init__(self, filename, timeout=60, mode='a', cached=False):
 
         self.lock = FileLock(filename.replace("ch5", "lock"))
@@ -98,6 +97,7 @@ class Ch5File(CH5FileWriter):
         except filelock.Timeout as e:
             raise IOError("Cannot open hdf file %s" %(str(e)))
 
+        # cellh5 workaround
         self._cached = cached
         if isinstance(filename, basestring):
             self.filename = filename
@@ -108,7 +108,9 @@ class Ch5File(CH5FileWriter):
 
         self._f = self._file_handle
 
-        try:
+    def iter_positions(self):
+
+        if not hasattr(self, "positions"):
             self.plate = self._get_group_members('/sample/0/plate/')[0]
             self.wells = self._get_group_members(
                 '/sample/0/plate/%s/experiment/' % self.plate)
@@ -125,16 +127,10 @@ class Ch5File(CH5FileWriter):
                     self._position_group[(well, pos)] = self._open_position(
                         self.plate, well, pos)
                     self.current_pos = self._position_group.values()[0]
-        except KeyError:
-            return
 
-    def close(self):
-        super(Ch5File, self).close()
-        self.lock.release()
-
-    def _init_basic_structure(self):
-        # because the parent method is crap
-        pass
+        for well, positions in self.positions.items():
+            for pos in positions:
+                yield self._position_group[(well, pos)]
 
     def __getitem__(self, key):
         return self._file_handle[key]
@@ -145,7 +141,20 @@ class Ch5File(CH5FileWriter):
     def __delitem__(self, key):
         del self._file_handle[key]
 
+    def copy(self, source, path):
+        """Wrapper h5py's copy method."""
+        self._file_handle.copy(source, path)
+
+    def close(self):
+        super(Ch5File, self).close()
+        self.lock.release()
+
+    def hasDefinition(self):
+        """Check if file contains a experimental layout for a specific plate."""
+        return CH5Const.DEFINITION in self._file_handle
+
     def plates(self):
+        """Return a tuple of plate names."""
         return tuple(self[Plate])
 
     def layout(self, plate):
@@ -155,10 +164,6 @@ class Ch5File(CH5FileWriter):
     def hasLayout(self, plate):
         """Check if file contains a experimental layout for a specific plate."""
         return "%s/%s" %(CH5Const.LAYOUT, plate) in self._file_handle
-
-    def hasDefinition(self):
-        """Check if file contains a experimental layout for a specific plate."""
-        return CH5Const.DEFINITION in self._file_handle
 
     def savePlateLayout(self, layout, platename):
         """Save experimental layout for using the platename."""
@@ -182,7 +187,8 @@ class Ch5File(CH5FileWriter):
         try:
             rec = np.recfromtxt(filename, dtype=LayoutDtype, skip_header=True)
         except ValueError:
-            rec = np.recfromtxt(filename, dtype=LayoutDtype, delimiter="\t", skip_header=True)
+            rec = np.recfromtxt(filename, dtype=LayoutDtype, delimiter="\t",
+                                skip_header=True)
 
         return rec
 
@@ -230,30 +236,3 @@ class Ch5File(CH5FileWriter):
             nsites += len(sites)
 
         return nsites
-
-    def copySample(self, filename, delete_source=True):
-
-        source = h5py.File(filename, "r")
-
-        if not self.hasDefinition():
-            self.copyDefinition(source)
-
-        plate = source[Plate].keys()[0]
-        well = source[Well %plate].keys()[0]
-        site = source[Site[:-2] %(plate, well)].keys()[0]
-        path = Site %(plate, well, site)
-
-        self._file_handle.copy(source[path], path)
-
-        source.close()
-
-        if delete_source:
-            os.remove(filename)
-
-    def copyDefinition(self, other):
-        if isinstance(other, basestring):
-            source = h5py.File(filename, "r")[CH5Const.DEFINITION]
-        else:
-            source = other[CH5Const.DEFINITION]
-
-        self._file_handle.copy(source, CH5Const.DEFINITION)
