@@ -54,16 +54,14 @@ def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
         well = first_item(source[Well % plate].keys())
         position = first_item(source[Site %(plate, well, "")].keys())
 
-        path_ = Site %(plate, well, position)
-
-        for group in source[path_].keys():
-            path = "%s/%s" %(path_, group)
-            target.copy(source[path], path)
+        path = Site %(plate, well, position)
+        target.copy(source[path], path)
 
         source.close()
 
         if remove_source:
             os.remove(h5)
+            os.remove(h5.replace(".ch5", ".tmp"))
 
     target.close()
 
@@ -193,18 +191,18 @@ class Ch5File(CH5FileWriter):
 
         return rec
 
-    def createSite(self, filename):
-        """Create an empty group for a Site."""
+    # def createSite(self, filename):
+    #     """Create an empty group for a Site."""
 
-        sf = h5py.File(filename, "r")
-        plate = sf[Plate].keys()[0]
-        well = sf[Well %plate].keys()[0]
-        site = sf[Site[:-2] %(plate, well)].keys()[0]
-        path = Site %(plate, well, site)
-        sf.close()
+    #     sf = h5py.File(filename, "r")
+    #     plate = sf[Plate].keys()[0]
+    #     well = sf[Well %plate].keys()[0]
+    #     site = sf[Site[:-2] %(plate, well)].keys()[0]
+    #     path = Site %(plate, well, site)
+    #     sf.close()
 
-        if not path in self._file_handle:
-            self._file_handle.create_group(path)
+    #     if not path in self._file_handle:
+    #         self._file_handle.create_group(path)
 
     def existingSites(self, plate):
 

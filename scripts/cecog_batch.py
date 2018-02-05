@@ -15,6 +15,7 @@ __url__ = 'www.cellcognition.org'
 import os
 import sys
 import time
+import glob
 import random
 import logging
 import argparse
@@ -45,22 +46,22 @@ PLATESEP = "___"
 POSSEP = ","
 
 
-def getCellH5NumberOfSites(file_):
-    """Determine the number of site within a file."""
+# def getCellH5NumberOfSites(file_):
+#     """Determine the number of site within a file."""
 
-    try:
-        c5 = Ch5File(file_, timeout=0.3)
-        nsites = 0
-        plates = c5.plates()
-        for plate in plates:
-            nsites += c5.numberSitesEmpty(plate)
-    except TimeoutError as e:
-        print "Timeout", str(e)
-        nsites = -1
-    except Exception as e:
-        nsites = -1
+#     try:
+#         c5 = Ch5File(file_, timeout=0.3)
+#         nsites = 0
+#         plates = c5.plates()
+#         for plate in plates:
+#             nsites += c5.numberSitesEmpty(plate)
+#     except TimeoutError as e:
+#         print "Timeout", str(e)
+#         nsites = -1
+#     except Exception as e:
+#         nsites = -1
 
-    return nsites
+#     return nsites
 
 
 if __name__ ==  "__main__":
@@ -183,7 +184,7 @@ if __name__ ==  "__main__":
         analyzer()
         ch5file = analyzer.h5f
 
-    n_sites = getCellH5NumberOfSites(ch5file)
+    n_sites = len(glob.glob(os.path.join(settings("General", "pathout"), "cellh5", "*.tmp")))
     n_total = len(imagecontainer.get_meta_data().positions)
     posflag = settings("General", "constrain_positions")
 

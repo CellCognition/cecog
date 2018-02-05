@@ -176,11 +176,9 @@ class PlateAnalyzer(Analyzer):
 
     def __call__(self):
 
-        # check for exiting site if the file already exists
-        finished = dict()
-        if self.settings('General', 'skip_finished') and isfile(self.h5f):
-            with Ch5File(self.h5f, mode="a") as ch5:
-                finished = ch5.existingSites(self.plate)
+        # skip plate if exists
+        if self.settings('General', 'skip_finished') and os.path.isfile(self.h5f):
+            return
 
         layout = "%s/%s.txt" %(self.settings("General", "plate_layout"), self.plate)
         layout = Ch5File.layoutFromTxt(layout)
@@ -189,15 +187,16 @@ class PlateAnalyzer(Analyzer):
             i = layout["File"].tolist().index(pos)
             well, site = layout["Well"][i], layout["Site"][i]
             wsstr = "%s_%02d" %(well, site)
+            datafile = join(self._cellh5_dir, '%s.ch5' %wsstr)
 
-            if well in finished and str(site) in finished[well]:
+            if self.settings('General', 'skip_finished') and os.path.isfile(datafile.replace(".ch5", ".tmp")):
                 msg = 'Skipping already processed postion %s' %wsstr
                 self.logger.info(msg)
                 continue
             else:
                 self.logger.info('Processing position: %s' %wsstr)
 
-            datafile = join(self._cellh5_dir, '%s.ch5' %wsstr)
+
             analyzer = PositionAnalyzer(
                 self.plate, pos, datafile, self.settings, self.frames,
                 self.sample_reader, self.sample_positions, None,
@@ -205,19 +204,13 @@ class PlateAnalyzer(Analyzer):
 
             try:
                 analyzer()
-                for i in range(10):
-                    # try several times to create the site. on the cluster
-                    # many processes will open the file in this mode at the
-                    # same time
-                    try:
-                        with Ch5File(self.h5f, mode="a") as ch5:
-                            ch5.createSite(analyzer.datafile)
-                            break
-                    except IOError:
-                        continue
+
+                fp = open(datafile.replace(".ch5", ".tmp"), "a")
+                fp.close()
 
             except StopProcessing:
-                pass
+                if analyzer.isAborted():
+                    os.remove(datafile)
             except Exception as e:
                 os.remove(datafile)
                 self.logger.error("Removed file %s" %datafile)
@@ -225,8 +218,7 @@ class PlateAnalyzer(Analyzer):
                 raise
             finally:
                 analyzer.clear()
-                if analyzer.isAborted():
-                    os.remove(datafile)
+
 
 
 class AnalyzerBrowser(PlateAnalyzer):
