@@ -67,6 +67,8 @@ def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
 
     target.close()
 
+class TimeoutError(filelock.Timeout):
+    pass
 
 class FileLock(filelock.FileLock):
 
@@ -84,7 +86,6 @@ class FileLock(filelock.FileLock):
             except OSError:
                 pass
 
-
 class Ch5File(CH5FileWriter):
 
     # this class is a workaround of the broken cellh5 implemation.
@@ -95,7 +96,7 @@ class Ch5File(CH5FileWriter):
         try:
             self.lock.acquire(timeout=timeout)
         except filelock.Timeout as e:
-            raise IOError("Cannot open hdf file %s" %(str(e)))
+            raise TimeoutError("Cannot open hdf file %s" %(str(e)))
 
         # cellh5 workaround
         self._cached = cached

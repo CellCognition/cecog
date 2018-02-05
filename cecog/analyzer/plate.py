@@ -219,10 +219,14 @@ class PlateAnalyzer(Analyzer):
             except StopProcessing:
                 pass
             except Exception as e:
+                os.remove(datafile)
+                self.logger.error("Removed file %s" %datafile)
                 traceback.print_exc()
                 raise
             finally:
                 analyzer.clear()
+                if analyzer.isAborted():
+                    os.remove(datafile)
 
 
 class AnalyzerBrowser(PlateAnalyzer):

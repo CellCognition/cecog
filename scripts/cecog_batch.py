@@ -37,6 +37,7 @@ from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import ImageContainer
 from cecog.io.hdf import mergeHdfFiles
 from cecog.io.hdf import Ch5File
+from cecog.io.hdf import TimeoutError
 
 
 ENV_INDEX_SGE = 'SGE_TASK_ID'
@@ -48,13 +49,16 @@ def getCellH5NumberOfSites(file_):
     """Determine the number of site within a file."""
 
     try:
-        c5 = Ch5File(file_)
+        c5 = Ch5File(file_, timeout=0.3)
         nsites = 0
         plates = c5.plates()
         for plate in plates:
             nsites += c5.numberSitesEmpty(plate)
+    except TimeoutError as e:
+        print "Timeout", str(e)
+        nsites = -1
     except Exception as e:
-        nsits = -1
+        nsites = -1
 
     return nsites
 
