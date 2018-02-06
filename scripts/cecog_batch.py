@@ -17,6 +17,7 @@ import sys
 import time
 import glob
 import random
+import shutil
 import logging
 import argparse
 from collections import defaultdict
@@ -44,24 +45,6 @@ from cecog.io.hdf import TimeoutError
 ENV_INDEX_SGE = 'SGE_TASK_ID'
 PLATESEP = "___"
 POSSEP = ","
-
-
-# def getCellH5NumberOfSites(file_):
-#     """Determine the number of site within a file."""
-
-#     try:
-#         c5 = Ch5File(file_, timeout=0.3)
-#         nsites = 0
-#         plates = c5.plates()
-#         for plate in plates:
-#             nsites += c5.numberSitesEmpty(plate)
-#     except TimeoutError as e:
-#         print "Timeout", str(e)
-#         nsites = -1
-#     except Exception as e:
-#         nsites = -1
-
-#     return nsites
 
 
 if __name__ ==  "__main__":
@@ -192,7 +175,7 @@ if __name__ ==  "__main__":
     # of positions to be processed
     if (posflag and n_positions == n_sites) or (n_total == n_sites):
         mergeHdfFiles(analyzer.h5f, analyzer.ch5dir, remove_source=True)
-        os.rmdir(analyzer.ch5dir)
+        shutil.rmtree(analyzer.ch5dir)
 
         # Run the error correction on the cluster
         if settings("Processing", "primary_errorcorrection") or \

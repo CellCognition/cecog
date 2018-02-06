@@ -48,22 +48,25 @@ def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
         if i == 0:
             target.copy(source['/layout'], '/layout')
             target.copy(source['/definition'], "/definition")
+            target.copy(source['/sample'], "/sample")
+        else:
 
-        first_item = lambda view: next(iter(view))
-        plate = first_item(source[Plate].keys())
-        well = first_item(source[Well % plate].keys())
-        position = first_item(source[Site %(plate, well, "")].keys())
+            first_item = lambda view: next(iter(view))
+            plate = first_item(source[Plate].keys())
+            well = first_item(source[Well % plate].keys())
+            position = first_item(source[Site %(plate, well, "")].keys())
 
-        path = Site %(plate, well, position)
-        target.copy(source[path], path)
+            path = str(Site %(plate, well, position))
+            target.copy(source[path], path)
 
-        source.close()
+            source.close()
 
         if remove_source:
             os.remove(h5)
             os.remove(h5.replace(".ch5", ".tmp"))
 
     target.close()
+
 
 class TimeoutError(filelock.Timeout):
     pass
