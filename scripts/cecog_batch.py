@@ -16,8 +16,8 @@ import os
 import sys
 import time
 import glob
-import random
 import shutil
+import random
 import logging
 import argparse
 from collections import defaultdict
@@ -174,8 +174,18 @@ if __name__ ==  "__main__":
     # compare the number of processed positions with the number
     # of positions to be processed
     if (posflag and n_positions == n_sites) or (n_total == n_sites):
-        mergeHdfFiles(analyzer.h5f, analyzer.ch5dir, remove_source=True)
-        shutil.rmtree(analyzer.ch5dir)
+
+        try:
+            mergeHdfFiles(analyzer.h5f, analyzer.ch5dir, remove_source=True)
+            shutil.rmtree(analyzer.ch5dir)
+        except OSError as e:
+            logger.warning(str(e))
+            logger.warning("Could not remove cellh5 directory")
+        except Exception as e:
+            logger.error("Could not create hdf file %s" %analyzer.h5f)
+            if os.path.isfile(analyzer.h5f):
+                os.remove(analyzer.h5f)
+            raise
 
         # Run the error correction on the cluster
         if settings("Processing", "primary_errorcorrection") or \
