@@ -172,14 +172,12 @@ class ClusterDisplay(QGroupBox):
         """Remove the content of the output directory except the structure file."""
         for root, dirs, files in os.walk(directory, topdown=False):
             for name in files:
-                print os.path.join(root, name)
                 if not name.endswith(".xml"):
                     try:
                         os.remove(os.path.join(root, name))
                     except OSError:
                         pass
             for name in dirs:
-                print os.path.join(root, name)
                 try:
                     os.rmdir(os.path.join(root, name))
                 except OSError:
