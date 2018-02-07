@@ -168,7 +168,7 @@ class MultiAnalyzerThread(AnalyzerThread):
             hdffile = os.path.join(outdir, "%s.ch5" %plate)
             hdfdir = os.path.join(outdir, "cellh5")
             mergeHdfFiles(hdffile, hdfdir, remove_source=True)
-        os.rmdir(hdfdir)
+            shutil.rmtree(hdfdir)
 
     def clearOutputDir(self, directory):
         """Remove the content of the output directory except the structure file."""
