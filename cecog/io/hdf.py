@@ -43,7 +43,7 @@ def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
     target = Ch5File(target, mode=mode)
 
     for i, h5 in enumerate(hdffiles):
-        source = Ch5File(h5, 'r')
+        source = Ch5File(os.path.abspath(h5), 'r')
 
         if i == 0:
             target.copy(source['/layout'], '/layout')
@@ -62,8 +62,15 @@ def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
             source.close()
 
         if remove_source:
-            os.remove(h5)
-            os.remove(h5.replace(".ch5", ".tmp"))
+            try:
+                os.remove(h5)
+            except Exception as e:
+                pass
+
+            try:
+                os.remove(h5.replace(".ch5", ".tmp"))
+            except Exception as e:
+                pass
 
     target.close()
 
