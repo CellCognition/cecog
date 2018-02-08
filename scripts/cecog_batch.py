@@ -37,14 +37,48 @@ from cecog.threads import ErrorCorrectionThread
 from cecog.analyzer.plate import PlateAnalyzer
 from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import ImageContainer
-from cecog.io.hdf import mergeHdfFiles
 from cecog.io.hdf import Ch5File
-from cecog.io.hdf import TimeoutError
 
 
 ENV_INDEX_SGE = 'SGE_TASK_ID'
 PLATESEP = "___"
 POSSEP = ","
+
+
+def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
+
+    hdffiles = glob.glob(os.path.join(source_dir, '*.ch5'))
+    target = Ch5File(target, mode=mode)
+
+    for i, h5 in enumerate(sorted(hdffiles)):
+
+        source = Ch5File(h5, 'r')
+
+        if i == 0:
+            target.copy(source['/layout'], '/layout')
+            target.copy(source['/definition'], "/definition")
+
+        first_item = lambda view: next(iter(view))
+        plate = first_item(source[Plate].keys())
+        well = first_item(source[Well % plate].keys())
+        position = first_item(source[Site %(plate, well, "")].keys())
+
+        path1 = str(Site %(plate, well, position))
+        path2 = Site %(plate, well, "")
+
+        if not path2 in target._f:
+            group = target._f.create_group(path2)
+
+        group.copy(source[path1], position)
+        source.close()
+
+        if remove_source:
+            os.remove(h5)
+            os.remove(h5.replace(".ch5", ".tmp"))
+
+    target.close()
+
+
 
 
 if __name__ ==  "__main__":
@@ -96,11 +130,11 @@ if __name__ ==  "__main__":
     logger.addHandler(handler)
     logger.setLevel(logging.ERROR)
 
-    logger.info("*"*(len(version) + 53))
-    logger.info("*** CellCognition - Batch Script - Version %s ***" %version)
-    logger.info("*"*(len(version) + 53))
-    logger.info("SGE job item index: environment variable '%s'" %str(index))
-    logger.info('cmd: %s' %" ".join(sys.argv))
+    print "*"*(len(version) + 53)
+    print "*** CellCognition - Batch Script - Version %s ***" %version
+    print "*"*(len(version) + 53)
+    print "SGE job item index: environment variable '%s'" %str(index)
+    print 'cmd: %s' %" ".join(sys.argv)
 
     environ = CecogEnvironment(version, redirect=False, debug=False)
     settingsfile = os.path.abspath(args.settings)
@@ -181,11 +215,6 @@ if __name__ ==  "__main__":
         except OSError as e:
             logger.warning(str(e))
             logger.warning("Could not remove cellh5 directory")
-        except Exception as e:
-            logger.error("Could not create hdf file %s" %analyzer.h5f)
-            if os.path.isfile(analyzer.h5f):
-                os.remove(analyzer.h5f)
-            raise
 
         # Run the error correction on the cluster
         if settings("Processing", "primary_errorcorrection") or \
