@@ -45,6 +45,10 @@ PLATESEP = "___"
 POSSEP = ","
 
 
+Plate = '/sample/0/plate/'
+Well = Plate + '%s/experiment/'
+Site = Well + '%s/position/%s'
+
 def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
 
     hdffiles = glob.glob(os.path.join(source_dir, '*.ch5'))
