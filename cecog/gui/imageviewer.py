@@ -43,11 +43,13 @@ class ZoomedQGraphicsView(QGraphicsView):
             newGrviewCenter = grviewCenter + offset
             self.centerOn(newGrviewCenter)
 
+
 class HoverPolygonItem(QGraphicsPolygonItem):
 
     def __init__(self, *args, **kw):
         super(HoverPolygonItem, self).__init__(*args, **kw)
         self._old_pen = self.pen()
+        self._old_pen.setWidth(0.0)
 
     def set_pen_color(self, color):
         self._old_pen.setColor(color)
@@ -72,7 +74,7 @@ class QGraphicsPixmapHoverItem(QGraphicsPixmapItem):
     def __init__(self, parent):
         QGraphicsPixmapItem.__init__(self, parent)
         self.setAcceptHoverEvents(True)
-        #self.setTransformOriginPoint(self.boundingRect().width()/2, self.boundingRect().height()/2)
+
 
 class ItemScaleHover(object):
     SCALE = 3
@@ -92,26 +94,10 @@ class GalleryViewer(ZoomedQGraphicsView):
         super(GalleryViewer, self).__init__(parent)
         self._scene = QGraphicsScene()
         self.setScene(self._scene)
-        #self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        #self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        #self.setDragMode(self.NoDrag)
-        #self.setTransformationAnchor(self.AnchorViewCenter)
-        #self.setResizeAnchor(self.AnchorViewCenter)
-        #self.setRenderHints(QPainter.Antialiasing |
-        #                    QPainter.SmoothPixmapTransform)
-        #self.setViewportUpdateMode(self.SmartViewportUpdate)
-        self.setBackgroundBrush(QBrush(QColor('#0C7A0C')))
-        gradient = QRadialGradient (400, 100, 800);
-        gradient.setColorAt(0.2, QColor.fromRgb(72, 72, 72));
-        gradient.setColorAt(0.8, QColor.fromRgb(42, 42, 42));
-
-
-        brush = QBrush(gradient);
-        self.setBackgroundBrush(brush);
-
-
-
         self.setMouseTracking(True)
+
+        self.setBackgroundBrush(QBrush(QColor('#666666')))
+
         self.hide()
 
     def clear(self):
@@ -282,6 +268,7 @@ class ImageViewer(QGraphicsView):
             poly = QPolygonF([QPointF(*pos) for pos in crack])
             item = HoverPolygonItem(poly)
             item.setData(0, obj_id)
+            item.setPen(QPen(QColor(obj.strHexColor)))
             if obj.roisize is not None:
                 item.setToolTip(('Object: %d\nSize: %d\nIntensity: '
                                  '%6.2f\nClass: %s (%3.2f)')
@@ -289,7 +276,7 @@ class ImageViewer(QGraphicsView):
                                   obj.strClassName, obj.dctProb[obj.iLabel]))
             scene.addItem(item)
             self._objects.add(item)
-            item.setPen(QColor(obj.strHexColor))
+
         self._update_contours()
 
     def remove_objects(self):

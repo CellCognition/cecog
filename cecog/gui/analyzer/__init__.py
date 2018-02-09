@@ -26,27 +26,18 @@ from PyQt5.QtCore import *
 from PyQt5.Qt import *
 
 from collections import OrderedDict
-from multiprocessing import cpu_count
 
 from cecog import CHANNEL_PREFIX
 from cecog.gui.display import TraitDisplayMixin
-from cecog.learning.learning import CommonClassPredictor
-
 from cecog.units.time import seconds2datetime
 
-from cecog.gui.util import question
-from cecog.gui.util import critical
-from cecog.gui.util import information
-
-from cecog.analyzer import CONTROL_1, CONTROL_2
 from cecog.plugin.metamanager import MetaPluginManager
 from cecog.traits.analyzer.errorcorrection import SECTION_NAME_ERRORCORRECTION
 from cecog.plugin.display import PluginBay
 from cecog.gui.widgets.tabcontrol import TabControl
 
-from cecog.threads import PickerThread
+from cecog.threads import TrainerThread
 from cecog.threads import AnalyzerThread
-from cecog.threads import TrainingThread
 from cecog.threads import ErrorCorrectionThread
 from cecog.multiprocess.multianalyzer import MultiAnalyzerThread
 
@@ -59,11 +50,11 @@ from cecog.gui.progressdialog import ProgressDialog
 from cecog.gui.processcontrol import ProcessControl
 
 
+
 class BaseFrame(TraitDisplayMixin):
 
     ICON = ":cecog_analyzer_icon"
     TABS = None
-    CONTROL = CONTROL_1
 
     toggle_tabs = pyqtSignal(str)
     status_message = pyqtSignal(str)
@@ -278,42 +269,20 @@ class BaseProcessorFrame(BaseFrame):
             if self.name == SECTION_NAME_CLASSIFICATION:
 
                 result_frame = self._get_result_frame(self._tab_name)
-                result_frame.load_classifier(check=False)
-                learner = result_frame._learner
+                result_frame.load_classifier()
 
-                if name == self.PICKING:
-                    if not result_frame.classifier.is_annotated:
-                        is_valid = False
-                        result_frame.msg_pick_samples(self)
-                    elif result_frame.classifier.is_trained:
-                        if not question(self, 'Samples already picked',
-                                    'Do you want to pick samples again and '
-                                    'overwrite previous '
-                                    'results?'):
+                if name == self.Training:
+                    is_valid = True
+                    if result_frame.classifier_exists():
+                        ret = QMessageBox.question(self,'Trained Classifier found',
+                                                   'Do you want to owerwrite the already '
+                                                   'trained classifier?')
+                        if ret == QMessageBox.No:
                             is_valid = False
 
-                elif name == self.TRAINING:
-                    if not result_frame.classifier.is_trained:
-                        is_valid = False
-                        result_frame.msg_train_classifier(self)
-                    elif result_frame.classifier.is_valid:
-                        if not question(self, 'Classifier already trained',
-                                    'Do you want to train the classifier '
-                                    'again?'):
-                            is_valid = False
-
-                elif name == self.TESTING and not result_frame.classifier.is_valid:
+                elif name == self.Testing and not result_frame.classifier_exists():
                     is_valid = False
-                    result_frame.msg_apply_classifier(self)
-
-            if cls is MultiAnalyzerThread:
-                ncpu = cpu_count()
-                (ncpu, ok) = QInputDialog.getInt(None, "On your machine are %d processers available." % ncpu, \
-                                             "Select the number of processors", \
-                                              ncpu, 1, ncpu*2)
-                if not ok:
-                    self._process_items = None
-                    is_valid = False
+                    QMessageBox.critical(self, "Error", "Please train the classifier first")
 
             if is_valid:
                 self._current_process = name
@@ -333,38 +302,39 @@ class BaseProcessorFrame(BaseFrame):
 
                 imagecontainer = self.parent().main_window._imagecontainer
 
-                if cls is PickerThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings, imagecontainer)
+                if cls is TrainerThread:
+                    self._current_settings = self._get_modified_settings(
+                        name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(
+                        self, self._current_settings, imagecontainer)
                     self._clear_image()
 
                 elif cls is AnalyzerThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings, imagecontainer)
+                    self._current_settings = self._get_modified_settings(
+                        name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(
+                        self, self._current_settings, imagecontainer)
                     self._clear_image()
 
-                elif cls is TrainingThread:
-                    self._current_settings = self._settings.copy()
-                    self._analyzer = cls(self, self._current_settings, result_frame._learner)
-                    self._analyzer.setTerminationEnabled(True)
-
-                    self._analyzer.conf_result.connect(result_frame.on_conf_result,
-                                                       Qt.QueuedConnection)
-                    result_frame.reset()
-
                 elif cls is MultiAnalyzerThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings, imagecontainer, ncpu)
+                    self._current_settings = self._get_modified_settings(
+                        name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(
+                        self, self._current_settings, imagecontainer)
 
 
                 elif cls is ErrorCorrectionThread:
-                    self._current_settings = self._get_modified_settings(name, imagecontainer.has_timelapse)
-                    self._analyzer = cls(self, self._current_settings,
-                                         self.parent().main_window._imagecontainer)
+                    self._current_settings = self._get_modified_settings(
+                        name, imagecontainer.has_timelapse)
+                    self._analyzer = cls(
+                        self, self._current_settings,
+                        self.parent().main_window._imagecontainer)
 
                 self._analyzer.finished.connect(self._on_process_finished)
-                self._analyzer.stage_info.connect(self._on_update_stage_info, Qt.QueuedConnection)
-                self._analyzer.analyzer_error.connect(self._on_error, Qt.QueuedConnection)
+                self._analyzer.status.connect(
+                    self._on_update_stage_info, Qt.QueuedConnection)
+                self._analyzer.error.connect(self._on_error, Qt.QueuedConnection)
+                self._analyzer.increment.connect(self.process_control.increment)
                 self._analyzer.image_ready.connect(self._on_update_image)
 
                 self._analyzer.start(QThread.LowestPriority)
@@ -385,12 +355,13 @@ class BaseProcessorFrame(BaseFrame):
         self.dlg.exec_(lambda: self._analyzer.abort(wait=True))
         self.setCursor(Qt.ArrowCursor)
 
-    def _on_error(self, msg, short='An error occurred during processing!'):
+    def _on_error(self, msg, short='Error'):
         self._has_error = True
-        critical(self, short, detail=msg)
+        QMessageBox.critical(self, short, msg)
 
     def _on_process_finished(self):
         self._analyzer.image_ready.disconnect(self._on_update_image)
+        self.process_control.reset()
 
         if (not self._process_items is None and
             self._current_process_item+1 < len(self._process_items) and
@@ -405,35 +376,19 @@ class BaseProcessorFrame(BaseFrame):
             self._toggle_tabs(True)
             # enable all section button of the main widget
             self.toggle_tabs.emit(self.get_name())
+            msg = 'Processing successfully finished'
+
             if not self._is_abort and not self._has_error:
                 if self.name == SECTION_NAME_OBJECTDETECTION:
                     msg = 'Object detection successfully finished.'
-                elif self.name == SECTION_NAME_CLASSIFICATION:
-                    if self._current_process == self.PICKING:
-                        msg = 'Samples successfully picked.\n\n'\
-                              'Please train the classifier now based on the '\
-                              'newly picked samples.'
-                        result_frame = self._get_result_frame(self._tab_name)
-                        result_frame.load_classifier(check=False)
-                        nr_removed = len(result_frame._learner.nan_features)
-                        if nr_removed > 0:
-                            msg += '\n\n%d features contained NA values and will be removed from training.' % nr_removed
-                    elif self._current_process == self.TRAINING:
-                        msg = 'Classifier successfully trained.\n\n'\
-                              'You can test the classifier performance here'\
-                              'visually or apply the classifier in the '\
-                              'processing workflow.'
-                    elif self._current_process == self.TESTING:
-                        msg = 'Classifier testing successfully finished.'
                 elif self.name == SECTION_NAME_TRACKING:
                     msg = 'Tracking successfully finished.'
                 elif self.name == SECTION_NAME_EVENT_SELECTION:
                     msg = 'Event selection successfully finished.'
-                elif self.name == SECTION_NAME_ERRORCORRECTION:
-                    msg = 'Error correction successfully finished.'
                 elif self.name == SECTION_NAME_PROCESSING:
                     msg = 'Processing successfully finished.'
                 self.status_message.emit(msg)
+                QMessageBox.information(self, "Finished", msg)
             else:
                 if self._is_abort:
                     self.status_message.emit('Process aborted by user.')
@@ -444,84 +399,36 @@ class BaseProcessorFrame(BaseFrame):
             self._process_items = None
 
     def _on_esc_pressed(self):
+
         if self._is_running:
             self._abort_processing()
             self._analyzer.image_ready.disconnect(self._on_update_image)
 
     def _on_update_stage_info(self, info):
-        sep = '   |   '
-        info = dict([(str(k), v) for k,v in info.iteritems()])
-        #print info
-        if self.CONTROL == CONTROL_1:
-            if info['stage'] == 0:
-                self.process_control.setRange(info['min'], info['max'])
-                if not info['progress'] is None:
-                    self.process_control.setProgress(info['progress'])
 
-                    msg = ''
-                    if 'meta' in info:
-                        msg += '%s' % info['meta']
-                    if 'text' in info:
-                        msg += '   %s' % info['text']
-                    if info['progress'] > info['min'] and 'interval' in info:
-                        interval = info['interval']
-                        self._intervals.append(interval)
-                        avg = numpy.average(self._intervals)
-                        estimate = seconds2datetime(avg*float(info['max']-info['progress']))
-                        msg += '%s~ %.1fs / %s%s%s remaining' % (sep,
-                                                                 avg,
-                                                                 info['item_name'],
-                                                                 sep,
-                                                                 estimate.strftime("%H:%M:%S"))
-                    else:
-                        self._intervals = []
-                    self.status_message.emit(msg)
-                else:
-                    self.process_control.clearText()
-            else:
-                self._stage_infos[info['stage']] = info
-                if len(self._stage_infos) > 1:
-                    total = self._stage_infos[1]['max']*self._stage_infos[2]['max']
-                    current = (self._stage_infos[1]['progress']-1)*self._stage_infos[2]['max']+self._stage_infos[2]['progress']
-                    self.process_control.setRange(0, total)
-                    self.process_control.setProgress(current)
-                    sep = '   |   '
-                    msg = '%s   %s%s%s' % (self._stage_infos[2]['meta'],
-                                           self._stage_infos[1]['text'],
-                                           sep,
-                                           self._stage_infos[2]['text'])
-                    if current > 1 and ('interval' in info.keys()):
-                        interval = info['interval']
-                        self._intervals.append(interval)
-                        estimate = seconds2datetime(
-                            numpy.average(self._intervals)*float(total-current))
-                        msg += '%s%.1fs / %s%s%s remaining' % (sep,
-                                                               interval,
-                                                               self._stage_infos[2]['item_name'],
-                                                               sep,
-                                                               estimate.strftime("%H:%M:%S"))
-                    else:
-                        self._intervals = []
-                    self.status_message.emit(msg)
+        sep = ' | '
+        info = dict([(str(k), v) for k, v in info.iteritems()])
 
-        elif self.CONTROL == CONTROL_2:
+        self.process_control.setRange(info['min'], info['max'])
 
-            if info['stage'] == 1:
-                if 'progress' in info:
-                    self._analyzer_progress1.setRange(info['min'], info['max'])
-                    self._analyzer_progress1.setValue(info['progress'])
-                    self._analyzer_label1.setText('%s (%d / %d)' % (info['text'],
-                                                                    info['progress'],
-                                                                    info['max']))
-                else:
-                    self._analyzer_label1.setText(info['text'])
-            else:
-                if 'progress' in info:
-                    self._analyzer_progress2.setRange(info['min'], info['max'])
-                    self._analyzer_progress2.setValue(info['progress'])
-                    self._analyzer_label2.setText('%s: %s (%d / %d)' % (info['text'],
-                                                                        info['meta'],
-                                                                        info['progress'],
-                                                                        info['max']))
-                else:
-                    self._analyzer_label2.setText(info['text'])
+        if info['progress'] is not None:
+            self.process_control.setProgress(info['progress'])
+
+        msg = ''
+        if 'meta' in info:
+            msg += '%s' % info['meta']
+        if 'text' in info:
+            msg += '   %s' % info['text']
+
+        if info['interval'] is not None:
+            prg = self.process_control.progress()
+            max_ = self.process_control.maximum()
+            self._intervals.append(info["interval"])
+            avg = numpy.average(self._intervals)
+            estimate = seconds2datetime(avg*float(max_-prg))
+            msg += '%s~ %.1fs %s%s remaining' \
+                   % (sep, avg, sep,
+                      estimate.strftime("%H:%M:%S"))
+        else:
+            self._intervals = []
+        self.status_message.emit(msg)

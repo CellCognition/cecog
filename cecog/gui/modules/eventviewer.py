@@ -18,7 +18,6 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.Qt import *
 
-from cecog.gui.util import exception, warning
 from cecog.gui.imageviewer import QGraphicsPixmapHoverItem
 from cecog.gui.modules.module import CH5BasedModule
 
@@ -67,14 +66,13 @@ class CellH5EventModule(CH5BasedModule):
         try:
             events = pos.get_event_items()
         except KeyError as ke:
-            exception(self, "No event data found in CellH5. Make sure tracking and event selection has been enabled! ('%s)'"% str(ke))
+            QMessageBox.critical(
+                self, "Error",
+                ("No event data found in CellH5. Make sure tracking "
+                 "and event selection has been enabled! ('%s)'"% str(ke)))
             return
         except Exception as e:
-            exception(self, "An error has occured ('%s)'"% str(e))
-            return
-        
-        if len(events) == 0:
-            warning(self, "No event data found...")
+            QMessageBox.critical(self, "Error", str(e))
             return
 
         self.event_table.setRowCount(0)
@@ -240,7 +238,7 @@ class CellH5EventModule(CH5BasedModule):
         layout.setContentsMargins(*padding)
         self._cb_show_id = QCheckBox('Show Event ID', self)
         self._cb_show_id.setTristate(False)
-        self._cb_show_id.setCheckState(2)
+        self._cb_show_id.setCheckState(Qt.Unchecked)
         layout.addWidget(self._cb_show_id)
 
         self._cb_show_id.stateChanged.connect(self._cb_show_id_changed)
@@ -369,26 +367,35 @@ class CellH5EventModule(CH5BasedModule):
                 event_text_item.setPos(0, y-init_y_offset)
                 self.browser.image_viewer._scene.addItem(event_text_item)
 
-            for i, gallery_numpy in enumerate(pos.get_gallery_image_generator(track, object_,size=size)):
-                gallery_item = QGraphicsPixmapHoverItem(QPixmap(array2qimage(self.transform_image(gallery_numpy), False )))
-                gallery_item.setPos(x, y)
-                self.browser.image_viewer._scene.addItem(gallery_item)
+            try:
+                for i, gallery_numpy in enumerate(pos.get_gallery_image_generator(track, object_)):
+                    gallery_item = QGraphicsPixmapHoverItem(QPixmap(array2qimage(self.transform_image(gallery_numpy), False )))
+                    gallery_item.setPos(x, y)
+                    self.browser.image_viewer._scene.addItem(gallery_item)
 
-                if self._cb_segmentation.checkState():
-                    contour_item = QGraphicsPolygonItem(QPolygonF(map(lambda x: QPointF(x[0],x[1]), self.cur_pos.get_crack_contour(track[i],object_, size=size)[0])))
-                    contour_item.setPos(x,y)
-                    color = Qt.red
-                    if self._cb_classification.checkState():
-                        color = QColor(self.cur_pos.get_class_color(track[i]))
-                    contour_item.setPen(QPen(color))
-                    contour_item.setZValue(4)
+                    if self._cb_segmentation.checkState():
+                        contour_item = QGraphicsPolygonItem(
+                            QPolygonF(map(lambda x: QPointF(x[0],x[1]),
+                                          self.cur_pos.get_crack_contour(track[i],object_)[0])))
+                        contour_item.setPos(x,y)
+                        color = Qt.red
+                        if self._cb_classification.checkState():
+                            color = QColor(self.cur_pos.get_class_color(track[i]))
+                        pen = QPen(color)
+                        pen.setWidth(0.0)
+                        contour_item.setPen(pen)
+                        contour_item.setZValue(4)
 
-                    self.browser.image_viewer._scene.addItem(contour_item)
+                        self.browser.image_viewer._scene.addItem(contour_item)
 
-                x += step
-                if (x / step) >= self.x_max:
-                    x = init_x_offset
-                    y += step
+                    x += step
+                    if (x / step) >= self.x_max:
+                        x = init_x_offset
+                        y += step
+            except KeyError as e:
+                QMessageBox.critical(self, "Error", "Data file does not contain images!")
+                return
+
             x = init_x_offset
             y += step
             if self._cb_show_id.checkState():

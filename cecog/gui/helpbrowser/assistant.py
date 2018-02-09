@@ -28,7 +28,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtGui import QTextDocument
 
 from cecog import version
-from cecog.gui.util import loadUI
+from cecog.gui.loadui import loadUI
 
 
 class AtLineEdit(QtWidgets.QLineEdit):

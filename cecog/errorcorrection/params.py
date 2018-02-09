@@ -24,26 +24,14 @@ from cecog.util.ctuple import COrderedDict
 # XXX belongs to the settings module/class
 class ECParams(object):
 
-    EVENTSELECTION_SUPERVISED = 0
-    EVENTSELECTION_UNSUPERVISED = 1
-    EVENTSELECTION = (EVENTSELECTION_SUPERVISED, EVENTSELECTION_UNSUPERVISED)
-
-    HMM_SMOOTHING = 0
-    HMM_BAUMWELCH = 1
-
     __slots__ = ['regionnames', 'constrain_graph', 'hmm_constrain',
-                 'classifier_dirs', 'position_labels', 'mapping_dir',
+                 'classifier_dirs', 'mapping_dir', 'size_gallery_image',
                  'sortby', 'timeunit', 'overwrite_timelapse', 'timelapse',
                  'sorting', 'sorting_sequence', 'tmax', 'ignore_tracking_branches',
-                 'write_gallery', 'n_galleries', 'eventselection', 'nclusters',
-                 'resampling_factor', 'hmm_algorithm', 'size_gallery_image']
+                 'write_gallery', 'n_galleries',
+                 'resampling_factor']
 
     def __init__(self, settings, tstep, timeunit):
-
-        if settings('ErrorCorrection', 'hmm_baumwelch'):
-            self.hmm_algorithm = self.HMM_BAUMWELCH
-        else:
-            self.hmm_algorithm = self.HMM_SMOOTHING
 
         self.constrain_graph = settings('ErrorCorrection', 'constrain_graph')
         self.hmm_constrain = dict()
@@ -62,19 +50,14 @@ class ECParams(object):
                 self.classifier_dirs[channel] = \
                     settings('Classification', _setting)
 
-        self.position_labels = settings('ErrorCorrection', 'position_labels')
-        self.mapping_dir = settings('ErrorCorrection', 'mappingfile_path')
+        self.mapping_dir = settings('General', 'plate_layout')
 
-        if settings('ErrorCorrection', 'groupby_oligoid'):
-            self.sortby = PlateMapping.OLIGO
+        if settings('ErrorCorrection', 'groupby_sirna'):
+            self.sortby = PlateMapping.SIRNA
         elif settings('ErrorCorrection', 'groupby_genesymbol'):
             self.sortby = PlateMapping.GENE
         else:
-            self.sortby = PlateMapping.POSITION
-
-        # special case, sort by position if no mappings file is provided
-        if not self.position_labels:
-            self.sortby = PlateMapping.POSITION
+            self.sortby = PlateMapping.FILE
 
         # timelapse in minutes
         self.overwrite_timelapse = \
@@ -103,11 +86,6 @@ class ECParams(object):
         self.n_galleries = \
             settings('ErrorCorrection', 'compose_galleries_sample')
 
-        if settings('EventSelection', 'supervised_event_selection'):
-            self.eventselection = self.EVENTSELECTION_SUPERVISED
-        else:
-            self.eventselection = self.EVENTSELECTION_UNSUPERVISED
-        self.nclusters = settings('EventSelection', 'num_clusters')
         self.resampling_factor = settings('ErrorCorrection', 'resampling_factor')
         self.size_gallery_image = settings('ErrorCorrection', 'size_gallery_image')
 

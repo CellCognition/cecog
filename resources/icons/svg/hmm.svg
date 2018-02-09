@@ -12,7 +12,7 @@
    viewBox="0 0 48 48"
    id="svg2"
    version="1.1"
-   inkscape:version="0.48.4 r9939"
+   inkscape:version="0.92.1 r15371"
    sodipodi:docname="hmm.svg"
    inkscape:export-filename="Z:\workbench\cecog\resources\icons\error-correction.png"
    inkscape:export-xdpi="360"
@@ -25,14 +25,14 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <defs
      id="defs8" />
   <sodipodi:namedview
-     pagecolor="#ff30ff"
+     pagecolor="#ffffff"
      bordercolor="#666666"
      borderopacity="1"
      objecttolerance="10"
@@ -40,15 +40,15 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="1162"
-     inkscape:window-height="868"
+     inkscape:window-width="1663"
+     inkscape:window-height="998"
      id="namedview6"
      showgrid="false"
      showguides="true"
      inkscape:guide-bbox="true"
      inkscape:zoom="13.5625"
-     inkscape:cx="12.497696"
-     inkscape:cy="24"
+     inkscape:cx="8.8714062"
+     inkscape:cy="23.410138"
      inkscape:window-x="358"
      inkscape:window-y="150"
      inkscape:window-maximized="0"
@@ -60,15 +60,14 @@
      inkscape:connector-curvature="0" />
   <text
      xml:space="preserve"
-     style="font-size:11.36395645000000000px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#cccccc;fill-opacity:1;stroke:#7bacff;stroke-width:0.29999999999999999;stroke-linecap:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:1.79999999000000010, 0.59999999999999998;stroke-dashoffset:0;font-family:Sans;-inkscape-font-specification:Sans Bold"
-     x="8.4398623"
-     y="43.517342"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:11.19346142px;line-height:0%;font-family:sans-serif;-inkscape-font-specification:'Sans Bold';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#d4d4d4;fill-opacity:1;stroke:#868686;stroke-width:0.27983657;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:1.6790193, 0.55967311;stroke-dashoffset:0;stroke-opacity:1"
+     x="9.2102871"
+     y="40.495327"
      id="text2987-0"
-     sodipodi:linespacing="125%"
-     transform="scale(1.0896361,0.91773759)"><tspan
+     transform="scale(1.0137116,0.98647389)"><tspan
        sodipodi:role="line"
        id="tspan2989-6"
-       x="8.4398623"
-       y="43.517342"
-       style="font-size:11.36395645000000000px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;text-align:start;line-height:125%;writing-mode:lr-tb;text-anchor:start;fill:#cccccc;stroke:#7bacff;stroke-width:0.29999999999999999;stroke-linecap:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:1.79999999000000010, 0.59999999999999998;stroke-dashoffset:0;font-family:Sans;-inkscape-font-specification:Sans Bold">HMM</tspan></text>
+       x="9.2102871"
+       y="40.495327"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:10.60016823px;line-height:125%;font-family:sans-serif;-inkscape-font-specification:'Sans Bold';text-align:start;writing-mode:lr-tb;text-anchor:start;fill:#d4d4d4;fill-opacity:1;stroke:#868686;stroke-width:0.27983657;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:1.6790193, 0.55967311;stroke-dashoffset:0;stroke-opacity:1">HMM</tspan></text>
 </svg>

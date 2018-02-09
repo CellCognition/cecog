@@ -14,90 +14,102 @@ __url__ = 'www.cellcognition.org'
 import os
 import sys
 import copy
+import shutil
 import logging
 import traceback
 import threading
 import SocketServer
 from multiprocessing import Pool
+from multiprocessing import cpu_count
 
 from PyQt5 import QtCore
 
 from cecog.version import version
 from cecog.util.stopwatch import StopWatch
-from cecog.threads.link_hdf import link_hdf5_files
-from cecog.analyzer.core import AnalyzerCore
+from cecog.analyzer.plate import PlateAnalyzer
 from cecog.threads.analyzer import AnalyzerThread
-from cecog.threads.corethread import ProgressMsg
 from cecog.multiprocess import mplogging as lg
 from cecog.environment import CecogEnvironment
 from cecog.traits.config import ConfigSettings
 from cecog.logging import QHandler
+from cecog.io.hdf import mergeHdfFiles
 
 class MultiProcessingError(Exception):
     pass
 
 
 def core_helper(plate, settings_dict, imagecontainer, position, version,
-                redirect=True, debug=False):
-    """Embeds analysis of a positon in a single function"""
+                mode="r+", redirect=True):
+    """Embedds analysis of a positon in a single function"""
     # see http://stackoverflow.com/questions/3288595/
     # multiprocessing-using-pool-map-on-a-function-defined-in-a-class
     logger =  logging.getLogger(str(os.getpid()))
-    import numpy
-    reload(numpy.core._dotblas)
+
+    try:
+        # FIXME numpy 1.11 does not have ._dotblas
+        import numpy.core._dotblas
+        reload(numpy.core._dotblas)
+    except ImportError as e:
+        pass
+
     try:
         settings = ConfigSettings()
         settings.from_dict(settings_dict)
         settings.set('General', 'constrain_positions', True)
         settings.set('General', 'positions', position)
 
-        environ = CecogEnvironment(version, redirect=redirect, debug=debug)
-        if debug:
-            environ.pprint()
-        analyzer = AnalyzerCore(plate, settings, imagecontainer)
-        post_hdf5_link_list = analyzer.processPositions()
-        return plate, position, copy.deepcopy(post_hdf5_link_list)
+        environ = CecogEnvironment(version, redirect=redirect)
+
+        analyzer = PlateAnalyzer(plate, settings, imagecontainer, mode=mode)
+        analyzer()
+        return plate, position
+
     except Exception as e:
-        errortxt = "plate: %s, position: %s\n" %(plate, position)
+        errortxt = "Plate: %s, Site: %s\n" %(plate, position)
         errortxt = "".join([errortxt] + \
                                traceback.format_exception(*sys.exc_info()))
         logger.error(errortxt)
-        raise e.__class__(errortxt)
+        raise type(e)(errortxt)
 
 
 class ProgressCallback(QtCore.QObject):
     """Helper class to send progress signals to the main window"""
 
-    def __init__(self, parent, job_count, ncpu):
-        self.parent = parent
-        self.ncpu = ncpu
+    def __init__(self, thread, njobs):
+        super(ProgressCallback, self).__init__()
+        self.thread = thread
+        self.count = 0
+        self.njobs = njobs
         self._timer = StopWatch(start=True)
 
-        self.progress = ProgressMsg(
-            max=job_count,
-            meta=('Parallel processing %d /  %d positions '
-                  '(%d cores)' % (0, job_count, self.ncpu)))
-        self.parent.stage_info.emit(self.progress)
+    def __call__(self, (plate, position)):
 
-    def __call__(self, (plate, pos, hdf_files)):
-        self.progress.increment_progress()
-        self.progress.meta = 'Parallel processing %d / %d positions %d cores)' \
-            % (self.progress.progress, self.progress.max, self.ncpu)
+        self.count += 1
+        self.thread.increment.emit()
+        self.thread.statusUpdate(
+            text = '%d/%d - last finished site: %s' %(self.count, self.njobs, position))
 
-        self.parent.stage_info.emit(self.progress)
         self._timer.reset(start=True)
-        return plate, pos, hdf_files
+        return plate, position
 
 
 # XXX should not be a child of QThread!
 class MultiAnalyzerThread(AnalyzerThread):
 
-    def __init__(self, parent, settings, imagecontainer, ncpu):
+    def __init__(self, parent, settings, imagecontainer):
         super(MultiAnalyzerThread, self).__init__(parent, settings,
                                                   imagecontainer)
 
         self._abort = False
-        self.ncpu = ncpu
+
+        if settings("General", "constrain_positions"):
+            count = self._settings("General", "positions").count(",") +1
+        else:
+            # FIXME - implcitly assume same number of postions for all plates
+            count = len(self._imagecontainer.get_meta_data().positions)
+
+        self.ncpu = min(count, cpu_count())
+
         self.job_result = []
 
         self.log_receiver = lg.LoggingReceiver(port=0)
@@ -129,16 +141,13 @@ class MultiAnalyzerThread(AnalyzerThread):
         self.pool.close()
         self.pool.join()
 
-        hdf5_link_list = list()
         try:
             exceptions = []
             if not self.is_aborted():
                 for r in self.job_result:
                     if r.successful():
                         try:
-                            plate, pos, hdf_files = r.get()
-                            if len(hdf_files) > 0:
-                                hdf5_link_list.append(hdf_files)
+                            plate, pos  = r.get()
                         except Exception, e:
                             exceptions.append(e)
 
@@ -148,9 +157,31 @@ class MultiAnalyzerThread(AnalyzerThread):
                 raise MultiProcessingError(msg)
         finally:
             self.close_logreceiver()
-            if len(hdf5_link_list) > 0:
-                hdf5_link_list = reduce(lambda x, y: x + y, hdf5_link_list)
-            link_hdf5_files(sorted(hdf5_link_list))
+
+        if not self._abort:
+            self.mergeFiles()
+
+    def mergeFiles(self):
+        # last step is to merge all hdf files into one
+        for plate in self._imagecontainer.plates:
+            outdir  = self._imagecontainer.get_path_out(plate)
+            hdffile = os.path.join(outdir, "%s.ch5" %plate)
+            hdfdir = os.path.join(outdir, "cellh5")
+            mergeHdfFiles(hdffile, hdfdir, remove_source=True)
+            shutil.rmtree(hdfdir)
+
+    def clearOutputDir(self, directory):
+        """Remove the content of the output directory except the structure file."""
+
+        for root, dirs, files in os.walk(directory, topdown=False):
+            for name in files:
+                if not name.endswith(".xml"):
+                    os.remove(os.path.join(root, name))
+            for name in dirs:
+                try:
+                    os.rmdir(os.path.join(root, name))
+                except OSError:
+                    pass
 
     def abort(self, wait=False):
         self._mutex.lock()
@@ -167,7 +198,10 @@ class MultiAnalyzerThread(AnalyzerThread):
     def _run(self):
         self._abort = False
 
-        # setup the processes
+        if not self._settings('General', 'skip_finished'):
+            self.clearOutputDir(self._settings('General', 'pathout'))
+
+            # setup the processes
         jobs = []
         positions = None
         if self._settings.get('General', 'constrain_positions'):
@@ -182,14 +216,19 @@ class MultiAnalyzerThread(AnalyzerThread):
             else:
                 _positions = meta_data.positions
 
-            for pos in _positions:
+            modes = ["w"] + ["r+"]*len(_positions)
+            for mode, pos in zip(modes, _positions):
                 jobs.append((plate, self._settings.to_dict() , self._imagecontainer, pos,
-                             version))
+                             version, mode))
+
+        self.statusUpdate(min=0, max=len(jobs),
+            text = 'Parallel processing %d /  %d positions '
+                          '(%d cores)' % (0, len(jobs), self.ncpu))
 
         # submit the jobs
-        callback = ProgressCallback(self, len(jobs), self.ncpu)
+        callback = ProgressCallback(self, len(jobs))
+
         for args in jobs:
             self.job_result.append( \
-                self.pool.apply_async(core_helper, args,
-                                      callback=callback))
+                self.pool.apply_async(core_helper, args, callback=callback))
         self.join()

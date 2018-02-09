@@ -13,24 +13,29 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-__all__ = ['Annotations']
+__all__ = ('AnnotationsFile', )
 
 
 from os.path import isfile
 from xml.dom.minidom import parse
 from collections import OrderedDict
+from collections import namedtuple
 
 
-class Annotations(OrderedDict):
+SamplePosition = namedtuple("SamplePosition", ['label', 'x', 'y'])
+
+
+class AnnotationsFile(OrderedDict):
 
     def __init__(self, regex, filename, reference, scale=1.0, timelapse=True):
-        super(Annotations, self).__init__()
+        super(AnnotationsFile, self).__init__()
 
         if not filename.endswith("xml"):
-            raise RuntimeError(("This classifier was trained with an outdated "
-                                "version of CellCognition. You can retrain the "
-                                "classifier or use the old version that you used "
-                                "in the first place. Sorry."))
+            raise RuntimeError(
+                ("This classifier was trained with an outdated "
+                 "version of CellCognition. You can retrain the "
+                 "classifier or use the old version that you used "
+                 "in the first place. Sorry."))
 
         if not isfile:
             raise IOError("File %s does not exist!")
@@ -47,12 +52,16 @@ class Annotations(OrderedDict):
 
         dom = parse(filename)
         for markertype in dom.getElementsByTagName('Marker_Type'):
-            imt = int(markertype.getElementsByTagName('Type')[0].childNodes[0].data)
+            imt = int(markertype.getElementsByTagName(
+                'Type')[0].childNodes[0].data)
 
             for marker in markertype.getElementsByTagName('Marker'):
-                iX = int(marker.getElementsByTagName('MarkerX')[0].childNodes[0].data)
-                iY = int(marker.getElementsByTagName('MarkerY')[0].childNodes[0].data)
-                iZ = int(marker.getElementsByTagName('MarkerZ')[0].childNodes[0].data)
+                iX = int(marker.getElementsByTagName(
+                    'MarkerX')[0].childNodes[0].data)
+                iY = int(marker.getElementsByTagName(
+                    'MarkerY')[0].childNodes[0].data)
+                iZ = int(marker.getElementsByTagName(
+                    'MarkerZ')[0].childNodes[0].data)
 
                 try:
                     i = reference[iZ - 1 + offset]
@@ -60,10 +69,10 @@ class Annotations(OrderedDict):
                     pass
                 else:
                     if not i in self:
-                        self[i] = []
-                    self[i].append(dict([('iClassLabel', imt),
-                                           ('iPosX', int(iX/self._scale)),
-                                           ('iPosY', int(iY/self._scale))]))
+                        self[i] = list()
+                    self[i].append(
+                        SamplePosition(
+                            imt, int(iX/self._scale), int(iY/self._scale)))
 
     def position(self):
         return self.regex.group('position')

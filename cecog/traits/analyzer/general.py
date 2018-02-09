@@ -24,8 +24,7 @@ from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
                                  SelectionTrait,
                                  DictTrait,
-                                 ListTrait
-                                 )
+                                 ListTrait)
 from cecog.environment import CecogEnvironment
 
 SECTION_NAME_GENERAL = 'General'
@@ -37,31 +36,21 @@ class SectionGeneral(SectionCore):
     OPTIONS = [
       ('general',
        [('pathin',
-            StringTrait('', 1000, label='Input directory',
-                                   widget_info=StringTrait.STRING_PATH)),
+         StringTrait('', label='Image Directory',
+                     widget_info=StringTrait.STRING_PATH)),
         ('has_multiple_plates',
-            BooleanTrait(False, label='Multiple plates')),
+         BooleanTrait(False, label='Multiple Plates')),
 
         ('pathout',
-            StringTrait('', 1000, label='Output directory',
-                                   widget_info=StringTrait.STRING_PATH)),
+         StringTrait('', label='Output Directory',
+                     widget_info=StringTrait.STRING_PATH)),
+        ('plate_layout',
+         StringTrait('', label='Plate Layout',
+                     widget_info=StringTrait.STRING_PATH)),
         ('namingscheme',
             SelectionTrait(CecogEnvironment.naming_schema.sections()[0],
                            CecogEnvironment.naming_schema.sections(),
-                           label='Naming scheme')),
-        ('structure_file_pathin',
-            BooleanTrait(True, label='Input directory ',
-                         widget_info=BooleanTrait.RADIOBUTTON)),
-        ('structure_file_pathout',
-            BooleanTrait(False, label='Output directory   ',
-                         widget_info=BooleanTrait.RADIOBUTTON)),
-        ('structure_file_extra_path',
-            BooleanTrait(False, label='Custom directory     ',
-                         widget_info=BooleanTrait.RADIOBUTTON)),
-        ('structure_file_extra_path_name',
-            StringTrait('', 1000, label='Path',
-                        widget_info=StringTrait.STRING_PATH)),
-
+                           label='Image Naming Scheme')),
         ('framerange',
             BooleanTrait(False, label='Timelapse')),
         ('framerange_begin',
@@ -72,7 +61,7 @@ class SectionGeneral(SectionCore):
             IntTrait(1, 1, 100, label='increment')),
 
 
-        ('redofailedonly',
+        ('skip_finished',
             BooleanTrait(False, label='Skip finished positions')),
         ('constrain_positions', BooleanTrait(False, label='Positions')),
         ('positions',

@@ -14,6 +14,7 @@ __url__ = 'www.cellcognition.org'
 
 from os.path import join
 from collections import OrderedDict
+import numpy as np
 
 from cecog import ccore
 from cecog.analyzer.channel import PrimaryChannel
@@ -31,7 +32,7 @@ class CellAnalyzer(LoggerObject):
 
     def __init__(self, timeholder, position, create_images, binning_factor,
                  detect_objects):
-        
+
         super(CellAnalyzer, self).__init__()
 
         self.timeholder = timeholder
@@ -102,9 +103,11 @@ class CellAnalyzer(LoggerObject):
                                                        secondary_channel)
                 elif channel.NAME == MergedChannel.NAME:
                     channel.meta_image = primary_channel.meta_image
-                    self.timeholder.apply_segmentation(channel, self._channel_registry)
+                    self.timeholder.apply_segmentation(
+                        channel, self._channel_registry)
                 else:
-                    raise ValueError("Channel with name '%s' not supported." % channel.NAME)
+                    raise ValueError(
+                        "Channel with name '%s' not supported." % channel.NAME)
 
                 if extract_features:
                     self.timeholder.apply_features(channel)
@@ -115,6 +118,7 @@ class CellAnalyzer(LoggerObject):
                 self.timeholder.apply_channel(channel)
 
     def purge(self, features=None):
+
         for channel in self._channel_registry.values():
             if not features is None and channel.strChannelId in features:
                 channelFeatures = features[channel.strChannelId]
@@ -122,25 +126,13 @@ class CellAnalyzer(LoggerObject):
                 channelFeatures = None
             channel.purge(features=channelFeatures)
 
-    def exportLabelImages(self, pathOut, compression='LZW'):
-        # no segmentaion in virtual channels --> no label images
-        for channel in self.proc_channels.itervalues():
-            channel_id = channel.strChannelId
-            for region, container in channel.containers.iteritems():
-                outdir = join(pathOut, channel_id, region)
-                makedirs(outdir)
-                fname = join(outdir, 'P%s_T%05d.tif' %(self.P, self._iT))
-                container.exportLabelImage(fname, compression)
-
     def getImageSize(self, name):
         oChannel = self._channel_registry[name]
         w = oChannel.meta_image.width
         h = oChannel.meta_image.height
         return (w,h)
 
-    def render(self, strPathOut, dctRenderInfo=None,
-               strFileSuffix='.jpg', strCompression='98', writeToDisc=True,
-               images=None):
+    def render(self, dctRenderInfo=None, images=None):
 
         lstImages = []
         if not images is None:
@@ -203,7 +195,6 @@ class CellAnalyzer(LoggerObject):
                                         imgCon = ccore.Image(imgRaw.width, imgRaw.height)
                                         # Flip this and use drawContours with fill option enables to get black background
                                         oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, False)
-#                                        oContainer.drawContoursByIds(lstObjIds, 255, imgCon, bThickContours, True)
                                         lstImages.append((imgCon, dctColors[iLabel], fAlpha))
 
                                         if isinstance(bShowLabels, bool) and bShowLabels:
@@ -230,17 +221,10 @@ class CellAnalyzer(LoggerObject):
                                         [ccore.RGBValue(*hex2rgb(x[1])) for x in lstImages],
                                         [x[2] for x in lstImages])
 
-            if writeToDisc:
-                strFilePath = join(strPathOut, "P%s_T%05d%s"
-                                   %(self.P, self._iT, strFileSuffix))
-                makedirs(strPathOut)
-                ccore.writeImage(imgRgb, strFilePath, strCompression)
-                self.logger.debug("* rendered image written '%s'" % strFilePath)
-            else:
-                strFilePath = ''
-            return imgRgb, strFilePath
+            return imgRgb
 
-    def collectObjects(self, plate_id, P, sample_readers, oLearner, byTime=True):
+    def collectObjects(self, plate_id, P, sample_readers, oLearner):
+
         self.logger.debug('* collecting samples...')
         self.process(apply = False, extract_features = False)
 
@@ -255,21 +239,19 @@ class CellAnalyzer(LoggerObject):
         object_ids = set()
 
         for reader in sample_readers:
-            if (byTime and P == reader.position() and self._iT in reader):
+            if (P == reader.position() and self._iT in reader):
                 coords = reader[self._iT]
-            elif (not byTime and P in reader):
-                coords = reader[P]
             else:
                 coords = None
 
             if coords is not None:
-                for data in coords:
-                    label = data['iClassLabel']
-                    if (label in oLearner.class_names and
-                        0 <= data['iPosX'] < oContainer.width and
-                        0 <= data['iPosY'] < oContainer.height):
+                for pos in coords:
+                    label = pos.label
+                    if (label in oLearner.classdef.names and
+                        0 <= pos.x < oContainer.width and
+                        0 <= pos.y < oContainer.height):
 
-                        center1 = ccore.Diff2D(data['iPosX'], data['iPosY'])
+                        center1 = ccore.Diff2D(pos.x, pos.y)
                         # test for obj_id "under" annotated pixel first
                         obj_id = oContainer.img_labels[center1]
 
@@ -310,58 +292,13 @@ class CellAnalyzer(LoggerObject):
                 self.timeholder.apply_features(mchannel)
 
         self.timeholder.apply_features(oChannel)
-        training_set = self.annotate(object_lookup,
-                                     oLearner, oContainer,
-                                     oChannel.get_region(region))
+        training_samples = self.annotate(object_lookup,
+                                         oLearner, oContainer,
+                                         oChannel.get_region(region))
 
-        if oChannel.is_virtual():
-            images = {}
-            for s_ch, reg in oChannel.sub_channels():
-                rid = "%s_%s" %(s_ch.NAME, reg)
-                self.draw_annotation_images(plate_id, training_set,
-                                   s_ch.get_container(reg), oLearner, rid)
-                images.update(self.write_annotation_images(s_ch, reg, oLearner))
+        if training_samples:
+            oLearner.add_samples(training_samples)
 
-        else:
-            self.draw_annotation_images(plate_id, training_set, oContainer, oLearner)
-            images = self.write_annotation_images(oChannel, region, oLearner)
-
-        if training_set:
-            oLearner.set_training_data(training_set)
-
-        return images
-
-    def write_annotation_images(self, channel, region, learner):
-        cnt = channel.get_container(region)
-        images = {}
-        if isinstance(region, tuple):
-            region = "-".join(region)
-        name = join(learner.controls_dir, "P%s_T%05d_C%s_R%s.jpg"
-                    %(self.P, self._iT, learner.color_channel, region))
-        cnt.exportRGB(name, "90")
-        images["%s_%s" %(channel.NAME.lower(), region)] = cnt.img_rgb
-        return images
-
-    def draw_annotation_images(self, plate, training_set, container, learner, rid=""):
-        cldir = dict([(cname, join(learner.samples_dir, cname)) \
-                          for cname in learner.class_names.values()])
-        # create dir per class name
-        for dir_ in cldir.values():
-            makedirs(dir_)
-
-        for obj in training_set.itervalues():
-            rgb_value = ccore.RGBValue(*hex2rgb(obj.strHexColor))
-
-            file_ = 'PL%s___P%s___T%05d___X%04d___Y%04d' \
-                %(plate, self.P, self._iT,
-                  obj.oCenterAbs[0], obj.oCenterAbs[1])
-            obj.file = file_
-            file_ = join(cldir[obj.strClassName],
-                         '%s___%s.png' %(file_, rid+"_%s"))
-            container.exportObject(obj.iId, file_ %"img", file_ %"msk")
-            container.markObjects([obj.iId], rgb_value, False, True)
-            ccore.drawFilledCircle(ccore.Diff2D(*obj.oCenterAbs),
-                                   3, container.img_rgb, rgb_value)
 
     def annotate(self, sample_objects, learner, container, region):
         """Annotate predefined class labels to picked samples."""
@@ -370,8 +307,8 @@ class CellAnalyzer(LoggerObject):
         training_set.feature_names = region.feature_names
 
         for class_label, object_ids in sample_objects.iteritems():
-            class_name = learner.class_names[class_label]
-            hex_color = learner.hexcolors[class_name]
+            class_name = learner.classdef.names[class_label]
+            hex_color = learner.classdef.colors[class_name]
 
             for obj_id in object_ids:
                 obj = region[obj_id]
@@ -381,8 +318,9 @@ class CellAnalyzer(LoggerObject):
                 training_set[obj_id] = obj
         return training_set
 
-    def classify_objects(self, predictor):
-        channel = self._channel_registry[predictor.name]
+    def classify_objects(self, predictor, channel):
+
+        channel = self._channel_registry[channel]
         holder = channel.get_region(predictor.regions)
 
         try:
@@ -392,18 +330,25 @@ class CellAnalyzer(LoggerObject):
         except ValueError:
             has_basic_features = False
 
-        for label, obj in holder.iteritems():
+
+        for l, obj in holder.iteritems():
+
             if obj.aFeatures.size != len(holder.feature_names):
                 msg = ('Incomplete feature set found (%d/%d): skipping sample '
                        'object label %s'
-                       %(obj.aFeatures.size, len(holder.feature_names), label))
+                       %(obj.aFeatures.size, len(holder.feature_names), l))
+                self.logger.warning(msg)
+            elif np.isnan(obj.aFeatures).any():
+                msg = ('Feature set containes NaN and is skipped therefore')
                 self.logger.warning(msg)
             else:
-                label, probs = predictor.predict(obj.aFeatures, holder.feature_names)
-                obj.iLabel = label
-                obj.dctProb = probs
-                obj.strClassName = predictor.class_names[label]
-                obj.strHexColor = predictor.hexcolors[obj.strClassName]
+                label, probs = predictor.predict(obj.aFeatures)
+                #, holder.feature_names)
+                obj.iLabel = label[0]
+                obj.dctProb = probs[0]
+                obj.strClassName = predictor.classdef.names[label[0]]
+                obj.strHexColor = predictor.classdef.colors[obj.strClassName]
+
                 if has_basic_features:
                     obj.roisize = obj.aFeatures[roisize_idx]
                     obj.signal = obj.aFeatures[signal_idx]

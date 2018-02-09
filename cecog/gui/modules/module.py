@@ -98,11 +98,13 @@ class CH5BasedModule(Module):
         self._imagecontainer = imagecontainer
         self._settings = settings
 
+    @property
+    def hdf_file(self):
+        plate  = self._imagecontainer.current_plate
+        return os.path.join(self._imagecontainer.get_path_out(), "%s.ch5" %plate)
+
     def initialize(self):
         super(CH5BasedModule, self).initialize()
-        self.hdf_file = os.path.join(
-            self._settings.get('General', 'pathout'), 'hdf5',
-            '_all_positions.ch5')
 
         if not os.path.exists(self.hdf_file):
             raise IOError(("CellH5 files not yet created. Interactive viewing "

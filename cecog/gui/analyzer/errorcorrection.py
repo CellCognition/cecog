@@ -30,18 +30,12 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
         super(ErrorCorrectionFrame, self).__init__(settings, parent, name)
 
         self.register_control_button( 'errorcorrection', ErrorCorrectionThread,
-            ('start error correction', 'stop error correction'))
+            ('Start Error Correction', 'Stop Error Correction'))
 
         self.add_group(None, [('primary', (0, 0, 1, 1)),
                               ('secondary', (0, 1, 1, 1)),
                               ('tertiary', (0, 2, 1, 1)),
                               ('merged', (0, 3, 1, 1))], label='Channels')
-
-        self.add_group(None,
-                       [('hmm_smoothing', ),
-                        ('hmm_baumwelch', )],
-                       layout='flow', link='hmm_learning',
-                       label='HMM learning algorithm')
 
         self.add_input('ignore_tracking_branches')
         self.add_line()
@@ -50,12 +44,9 @@ class ErrorCorrectionFrame(BaseProcessorFrame):
                         ('secondary_graph',),
                         ('tertiary_graph',),
                         ('merged_graph',)])
-
-        self.add_group('position_labels',
-                       [('mappingfile_path',)])
         self.add_group(None,
                        [('groupby_position',),
-                        ('groupby_oligoid',),
+                        ('groupby_sirna',),
                         ('groupby_genesymbol',),
                         ], layout='flow', link='groupby', label='Group by')
         self.add_line()

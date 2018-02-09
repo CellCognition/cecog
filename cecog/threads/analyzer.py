@@ -13,11 +13,12 @@ __url__ = 'www.cellcognition.org'
 __all__ = ['AnalyzerThread']
 
 
+import os
 import copy
+import shutil
 from cecog.threads.corethread import CoreThread
-from cecog.threads.link_hdf import link_hdf5_files
-from cecog.analyzer.core import AnalyzerCore
-
+from cecog.analyzer.plate import PlateAnalyzer
+from cecog.io.hdf import mergeHdfFiles
 
 class AnalyzerThread(CoreThread):
 
@@ -25,11 +26,34 @@ class AnalyzerThread(CoreThread):
         super(AnalyzerThread, self).__init__(parent, settings)
         self._imagecontainer = imagecontainer
 
+    def clear_output_directory(self, directory):
+        """Remove the content of the output directory except the structure file."""
+
+        for root, dirs, files in os.walk(directory, topdown=False):
+            for name in files:
+                if not name.endswith(".xml"):
+                    os.remove(os.path.join(root, name))
+            for name in dirs:
+                try:
+                    os.rmdir(os.path.join(root, name))
+                except OSError:
+                    pass
+
     def _run(self):
 
-        for plate_id in self._imagecontainer.plates:
-            analyzer = AnalyzerCore(plate_id, self._settings,
-                                    copy.deepcopy(self._imagecontainer))
-            h5_links = analyzer.processPositions(self)
-            if h5_links:
-                link_hdf5_files(h5_links)
+        if not self._settings('General', 'skip_finished'):
+            self.clear_output_directory(self._settings("General", "pathout"))
+
+        nplates = len(self._imagecontainer.plates)
+        for plate in self._imagecontainer.plates:
+            analyzer = PlateAnalyzer(plate, self._settings,
+                                     copy.deepcopy(self._imagecontainer))
+
+            # set maxium in the progress bar
+            imax = len(analyzer.frames)*len(analyzer.positions)*nplates
+            self.statusUpdate(min=0, max=imax)
+            analyzer()
+
+        # merge hdf files into one
+        mergeHdfFiles(analyzer.h5f, analyzer.ch5dir, remove_source=True)
+        os.rmdir(analyzer.ch5dir)

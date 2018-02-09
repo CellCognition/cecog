@@ -14,28 +14,29 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['ClassificationFrame']
+__all__ = ('ClassificationFrame', )
 
-from os.path import isdir
-import numpy
+
+import os
+from os.path import isdir, basename, splitext, join
+import numpy as np
 from collections import OrderedDict
 
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.Qt import *
 
+from cecog.colors import hex2rgb
+from cecog.classifier import SupportVectorClassifier
+
 from cecog import CHANNEL_PREFIX, CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.traits.analyzer.classification import SECTION_NAME_CLASSIFICATION
-from cecog.gui.util import information
 from cecog.util.ctuple import CTuple
 from cecog.gui.analyzer import BaseProcessorFrame
 
-from cecog.threads.picker import PickerThread
+from cecog.threads.trainer import TrainerThread
 from cecog.threads.analyzer import AnalyzerThread
-from cecog.threads.training import TrainingThread
 
-from cecog.learning.learning import CommonClassPredictor
-from cecog.colors import hex2rgb
 
 from cecog.environment import CecogEnvironment
 
@@ -100,139 +101,66 @@ class ClassifierResultFrame(QGroupBox):
         layout_desc.addWidget(self._label_c, Qt.AlignLeft)
         self._label_g = QLabel(self.LABEL_G % float('NAN'), desc)
         layout_desc.addWidget(self._label_g, Qt.AlignLeft)
-        self.browserBtn = QPushButton('Open browser for annotation', desc)
+        self.browserBtn = QPushButton('Open Browser for Annotation', desc)
         layout_desc.addWidget(self.browserBtn)
         layout.addWidget(desc)
-        self._has_data = False
-        self._learner = None
+
+    def classifier_exists(self):
+        return os.path.isfile(self.hdffile)
 
     @property
-    def classifier(self):
-        return self._learner
+    def hdffile(self):
+        path = self._settings.get("Classification",
+                                  "%s_classification_envpath" %self._channel)
+        return join(path, basename(path)+".hdf")
 
     def clear(self):
         self._table_conf.clear()
         self._table_info.clear()
-        self._has_data = False
 
     def reset(self):
-        self._has_data = False
         self._table_conf.clearContents()
 
     def on_load(self):
-        self.load_classifier(check=True)
-        self.update_frame()
+        self.load_classifier()
 
-    def load_classifier(self, check=True, quiet=False):
+    def load_classifier(self):
 
-        clfdir = self._settings('Classification',
-                                '%s_classification_envpath' %self._channel)
-
-        if not isdir(clfdir):
-            return
-        else:
-            chid = self._settings('ObjectDetection', '%s_channelid' %self._channel)
-            title = self._settings('Classification',
-                                   '%s_classification_regionname' %self._channel)
-            self._learner = CommonClassPredictor( \
-                clf_dir=clfdir,
-                name=self._channel,
-                channels = {self._channel.title(): title},
-                color_channel=chid)
-
-            state = self._learner.state
-            if check:
-                b = lambda x: 'Yes' if x else 'No'
-                msg =  'Classifier path: %s\n' % state['path_env']
-                msg += 'Found class definition: %s\n' % b(state['has_definition'])
-                msg += 'Found annotations: %s\n' % b(state['has_path_annotations'])
-                msg += 'Can you pick new samples? %s\n\n' % b(self._learner.is_annotated)
-                msg += 'Found ARFF file: %s\n' % b(state['has_arff'])
-                msg += 'Can you train a classifier? %s\n\n' %b(self._learner.is_trained)
-                msg += 'Found SVM model: %s\n' % b(state['has_model'])
-                msg += 'Found SVM range: %s\n' % b(state['has_range'])
-                msg += 'Can you apply the classifier to images? %s\n\n' \
-                    %b(self._learner.is_valid)
-                msg += 'Found samples: %s\n' % b(state['has_path_samples'])
-                msg += ('Sample images are only used for visualization and annotation '
-                        ' control at the moment.')
-
-                txt = '%s classifier inspection states' % self._channel
-                if not quiet:
-                    information(self, txt, info=msg)
-
-            if state['has_arff']:
-                self._learner.importFromArff()
-
-            if state['has_definition']:
-                self._learner.loadDefinition()
-
-    def update_frame(self):
-        """Updates cass & annotation info and confusion matrix in the gui"""
-
-        # update only if possible...
-        # if samples were picked/annotated
         try:
-            nftr_prev = len(self._learner.feature_names)
-        except TypeError:
-            pass
-        except AttributeError: # ClassDefUnsupervised, nothing to draw
+            clf = SupportVectorClassifier(self.hdffile)
+        except IOError:
             return
-        else:
-            removed_features = self._learner.filter_nans(apply=True)
-            nftr = nftr_prev - len(removed_features)
-            self._label_features.setText(self.LABEL_FEATURES %(nftr, nftr_prev))
-            self._label_features.setToolTip(
-                "removed %d features containing NA values:\n%s" %
-                (len(removed_features), "\n".join(removed_features)))
+
+        ftr_names = np.array(clf.feature_names)
+        nftr = len(ftr_names)
+        fmask = clf.feature_mask
+        nmasked = np.invert(fmask).sum()
+        removed_features = ftr_names[fmask]
+
+        self._label_features.setText('#Features: %d (%d)' %(len(removed_features), nftr))
+        self._label_features.setToolTip(
+            "removed %d features containing NA values:\n%s" %
+            (len(removed_features), "\n".join(removed_features)))
 
         # if classifier was trained
         try:
-            c, g, conf = self._learner.importConfusion()
+            conf = clf.confmat
+            c, g = clf.hyper_params
         except IOError as e:
             conf = None
             self._init_conf_table(conf)
         else:
             self._set_info(c, g, conf)
-            self._init_conf_table(conf)
+            self._init_conf_table(conf, clf.classdef.names)
             self._update_conf_table(conf)
-        self._set_info_table(conf)
+        self._set_info_table(conf, clf.classdef, clf.class_counts)
 
+        clf.close()
 
-    def msg_pick_samples(self, parent):
-        state = self._learner.state
-        text = 'Sample picking is not possible'
-        info = 'You need to provide a class definition '\
-               'file and annotation files.'
-        detail = 'Missing components:\n'
-        if not state['has_path_annotations']:
-            detail += "- Annotation path '%s' not found.\n" %state['path_annotations']
-        if not state['has_definition']:
-            detail += "- Class definition file '%s' not found.\n" %state['definition']
-        return information(parent, text, info, detail)
+    def _set_info_table(self, conf, classdef, counts):
 
-    def msg_train_classifier(self, parent):
-        state = self._learner.state
-        text = 'Classifier training is not possible'
-        info = 'You need to pick samples first.'
-        detail = 'Missing components:\n'
-        if not state['has_arff']:
-            detail += "- Feature file '%s' not found.\n" % state['arff']
-        return information(parent, text, info, detail)
+        rows = len(classdef)
 
-    def msg_apply_classifier(self, parent):
-        state = self._learner.state
-        text = 'Classifier model not found'
-        info = 'You need to train a classifier first.'
-        detail = 'Missing components:\n'
-        if not state['has_model']:
-            detail += "- SVM model file '%s' not found.\n" % state['model']
-        if not state['has_range']:
-            detail += "- SVM range file '%s' not found.\n" % state['range']
-        return information(parent, text, info, detail)
-
-    def _set_info_table(self, conf):
-        rows = len(self._learner.class_labels)
         self._table_info.clear()
         names_horizontal = [('Name', 'class name'),
                             ('Samples', 'class samples'),
@@ -240,8 +168,7 @@ class ClassifierResultFrame(QGroupBox):
                             ('%PR', 'class precision in %'),
                             ('%SE', 'class sensitivity in %')]
 
-        names_vertical = [str(k) for k in self._learner.class_names.keys()] + \
-            ['', '#']
+        names_vertical = [str(k) for k in classdef.labels.values()] + ['', '#']
         self._table_info.setColumnCount(len(names_horizontal))
         self._table_info.setRowCount(len(names_vertical))
         self._table_info.setVerticalHeaderLabels(names_vertical)
@@ -251,15 +178,16 @@ class ClassifierResultFrame(QGroupBox):
             item.setToolTip(info)
             self._table_info.setHorizontalHeaderItem(c, item)
 
-        for r, label in enumerate(self._learner.class_names.keys()):
+        for r, label in enumerate(classdef.labels.values()):
+
             self._table_info.setRowHeight(r, 20)
-            name = self._learner.class_names[label]
-            samples = self._learner.names2samples[name]
+            name = classdef.names[label]
+            count = counts[label]
             self._table_info.setItem(r, 0, QTableWidgetItem(name))
-            self._table_info.setItem(r, 1, QTableWidgetItem(str(samples)))
+            self._table_info.setItem(r, 1, QTableWidgetItem(str(count)))
             item = QTableWidgetItem(' ')
             item.setBackground(QBrush(\
-                    QColor(*hex2rgb(self._learner.hexcolors[name]))))
+                    QColor(*hex2rgb(classdef.colors[name]))))
             self._table_info.setItem(r, 2, item)
 
             if not conf is None and r < len(conf):
@@ -276,7 +204,7 @@ class ClassifierResultFrame(QGroupBox):
             r += 2
             self._table_info.setRowHeight(r, 20)
             name = "overal"
-            samples = sum(self._learner.names2samples.values())
+            samples = sum(counts.values())
             self._table_info.setItem(r, 0, QTableWidgetItem(name))
             self._table_info.setItem(r, 1, QTableWidgetItem(str(samples)))
             item = QTableWidgetItem(' ')
@@ -293,7 +221,7 @@ class ClassifierResultFrame(QGroupBox):
 
         self._table_info.resizeColumnsToContents()
 
-    def _init_conf_table(self, conf):
+    def _init_conf_table(self, conf, class_names):
         self._table_conf.clear()
 
         if not conf is None:
@@ -302,11 +230,11 @@ class ClassifierResultFrame(QGroupBox):
             self._table_conf.setColumnCount(cols)
             self._table_conf.setRowCount(rows)
 
-            for i, label in enumerate(self._learner.class_names):
+            for i, label in enumerate(class_names):
                 h_item = QTableWidgetItem(str(label))
                 v_item = QTableWidgetItem(str(label))
 
-                tooltip = '%d : %s' %(label, self._learner.class_names[label])
+                tooltip = '%d : %s' %(label, class_names[label])
                 v_item.setToolTip(tooltip)
                 h_item.setToolTip(tooltip)
 
@@ -319,14 +247,14 @@ class ClassifierResultFrame(QGroupBox):
     def _update_conf_table(self, conf):
         conf_array = conf.conf
         rows, cols = conf_array.shape
-        conf_norm = conf_array.swapaxes(0,1) / numpy.array(numpy.sum(conf_array, 1), numpy.float)
+        conf_norm = conf_array.swapaxes(0,1) / np.array(np.sum(conf_array, 1), np.float)
         conf_norm = conf_norm.swapaxes(0,1)
         self._table_conf.clearContents()
         for r in range(rows):
             for c in range(cols):
                 item = QTableWidgetItem()
                 item.setToolTip('%d samples' % conf_array[r,c])
-                if not numpy.isnan(conf_norm[r,c]):
+                if not np.isnan(conf_norm[r,c]):
                     col = int(255 * (1 - conf_norm[r,c]))
                     item.setBackground(QBrush(QColor(col, col, col)))
                 self._table_conf.setItem(r, c, item)
@@ -352,23 +280,16 @@ class ClassificationFrame(BaseProcessorFrame):
             'Tertiary Channel', 'Merged Channel']
     ICON = ":classification.png"
 
-    PICKING = 'PICKING'
-    TRAINING = 'TRAINING'
-    TESTING = 'TESTING'
-
+    Training = 0
+    Testing = 1
 
     def __init__(self, settings, parent, name):
         super(ClassificationFrame, self).__init__(settings, parent, name)
         self._result_frames = OrderedDict()
 
-        self.register_control_button(self.PICKING,
-                                     PickerThread,
-                                     ('Pick %s samples', 'Stop %s picking'))
-        self.register_control_button(self.TRAINING,
-                                     TrainingThread,
+        self.register_control_button(self.Training, TrainerThread,
                                      ('Train classifier', 'Stop training'))
-        self.register_control_button(self.TESTING,
-                                     AnalyzerThread,
+        self.register_control_button(self.Testing, AnalyzerThread,
                                      ('Test classifier', 'Stop testing'))
 
         for tab_name, prefix in [('Primary Channel', 'primary'),
@@ -413,9 +334,8 @@ class ClassificationFrame(BaseProcessorFrame):
         settings.set('Classification', 'collectsamples', False)
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
-        settings.set('Output', 'events_export_gallery_images', False)
         settings.set('Output', 'hdf5_create_file', False)
-        settings.set('Output', 'rendering_channel_gallery', False)
+
 
         current_tab = self._tab.current_index
         if current_tab == 0:
@@ -426,8 +346,9 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('General', 'process_secondary', False)
             settings.set('General', 'process_tertiary', False)
             settings.set('General', 'process_merged', False)
-            rdn = {"%s_%s" %(prefix, settings.get("Classification",
-                                                  "%s_classification_regionname" %prefix)): {}}
+            rdn = {"%s_%s" %(prefix, settings.get(
+                "Classification",
+                "%s_classification_regionname" %prefix)): {}}
         elif current_tab == 1:
             prefix = 'secondary'
             settings.set('Processing', 'primary_featureextraction', False)
@@ -438,8 +359,9 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('General', 'process_merged', False)
 
             # to setup the rending of the image currently processed
-            rdn = {"%s_%s" %(prefix, settings.get("Classification",
-                                                  "%s_classification_regionname" %prefix)): {}}
+            rdn = {"%s_%s" %(prefix, settings.get(
+                "Classification",
+                "%s_classification_regionname" %prefix)): {}}
         elif current_tab == 2:
             prefix = 'tertiary'
             seg_region = settings.get('Classification',
@@ -451,8 +373,9 @@ class ClassificationFrame(BaseProcessorFrame):
             settings.set('General', 'process_tertiary', True)
             settings.set('General', 'process_merged', False)
 
-            rdn = {"%s_%s" %(prefix, settings.get("Classification",
-                                                  "%s_classification_regionname" %prefix)): {}}
+            rdn = {"%s_%s" %(prefix, settings.get(
+                "Classification",
+                "%s_classification_regionname" %prefix)): {}}
         else:
             # checkboxes in merged channel tab
             pch = settings.get('Classification', 'merge_primary')
@@ -470,11 +393,12 @@ class ClassificationFrame(BaseProcessorFrame):
             rdn = {}
             for pfx in (CH_PRIMARY+CH_OTHER):
                 if settings.get("Classification", "merge_%s" %pfx):
-                    rdn["%s_%s" %(pfx, settings.get("Classification","merged_%s_region" %pfx))] = {}
-
+                    rdn["%s_%s" %(pfx, settings.get(
+                        "Classification","merged_%s_region" %pfx))] = {}
 
         settings.set('Classification', 'collectsamples_prefix', prefix)
-        if name == self.TESTING:
+
+        if name == self.Testing:
             rdn = dict()
             settings.set('Processing', '%s_classification' % prefix, True)
             settings.set('General', 'rendering_class',
@@ -487,7 +411,6 @@ class ClassificationFrame(BaseProcessorFrame):
 
     def _class_rendering_params(self, prefix, settings):
         """Setup rendering prameters for images to show classified objects"""
-        showids = settings.get('Output', 'rendering_class_showids')
 
         if prefix in CH_VIRTUAL:
             region = []
@@ -503,7 +426,7 @@ class ClassificationFrame(BaseProcessorFrame):
         rpar = {prefix.title():
                     {'raw': ('#FFFFFF', 1.0),
                      'contours': [(region, 'class_label', 1, False),
-                                  (region, '#000000', 1, showids)]}}
+                                  (region, '#000000', 1, False)]}}
         cl_rendering = {'%s_classification_%s' %(prefix, str(region)): rpar}
         return cl_rendering
 
@@ -522,19 +445,18 @@ class ClassificationFrame(BaseProcessorFrame):
     def _update_classifier(self):
         channel = CHANNEL_PREFIX[self._tab.current_index]
         result_frame = self._result_frames[channel]
-        result_frame.update_frame()
+        result_frame.load_classifier()
 
-    @property
     def classifiers(self):
-        classifiers = OrderedDict()
+        classifiers = list()
         for k, v in self._result_frames.iteritems():
-            classifiers[k.title()] = v.classifier
+            if v.classifier_exists():
+                classifiers.append(k.title())
         return classifiers
 
     def settings_loaded(self):
         for frame in self._result_frames.values():
-            frame.load_classifier(quiet=True, check=True)
-            frame.update_frame()
+            frame.load_classifier()
         self.update_region_boxes()
 
     def _merged_channel_and_region(self, prefix):
@@ -567,3 +489,7 @@ class ClassificationFrame(BaseProcessorFrame):
                 trait = self._settings.get_trait(
                     SECTION_NAME_CLASSIFICATION, '%s_classification_regionname' %name)
                 trait.set_list_data(self.plugin_mgr.region_info.names[name])
+
+    def _on_process_finished(self):
+        super(ClassificationFrame, self)._on_process_finished()
+        self._update_classifier()

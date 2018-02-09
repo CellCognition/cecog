@@ -14,11 +14,11 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['TraitDisplayMixin']
+
+__all__ = ('TraitDisplayMixin', )
 
 import os
 import types
-import functools
 
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -32,7 +32,6 @@ from cecog.gui.guitraits import (StringTrait,
                                  BooleanTrait,
                                  SelectionTrait,
                                  SelectionTrait2,
-                                 MultiSelectionTrait,
                                  DictTrait,
                                  ListTrait
                                  )
@@ -41,8 +40,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
 
     DISPLAY_NAME = None
 
-    def __init__(self, settings,
-                 parent=None, has_label_link=True, label_click_callback=None,
+    def __init__(self, settings, parent=None, has_label_link=True,
                  *args, **kw):
 
         super(TraitDisplayMixin, self).__init__(parent, *args, **kw)
@@ -53,7 +51,6 @@ class TraitDisplayMixin(QtWidgets.QFrame):
         self._tab_name = None
         self._input_cnt = 0
         self._has_label_link = has_label_link
-        self._label_click_callback = label_click_callback
 
     def get_name(self):
         return self.name if self.DISPLAY_NAME is None \
@@ -85,8 +82,8 @@ class TraitDisplayMixin(QtWidgets.QFrame):
         frame.layout().addWidget(line, frame._input_cnt, 0, 1, 2)
         frame._input_cnt += 1
 
-    def add_label(self, label, link, margin=3, isHeading=False):
-        label = self._create_label(self, label, link)
+    def add_label(self, label, link=None, margin=3, isHeading=False):
+        label = QLabel(label, self)
         label.setMargin(margin)
         if isHeading:
             frame = self._get_frame(name=self._tab_name)
@@ -111,7 +108,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
             w_input = self.add_input(trait_name)
             trait = self._get_trait(trait_name)
         else:
-            w_input = self._create_label(frame, label, link=link)
+            w_input = QLabel(label, frame)
             frame_layout.addWidget(w_input, frame._input_cnt, 0,
                                    Qt.AlignRight|Qt.AlignTop)
             trait = None
@@ -177,31 +174,8 @@ class TraitDisplayMixin(QtWidgets.QFrame):
 
         frame._input_cnt += 1
 
-    def _create_label(self, parent, label, link=None):
-        if link is None:
-            link = label
-        w_label = ClickableQLabel(parent)
-
-        if self._has_label_link and link is not False:
-            w_label.setTextFormat(Qt.AutoText)
-#             w_label.setStyleSheet(("*:hover { border:none; background: "
-#                                    "#e8ff66; text-decoration: underline;}"))
-            w_label.setText(label)
-            w_label.setLink(link)
-
-            w_label.setToolTip('Click on the label for help.')
-            if self._label_click_callback is None:
-                w_label.clicked.connect(self._on_show_help)
-#                 w_label.linkActivated.connect(self._on_show_help)
-            else:
-                w_label.clicked.connect(
-                    functools.partial(self._label_click_callback, link))
-        else:
-            w_label.setText(label)
-        return w_label
-
     def add_input(self, trait_name, parent=None, grid=None, alignment=None,
-                  last=False, link=True):
+                  last=False, link=True, w_button=None):
         if parent is None:
             parent = self._get_frame(self._tab_name)
 
@@ -211,11 +185,7 @@ class TraitDisplayMixin(QtWidgets.QFrame):
         trait = self._get_trait(trait_name)
 
         label = trait.label
-        if link:
-            w_label = self._create_label(parent, label, link=trait_name)
-        else:
-            w_label = self._create_label(parent, label, link=False)
-        w_button = None
+        w_label = QLabel(label, parent)
 
         # read value from settings-instance
         value = self._get_value(trait_name)
@@ -223,7 +193,8 @@ class TraitDisplayMixin(QtWidgets.QFrame):
 
         if isinstance(trait, StringTrait):
             w_input = QLineEdit(parent)
-            w_input.setMaxLength(trait.max_length)
+            if trait.max_length is not None:
+                w_input.setMaxLength(trait.max_length)
             w_input.setSizePolicy(policy_expanding)
             w_input.setToolTip(value)
             w_input.setAcceptDrops(True)
@@ -234,8 +205,8 @@ class TraitDisplayMixin(QtWidgets.QFrame):
                 regexp.setPatternSyntax(QRegExp.RegExp2)
                 w_input.setValidator(QRegExpValidator(regexp, w_input))
             trait.set_value(w_input, value)
-            handler = lambda name: lambda value: self._set_value(name, value,
-                                                                 tooltip=value)
+            handler = lambda name: lambda value: self._set_value(
+                name, value, tooltip=value)
 
             w_input.textEdited.connect(handler(trait_name))
 
@@ -283,18 +254,6 @@ class TraitDisplayMixin(QtWidgets.QFrame):
             w_input.setSizePolicy(policy_fixed)
             w_input.toggled.connect(handler(trait_name))
 
-        elif isinstance(trait, MultiSelectionTrait):
-            w_input = QListWidget(parent)
-            w_input.setMaximumHeight(100)
-            w_input.setSelectionMode(QListWidget.ExtendedSelection)
-            w_input.setSizePolicy(policy_fixed)
-
-            for item in trait.list_data:
-                w_input.addItem(str(item))
-            trait.set_value(w_input, value)
-            handler = lambda n: lambda: self._on_selection_changed(n)
-            w_input.itemSelectionChanged.connect(handler(trait_name))
-
         elif isinstance(trait, SelectionTrait):
             w_input = QComboBox(parent)
             for item in trait.list_data:
@@ -314,7 +273,6 @@ class TraitDisplayMixin(QtWidgets.QFrame):
             w_input.setSizePolicy(policy_expanding)
             handler = lambda n: lambda v: self._on_current_index(n, v)
             w_input.currentIndexChanged[int].connect(handler(trait_name))
-
 
         elif isinstance(trait, DictTrait):
             w_input = QTextEdit(parent)
@@ -362,7 +320,6 @@ class TraitDisplayMixin(QtWidgets.QFrame):
                     layout.addWidget(w_button, grid[0], grid[1]*3+2+grid[3])
                 # do not add a spacer if the element is last in a row
                 if not last:
-                    # layout.setColumnStretch(grid[1]*3+2, 0)
                     layout.addItem(QSpacerItem(0, 0,
                                                QSizePolicy.MinimumExpanding,
                                                QSizePolicy.Fixed),
@@ -461,20 +418,3 @@ class TraitDisplayMixin(QtWidgets.QFrame):
                 # call final handler
                 if name in self._final_handlers:
                     self._final_handlers[name]()
-
-
-class ClickableQLabel(QLabel):
-
-    clicked = pyqtSignal(str)
-
-    def __init__(self, *args, **kw):
-        super(ClickableQLabel, self).__init__(*args, **kw)
-        self.link = None
-
-    def setLink(self, link):
-        self.link = link
-
-    def mouseReleaseEvent(self, event):
-        if self.link is not None:
-            self.clicked.emit(self.link)
-        return super(ClickableQLabel, self).mouseReleaseEvent(event)

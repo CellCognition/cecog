@@ -24,24 +24,9 @@ from PyQt5.Qt import *
 
 from collections import OrderedDict
 
-TAB_STYLE = \
-'''
-    QPushButton#tab {
-        border: 1px solid #8f8f91;
-        border-radius: 2px;
-        padding: 3px;
-        min-width: 120px;
-    }
 
-    QPushButton#tab:checked, QPushButton#tab:pressed {
-        background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                          stop: 0 #9a9b9e, stop: 1 #babbbe);
-    }
-
-    QStackedWidget#stacked {
-        border: 1px solid #8f8f91;
-    }
-'''
+class TabButton(QPushButton):
+    pass
 
 class TabControl(QFrame):
     """General tab control: list of buttons at the top and stacked widget below"""
@@ -78,7 +63,7 @@ class TabControl(QFrame):
         scroll_area.setFrameShape(QFrame.NoFrame)
         scroll_area.setWidget(frame)
 
-        btn = QPushButton(name, self._btn_frame)
+        btn = TabButton(name, self._btn_frame)
         btn.setObjectName('tab')
         btn.setFlat(True)
         btn.setCheckable(True)

@@ -16,20 +16,17 @@ __revision__ = '$Rev$'
 __source__ = '$URL$'
 
 
-import logging
+
 import zlib
 import base64
-import csv
-from os.path import join, exists
+import logging
+from os.path import  exists
 from collections import OrderedDict
-from  matplotlib.figure import Figure
-from matplotlib.font_manager import FontProperties
-from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 import h5py
 import numpy
 
-from cellh5 import CH5Const, CH5File, CH5Position
+from cellh5 import CH5Const, CH5File
 
 from cecog import ccore
 from cecog.colors import Colors
@@ -110,7 +107,7 @@ class TimeHolder(OrderedDict):
                      ('edge_idx2', 'uint32'),])
 
     def __init__(self, P, channel_regions, filename_hdf5, meta_data, settings,
-                 analysis_frames, plate_id,
+                 analysis_frames, plate_id, well, site,
                  hdf5_create=True, hdf5_reuse=True, hdf5_compression='gzip',
                  hdf5_include_raw_images=True,
                  hdf5_include_label_images=True, hdf5_include_features=True,
@@ -121,6 +118,8 @@ class TimeHolder(OrderedDict):
 
         self.P = P
         self.plate_id = plate_id
+        self.well = well
+        self.site = str(site)
         self._iCurrentT = None
         self.channel_regions = channel_regions
         self._meta_data = meta_data
@@ -146,7 +145,8 @@ class TimeHolder(OrderedDict):
         self.minimal_effort = False
         try:
             # minimal_effort is read from the settings
-            self.minimal_effort = self._settings.get('Output', 'minimal_effort') and self._hdf5_reuse
+            self.minimal_effort = self._settings.get(
+                'Output', 'minimal_effort') and self._hdf5_reuse
         except:
             # for backwards compatibility
             self.minimal_effort = False
@@ -258,7 +258,6 @@ class TimeHolder(OrderedDict):
 
 
                 except Exception as e:
-                    print 'Loading of Hdf5 failed... '
                     self._logger.info('Loading of Hdf5 failed... ')
                     self._hdf5_reuse = False
                     label_image_cpy = None
@@ -277,28 +276,13 @@ class TimeHolder(OrderedDict):
 
             self._hdf5_write_global_definition()
 
-    def get_well_position(self):
-        meta_data = self._meta_data
-
-        # Check for being wellbased or old style (B01_03 vs. 0037)
-        if meta_data.has_well_info:
-            well, subwell = meta_data.get_well_and_subwell(self.P)
-            position = str(subwell)
-        else:
-            well = "0"
-            position = self.P
-        return well, position
-
     def _hdf5_prepare_reuse(self):
         self.cellh5_file = CH5File(self.hdf5_filename, 'r')
         self._hdf5_file = self.cellh5_file.get_file_handle()
         try:
-            well, position = self.get_well_position()
-
-
             self._grp_cur_position = self._hdf5_file['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate_id,
-                                                                                                       well,
-                                                                                                       position)]
+                                                                                                       self.well,
+                                                                                                       self.site)]
             self._grp_def = self._hdf5_file[self.HDF5_GRP_DEFINITION]
             return 0
         except:
@@ -312,23 +296,15 @@ class TimeHolder(OrderedDict):
             return False
 
         try:
-            meta_data = self._meta_data
-            # Check for being wellbased or old style (B01_03 vs. 0037)
-            if meta_data.has_well_info:
-                well, subwell = meta_data.get_well_and_subwell(self.P)
-                position = str(subwell)
-            else:
-                well = "0"
-                position = self.P
 
             label_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/region' % (self.plate_id,
-                                                                                      well,
-                                                                                      position,
+                                                                                      self.well,
+                                                                                      self.site,
                                                                                       self.HDF5_GRP_IMAGE)
 
             raw_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/channel' % (self.plate_id,
-                                                                                      well,
-                                                                                      position,
+                                                                                      self.well,
+                                                                                      self.site,
                                                                                       self.HDF5_GRP_IMAGE)
             # we check if the label image and raw image are in the cellh5 file
             if label_image_str in f and raw_image_str in f:
@@ -461,7 +437,9 @@ class TimeHolder(OrderedDict):
 
         raise StopIteration
 
-    def _hdf5_create_file_structure(self, filename, label_info=(None, None, None), raw_info=(None, None, None), feature_dict=None, object_dict=None):
+    def _hdf5_create_file_structure(self, filename, label_info=(None, None, None),
+                                    raw_info=(None, None, None),
+                                    feature_dict=None, object_dict=None):
         label_image_str, label_image_cpy, label_image_valid = label_info
         raw_image_str, raw_image_cpy, raw_image_valid = raw_info
 
@@ -482,17 +460,10 @@ class TimeHolder(OrderedDict):
 
         meta_data = self._meta_data
 
-        # Check for being wellbased or old style (B01_03 vs. 0037)
-        if meta_data.has_well_info:
-            well, subwell = meta_data.get_well_and_subwell(self.P)
-            position = str(subwell)
-        else:
-            well = "0"
-            position = self.P
         grp_experiment = grp_cur_plate.create_group('experiment')
-        grp_cur_experiment = grp_experiment.create_group(well)
+        grp_cur_experiment = grp_experiment.create_group(self.well)
         grp_position = grp_cur_experiment.create_group('position')
-        grp_cur_position = grp_position.create_group(position)
+        grp_cur_position = grp_position.create_group(self.site)
 
         self._grp_cur_position = grp_cur_position
 
@@ -573,7 +544,8 @@ class TimeHolder(OrderedDict):
     def getCurrentChannels(self):
         return self[self._iCurrentT]
 
-    def purge_features(self):
+    def purge(self):
+        """Clear features from memory"""
         for channels in self.itervalues():
             for channel in channels.itervalues():
                 channel.purge(features={})
@@ -779,12 +751,11 @@ class TimeHolder(OrderedDict):
         channel._features_calculated = True
         channel_name = channel.NAME.lower()
         for region_name, container in channel.containers.iteritems():
-            well, position = self.get_well_position()
             frame_idx = self._frames_to_idx[self._iCurrentT]
 
             combined_region_name = self._convert_region_name(channel_name, region_name, '')
 
-            cur_pos = self.cellh5_file.get_position(well, position)
+            cur_pos = self.cellh5_file.get_position(self.well, self.site)
 
             # cast to tuple to enable cashing
             current_object_idx = tuple(cur_pos.get_object_idx(combined_region_name, frame_idx))
@@ -840,8 +811,8 @@ class TimeHolder(OrderedDict):
                 center = cur_pos.get_center(current_object_idx, combined_region_name)
 
                 # get_object_feature_by_name gives back all feature values for the specified feature (for all timepoints)
-                #bounding_box = cur_pos.get_object_feature_by_name("bounding_box")
-                #center = cur_pos.get_object_feature_by_name("center")
+                # bounding_box = cur_pos.get_object_feature_by_name("bounding_box")
+                # center = cur_pos.get_object_feature_by_name("center")
 
                 # loop over detected objects
                 for j, index in enumerate(current_object_idx):
@@ -1217,241 +1188,6 @@ class TimeHolder(OrderedDict):
                                                       chunks=(1,), maxshape=(None,))
 
 
-    def exportObjectCounts(self, filename, pos, meta_data, ch_info,
-                           sep='\t', has_header=False):
-
-        with open(filename, 'w') as fp:
-            for frame, channels in self.iteritems():
-                line1 = []
-                line2 = []
-                line3 = []
-                line4 = []
-                items = []
-                coordinate = Coordinate(position=pos, time=frame)
-                prefix = [frame, meta_data.get_timestamp_relative(coordinate)]
-                prefix_names = ['frame', 'time']
-
-                for chname, (region_name, class_names, _) in ch_info.iteritems():
-                    channel = channels[chname]
-
-                    if not has_header:
-                        keys = ['total'] + class_names
-                        line4 += keys
-                        line3 += ['total'] + ['class']*len(class_names)
-                        line1 += [chname.upper()]*len(keys)
-                        line2 += [str(region_name)]*len(keys)
-
-                    region = channel.get_region(region_name)
-                    total = len(region)
-                    count = dict([(x, 0) for x in class_names])
-                    # in case just total counts are needed
-                    if len(class_names) > 0:
-                        for obj in region.values():
-                            count[obj.strClassName] += 1
-                    items += [total] + [count[x] for x in class_names]
-
-                if not has_header:
-                    has_header = True
-                    prefix_str = [''] * len(prefix)
-                    fp.write('%s\n' % sep.join(prefix_str + line1))
-                    fp.write('%s\n' % sep.join(prefix_str + line2))
-                    fp.write('%s\n' % sep.join(prefix_str + line3))
-                    fp.write('%s\n' % sep.join(prefix_names + line4))
-                fp.write('%s\n' % sep.join(map(str, prefix + items)))
-
-    def getObjectCounts(self, ch_info):
-
-        all_counts = {}
-        for chname, (region_name, class_names, _) in ch_info.iteritems():
-            all_counts[(chname, region_name)] = {}
-
-        for frame, channels in self.iteritems():
-
-            for chname, (region_name, class_names, _) in ch_info.iteritems():
-
-                if len(all_counts[(chname, region_name)])==0:
-                    all_counts[(chname, region_name)] = OrderedDict([(x, [])
-                                                                     for x in ['total'] + class_names])
-                channel = channels[chname]
-                region = channel.get_region(region_name)
-                total = len(region)
-                count = dict([(x, 0) for x in class_names])
-                # in case just total counts are needed
-                if len(class_names) > 0:
-                    for obj in region.values():
-                        count[obj.strClassName] += 1
-                for class_name in class_names:
-                    all_counts[(chname, region_name)][class_name].append(count[class_name])
-                all_counts[(chname, region_name)]['total'].append(total)
-
-        return all_counts
-
-    def exportPopulationPlots(self, ch_info, pop_plot_output_dir, plate, pos,
-                              ymax=None,
-                              all_counts=None, grid=True, legend=True,
-                              relative=True):
-        if all_counts is None:
-            all_counts = self.getObjectCounts(ch_info)
-
-        if relative:
-            ylab = 'class percentage'
-        else:
-            ylab = 'class counts (raw)'
-
-        for chname, (region_name, class_names, colors) in ch_info.iteritems():
-            if len(class_names) < 2:
-                continue
-
-            X = numpy.array([all_counts[(chname, region_name)][x] for x in class_names])
-            timevec = range(X.shape[1])
-
-            if len(timevec) > 1:
-                if relative:
-                    total = numpy.array(all_counts[(chname, region_name)]['total'])
-                    X = X.astype('float') / total.astype('float')
-
-                fig = Figure(figsize=(10, 8))
-                ax = fig.add_subplot(1,1,1)
-
-                # in this case we have more than one time point and we can visualize the time series
-                for i, lb, color in zip(range(len(class_names)), class_names, colors):
-                    ax.plot(timevec, X[i,:], color=color, label=lb, linewidth=2.0)
-
-                if not ymax is None and ymax > -1:
-                    ax.axis([min(timevec), max(timevec), 0, ymax])
-                ax.set_title('Population time series: %s %s %s %s' % (plate, pos, chname, region_name), size='medium')
-                ax.set_xlim((min(timevec), max(timevec)))
-                ax.set_xlabel('time (frames)', size='medium')
-                ax.set_ylabel(ylab, size='medium')
-
-                if legend:
-                    fprop = FontProperties()
-                    fprop.set_size('small')
-
-                    handles, labels = ax.get_legend_handles_labels()
-                    ax.legend(handles[::-1], labels[::-1], frameon=False, loc=9,
-                              ncol=len(class_names), mode="expand", prop=fprop)
-
-                if grid:
-                    ax.grid(b=True, which='major', alpha=0.5)
-
-                canvas = FigureCanvasAgg(fig)
-                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.pdf'
-                                 %(plate, pos, chname, region_name)))
-
-            else:
-                # in this case we have only one timepoint.
-                # We can visualize a barplot instead.
-                width = 0.7
-                nb_bars = X.shape[0]
-
-                fig = Figure(figsize=(int(0.8*nb_bars + 1),10))
-                ax = fig.add_subplot(1,1,1)
-
-                ind = numpy.arange(nb_bars)
-
-                if relative:
-                    X = X.astype('float') / numpy.sum(X.astype('float'))
-
-                ax.bar(ind-width/2., X[:,0], width=width, color=colors,
-                       edgecolor='none')
-                ax.set_xlim((ind.min()-0.5, ind.max()+0.5))
-                ax.set_xticks(ind)
-                ax.set_xticklabels(class_names, rotation=45, fontsize='small',
-                                   ha='center')
-
-                ax.set_title('Classification results:\n%s %s\n%s %s'
-                             %(plate, pos, chname, region_name), size='medium')
-                ax.set_xlabel('')
-                ax.set_ylabel(ylab, size='medium')
-
-                if grid:
-                    ax.grid(b=True, axis='y', which='major', alpha=0.5)
-
-                canvas = FigureCanvasAgg(fig)
-                fig.savefig(join(pop_plot_output_dir, '%s__%s__%s__%s.pdf' % (plate, pos, chname, region_name)))
-        return
-
-    def exportObjectDetails(self, filename, sep='\t'):
-        f = file(filename, 'w')
-
-        feature_lookup = OrderedDict()
-        feature_lookup['mean'] = 'n2_avg'
-        feature_lookup['sd'] = 'n2_stddev'
-        feature_lookup['size'] = 'roisize'
-
-        has_header = False
-        line1 = []
-        line2 = []
-        line3 = []
-
-        for frame, channels in self.iteritems():
-
-            items = []
-            prim_region = channels.values()[0].get_region(self.reginfo.names['primary'][0])
-
-            for obj_id in prim_region:
-
-                prefix = [frame, obj_id]
-                prefix_names = ['frame', 'objID']
-                items = []
-
-                for channel in channels.values():
-
-                    for rname in channel.region_names():
-
-                        region = channel.get_region(rname)
-                        if obj_id in region:
-                            #FIXME:
-                            feature_lookup2 = feature_lookup.copy()
-                            for k,v in feature_lookup2.items():
-                                if not region.has_feature(v):
-                                    del feature_lookup2[k]
-
-                            if not has_header:
-                                keys = ['classLabel', 'className']
-                                if channel.NAME == 'Primary':
-                                    keys += ['centerX', 'centerY']
-                                keys += feature_lookup2.keys()
-
-                                line1 += ['%s_%s_%s' % (channel.NAME.upper(),
-                                                        rname, key)
-                                          for key in keys]
-
-                            obj = region[obj_id]
-                            features = region.features_by_name(obj_id, feature_lookup2.values())
-                            values = [x if not x is None else '' for x in [obj.iLabel, obj.strClassName]]
-                            if channel.NAME == 'Primary':
-                                values += [obj.oCenterAbs[0], obj.oCenterAbs[1]]
-                            values += list(features)
-                            items.extend(values)
-
-                if not has_header:
-                    has_header = True
-                    prefix_str = [''] * len(prefix)
-
-                    line1 = prefix_names + line1
-                    f.write('%s\n' % sep.join(line1))
-                f.write('%s\n' % sep.join(map(str, prefix + items)))
-        f.close()
-
-    def exportImageFileNames(self, outdir, position, importer, ch_mapping):
-        fname = join(outdir, 'P%s__image_files.csv' %position)
-
-        with open(fname, 'wb') as fp:
-            writer = csv.DictWriter(fp, ch_mapping.keys(), lineterminator='\n')
-            writer.writeheader()
-            for frame in self.keys():
-                table = dict()
-                for chname, color in ch_mapping.iteritems():
-                    # no color channel in merged channel
-                    if color is None:
-                        continue
-                    for zslice in importer.dimension_lookup[position][frame][color]:
-                        file_ = importer.dimension_lookup[position][frame][color][zslice]
-                        table[chname] = join(importer.path, file_)
-                writer.writerow(table)
-
     def save_classlabels(self, channel, region, predictor):
         """Save class labels and preditions to hdf5."""
         if not (self._hdf5_create and self._hdf5_include_classification):
@@ -1459,7 +1195,7 @@ class TimeHolder(OrderedDict):
 
         channel_region = ("%s__%s" %(channel.NAME, region.name)).lower()
 
-        nr_classes = predictor.n_classes
+        nr_classes = len(predictor.classdef)
         nr_objects = len(region)
 
         # 1) write /definition - classifier definition
@@ -1474,9 +1210,10 @@ class TimeHolder(OrderedDict):
             var = classification_group.create_dataset('class_labels', (nr_classes,), dt)
             var.attrs["UNPREDICED_LABEL"] = numpy.int32(self.UNPREDICTED_LABEL)
             var.attrs['UNPREDICED_PROB'] = numpy.float32(self.UNPREDICTED_PROB)
-            var[:] = zip(predictor.class_names.keys(),
-                         predictor.class_names.values(),
-                         [predictor.hexcolors[n] for n in predictor.class_names.values()])
+            var[:] = zip(predictor.classdef.names.keys(),
+                         predictor.classdef.names.values(),
+                         [predictor.classdef.colors[n]
+                          for n in predictor.classdef.names.values()])
 
             # classifier
             dt = numpy.dtype([('name', '|S512'),
@@ -1486,14 +1223,14 @@ class TimeHolder(OrderedDict):
                               ('description', '|S512')])
             var = classification_group.create_dataset('classifier', (1,), dt)
 
-            var[0] = (channel.NAME, predictor.classifier.METHOD,
-                      predictor.classifier.NAME, '', '')
+            var[0] = (channel.NAME, predictor.Method,
+                      predictor.Library, '', '')
 
             # feature names
             feature_names = predictor.feature_names
             var = classification_group.create_dataset('features', (len(feature_names),), \
                                                           [('object_feautres','|S512'),])
-            var[:] = feature_names
+            var[:] = numpy.array(feature_names)
 
         # 2) write to /sample  prediction and probablilities
         current_classification_grp =  \
@@ -1502,18 +1239,19 @@ class TimeHolder(OrderedDict):
 
         if 'prediction' not in current_classification_grp:
             dt = numpy.dtype([('label_idx', 'int32')])
-            dset_prediction = current_classification_grp.create_dataset('prediction',
-                                                                        (nr_objects, ), dt,
-                                                                        chunks=(nr_objects if nr_objects > 0 else 1,),
-                                                                        compression=self._hdf5_compression,
-                                                                        maxshape=(None,))
+            dset_prediction = current_classification_grp.create_dataset(
+                'prediction',
+                (nr_objects, ), dt,
+                chunks=(nr_objects if nr_objects > 0 else 1,),
+                compression=self._hdf5_compression,
+                maxshape=(None,))
             offset = 0
         else:
             dset_prediction = current_classification_grp['prediction']
             offset = len(dset_prediction)
             dset_prediction.resize((nr_objects + offset,))
 
-        if predictor.SAVE_PROBS:
+        if predictor.SaveProbs:
             var_name = 'probability'
             if not var_name in current_classification_grp:
                 dset_probability = current_classification_grp.create_dataset(var_name, (nr_objects, nr_classes),
@@ -1526,16 +1264,16 @@ class TimeHolder(OrderedDict):
                 dset_probability = current_classification_grp[var_name]
                 dset_probability.resize((offset+nr_objects, nr_classes))
 
-        label2idx = dict([(l, i) for i, l in enumerate(predictor.class_names.keys())])
+        label2idx = dict([(l, i) for i, l in enumerate(predictor.classdef.names.keys())])
 
         for i, obj in enumerate(region.itervalues()):
             # replace default for unlabeld object with numerical values
             if obj.iLabel is None:
                 dset_prediction[i+offset] = (self.UNPREDICTED_LABEL, )
-                probs = [self.UNPREDICTED_PROB]*predictor.n_classes
+                probs = [self.UNPREDICTED_PROB]*len(predictor.classdef)
             else:
                 dset_prediction[i+offset] = (label2idx[obj.iLabel], )
                 probs = obj.dctProb.values()
 
-            if predictor.SAVE_PROBS:
+            if predictor.SaveProbs:
                 dset_probability[i+offset] = probs

@@ -157,7 +157,7 @@
       <keyword name="Local Adaptive Threshod, Split by morphological dynamics" ref="html/local_adaptive_threshold_dyn.html#primary3"></keyword>
       <keyword name="Global and Local Adaptive Threshod, Split by morphological dynamics" ref="html/local_adaptive_threshold_globloc.html#primary4"></keyword>
 
-      <keyword name="Controlpanel (Object detection)" ref="html/manual.html#controlpanel_segmentation"/>
+      <keyword name="Controlpanel (Object Detection)" ref="html/manual.html#controlpanel_segmentation"/>
 
       <keyword name="Feature Extraction" ref="html/manual.html#feature_extraction"/>
       <keyword name="Basic shape features" ref="html/manual.html#basicshape"/>
@@ -192,7 +192,7 @@
       <keyword name="Visualization" ref="html/manual.html#tracking_visualization"/>
       <keyword name="Max. time points" ref="html/manual.html#tracking_visualize_track_length"/>
       <keyword name="Centroid radius" ref="html/manual.html#tracking_centroid_radius"/>
-      <keyword name="Controlpanel (tracking)" ref="html/manual.html#controlpanel_tracking"/>
+      <keyword name="Controlpanel (Tracking)" ref="html/manual.html#controlpanel_tracking"/>
 
       <keyword name="Event selection" ref="html/manual.html#event_detection"/>
       <keyword name="Duration [post]" ref="html/manual.html#backwardrange"/>
@@ -210,7 +210,7 @@
       <keyword name="TC3 Analysis" ref="html/manual.html#tc3_analysis"/>
       <keyword name="Number of clusters" ref="html/manual.html#num_clusters"/>
       <keyword name="Min. cluster size" ref="html/manual.html#min_cluster_size"/>
-      <keyword name="Controlpanel (event selection)" ref="html/manual.html#controlpanel_eventselection"/>
+      <keyword name="Controlpanel (Event Selection)" ref="html/manual.html#controlpanel_eventselection"/>
 
       <keyword name="Error correction" ref="html/manual.html#error_correction"/>
       <keyword name="Channels (error correction)" ref="html/manual.html#channels"/>

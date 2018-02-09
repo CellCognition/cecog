@@ -16,6 +16,8 @@ __source__ = '$URL$'
 
 __all__ = ['TrackingFrame']
 
+
+from cecog.gui.preferences import AppPreferences
 from cecog import CH_VIRTUAL, CH_PRIMARY, CH_OTHER
 from cecog.gui.analyzer import BaseProcessorFrame, AnalyzerThread
 
@@ -30,7 +32,7 @@ class TrackingFrame(BaseProcessorFrame):
 
         self.register_control_button(self.PROCESS_TRACKING,
                                      AnalyzerThread,
-                                     ('Test tracking', 'Stop tracking'))
+                                     ('Test Tracking', 'Abort Tracking'))
 
         self.add_input('region')
         self.add_group(None,
@@ -38,11 +40,6 @@ class TrackingFrame(BaseProcessorFrame):
                         ('tracking_maxtrackinggap', (0,1,1,1)),
                         ('tracking_maxsplitobjects', (1,0,1,1)),
                         ], link='tracking', label='Tracking')
-        self.add_line()
-        self.add_group('tracking_visualization',
-                       [('tracking_visualize_track_length',),
-                        ('tracking_centroid_radius',),
-                       ], layout='flow')
         self.add_expanding_spacer()
 
         self._init_control()
@@ -68,13 +65,11 @@ class TrackingFrame(BaseProcessorFrame):
         settings.set('Processing', 'tertiary_classification', False)
         settings.set('General', 'process_merged', False)
         settings.set('Processing', 'merged_classification', False)
-        settings.set('Output', 'events_export_gallery_images', False)
 
         region_name = settings.get('Tracking', 'region')
-        show_ids = settings.get('Output', 'rendering_contours_showids')
         pct = {'primary_contours':
-                   {CH_PRIMARY[0].title(): {'raw': ('#FFFFFF', 1.0),
-                                         'contours': {region_name: ('#FF0000', 1, show_ids)}}}}
+               {CH_PRIMARY[0].title(): {'raw': ('#FFFFFF', 1.0),
+                                        'contours': {region_name: ('#FF0000', 1, False)}}}}
 
         settings.set('General', 'rendering', pct)
         return settings

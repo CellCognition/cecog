@@ -20,7 +20,7 @@ __all__ = ['HmmTde']
 
 
 import numpy as np
-from cecog.tc3 import normalize
+from cecog.errorcorrection.hmm.estimator import normalize
 from cecog.errorcorrection import HmmBucket
 from cecog.errorcorrection.hmm import HmmCore
 from cecog.errorcorrection.hmm import estimator
@@ -68,7 +68,6 @@ class HmmTde(HmmCore):
             bp = np.zeros((nframes, est.nstates), dtype=int) - 1
             P2 = np.zeros((est.nstates, est.nstates))
 
-
             # setup the time dependend emssion matrix
             for j in xrange(est.nstates):
                 emis += np.tile(est.emis[:, j], (nframes, 1))* \
@@ -99,17 +98,20 @@ class HmmTde(HmmCore):
             if tracks is None:
                 hmmdata[name] = None
                 continue
+
             elif probs is None:
                 raise RuntimeError(("No prediction probabilities available. "
                                     "Try different hmm learing algorithm"))
 
+            tracks, probs = self._filter_tracks(tracks, probs)
             labelmapper = LabelMapper(np.unique(tracks),
-                                      self.classdef.class_names.keys())
+                                      self.classdef.names.keys())
 
             # np.unique -> sorted ndarray
             idx = labelmapper.index_from_classdef(np.unique(tracks))
             idx.sort()
             probs = probs[:, :, idx]
+
             est = self._get_estimator(probs, labelmapper.label2index(tracks))
             est.constrain(self.hmmc(est, labelmapper))
 

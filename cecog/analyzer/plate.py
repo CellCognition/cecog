@@ -1,41 +1,45 @@
 """
-                           The CellCognition Project
-        Copyright (c) 2006 - 2012 Michael Held, Christoph Sommer
-                      Gerlich Lab, ETH Zurich, Switzerland
-                              www.cellcognition.org
+plate.py
 
-              CellCognition is distributed under the LGPL License.
-                        See trunk/LICENSE.txt for details.
-                 See trunk/AUTHORS.txt for author contributions.
 """
 
-__author__ = 'Michael Held'
-__date__ = '$Date$'
-__revision__ = '$Rev$'
-__source__ = '$URL$'
+__author__ = 'rudolf.hoefler@gmail.com'
+__copyright__ = ('The CellCognition Project'
+                 'Copyright (c) 2006 - 2012'
+                 'Gerlich Lab, IMBA Vienna, Austria'
+                 'see AUTHORS.txt for contributions')
+__licence__ = 'LGPL'
+__url__ = 'www.cellcognition.org'
+
+
+__all__ = ("Trainer", "PlateAnalyzer", "AnalyzerBrowser")
 
 import os
 import re
 import glob
-from os.path import join, basename, isdir
+import traceback
+from os.path import join, basename, isfile
 
-from cecog.learning.annotation import Annotations
-from cecog.analyzer.position import PositionAnalyzer, PositionAnalyzerForBrowser
-from cecog.analyzer.position import PositionPicker
-from cecog.io.imagecontainer import MetaImage
-from cecog.logging import LoggerObject
+from cecog.io import Ch5File
 from cecog.util.util import makedirs
+from cecog.logging import LoggerObject
+from cecog.threads import StopProcessing
+from cecog.classifier import AnnotationsFile
+from cecog.gui.preferences import AppPreferences
+from cecog.analyzer.position import PositionAnalyzer
+from cecog.analyzer.position import PositionAnalyzerForBrowser
+from cecog.analyzer.position import PosTrainer
+from cecog.io.imagecontainer import MetaImage
 
 
-# XXX - fix class names
-class AnalyzerBase(LoggerObject):
+
+class Analyzer(LoggerObject):
 
     def __init__(self, plate, settings, imagecontainer):
-        super(AnalyzerBase, self).__init__()
+        super(Analyzer, self).__init__()
         self._frames = None
         self._positions = None
 
-        # XXX
         self.sample_reader = list()
         self.sample_positions = dict()
 
@@ -46,25 +50,12 @@ class AnalyzerBase(LoggerObject):
         self._imagecontainer.set_plate(plate)
 
     @property
-    def _out_dir(self):
+    def _outdir(self):
         return self._imagecontainer.get_path_out(self.plate)
 
     @property
     def meta_data(self):
         return self._imagecontainer.get_meta_data()
-
-    def _makedirs(self):
-        """Make output directories (analyzed, dumps and log)"""
-        odirs = ("analyzed", "hdf5", "plots", "log")
-        for odir in odirs:
-            path = join(self._out_dir, odir)
-            try:
-                makedirs(path)
-            except os.error: # no permissions
-                self.logger.error("mkdir %s: failed" %path)
-            else:
-                self.logger.info("mkdir %s: ok" %path)
-            setattr(self, "_%s_dir" %basename(odir).lower(), path)
 
     @property
     def frames(self):
@@ -103,35 +94,42 @@ class AnalyzerBase(LoggerObject):
         return self._frames
 
 
-class AnalyzerCore(AnalyzerBase):
-    def __init__(self, plate, settings, imagecontainer):
-        super(AnalyzerCore, self).__init__(plate, settings, imagecontainer)
-        self._makedirs()
-        self._setup_cropping()
-        self.logger.info("openening image container: end")
-        self.logger.info("lstAnalysisFrames: %r" % self.frames)
+class PlateAnalyzer(Analyzer):
 
-    def _already_processed(self, positions):
-        """Find positions already been processed and remove them from list"""
-        _finished_dir = join(self._log_dir, '_finished')
-        set_found = set()
-        positions = set(positions)
-        if isdir(_finished_dir):
-            for file_ in glob.glob(join("%s" %_finished_dir, "*.txt")):
-                fname = basename(file_)
-                if fname.startswith("_"):
-                    pos = fname.split('_')[1]
-                else:
-                    pos = fname.split('__')[0]
-                set_found.add(pos)
-                pos_found = list(positions.difference(set_found))
-            pos_found.sort()
-            self.logger.info(("Following positions have been "
-                              "processed already:\n%s" %positions))
-        else:
-            pos_found = positions
-            self.logger.info("No positions have been processed yet.")
-        return pos_found
+    def __init__(self, plate, settings, imagecontainer, mode="w"):
+        super(PlateAnalyzer, self).__init__(plate, settings, imagecontainer)
+        self._makedirs()
+
+        self.h5f = join(self._outdir, "%s.ch5" %plate)
+
+        # don't overwrite file
+        if settings('General', 'skip_finished'):
+            mode = "r+"
+
+        self._setup_cropping()
+        self.logger.debug("frames: %r" % self.frames)
+
+    @property
+    def ch5dir(self):
+        return self._cellh5_dir
+
+    def _makedirs(self):
+
+        odirs = (join(self._outdir, "cellh5"), )
+
+        if AppPreferences().write_logs:
+            odirs += (join(self._outdir, "log"), )
+
+
+        for odir in odirs:
+            try:
+                makedirs(odir)
+            except os.error: # no permissions
+                self.logger.error("mkdir %s: failed" %odir)
+            else:
+                self.logger.info("mkdir %s: ok" %odir)
+            setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
+
 
     @property
     def positions(self):
@@ -152,10 +150,8 @@ class AnalyzerCore(AnalyzerBase):
                                   " %s\nValid values are %s" % \
                                       (positions, self.meta_data.positions)))
 
-            # drop already processed positions
-            if self.settings.get('General', 'redoFailedOnly'):
-                positions = self._already_processed(positions)
             self._positions = sorted(positions)
+
         return self._positions
 
     @positions.setter
@@ -169,6 +165,7 @@ class AnalyzerCore(AnalyzerBase):
         y0 = self.settings.get('General', 'crop_image_y0')
         x1 = self.settings.get('General', 'crop_image_x1')
         y1 = self.settings.get('General', 'crop_image_y1')
+
         if crop:
             MetaImage.enable_cropping(x0, y0, x1-x0, y1-y0)
             self.logger.info("cropping enabled with %d %d %d %d"
@@ -177,88 +174,87 @@ class AnalyzerCore(AnalyzerBase):
             MetaImage.disable_cropping()
             self.logger.info("cropping disabled")
 
-    def processPositions(self, qthread=None):
-        job_args = []
+    def __call__(self):
+
+        # skip plate if exists
+        if self.settings('General', 'skip_finished') and os.path.isfile(self.h5f):
+            return
+
+        layout = "%s/%s.txt" %(self.settings("General", "plate_layout"), self.plate)
+        layout = Ch5File.layoutFromTxt(layout)
+
         for pos in self.positions:
-            self.logger.info('Process positions: %r' % pos)
-            if len(self.frames) > 0:
-                args_ = (self.plate,
-                         pos,
-                         self._out_dir,
-                         self.settings,
-                         self.frames,
-                         self.sample_reader,
-                         self.sample_positions,
-                         None,
-                         self._imagecontainer)
-                kw_ = dict(qthread = qthread)
-                job_args.append((args_, kw_))
+            i = layout["File"].tolist().index(pos)
+            well, site = layout["Well"][i], layout["Site"][i]
+            wsstr = "%s_%02d" %(well, site)
+            datafile = join(self._cellh5_dir, '%s.ch5' %wsstr)
 
-        stage_info = {'stage': 1, 'min': 1, 'max': len(job_args)}
+            if self.settings('General', 'skip_finished') and os.path.isfile(datafile.replace(".ch5", ".tmp")):
+                msg = 'Skipping already processed postion %s' %wsstr
+                self.logger.info(msg)
+                continue
+            else:
+                self.logger.info('Processing position: %s' %wsstr)
 
-        hdf5_links = []
-        for idx, (args_, kw_) in enumerate(job_args):
-            if not qthread is None:
-                if qthread.is_aborted():
-                    break
-                stage_info.update({'progress': idx+1,
-                                   'text': 'P %s (%d/%d)' \
-                                       % (args_[0], idx+1, len(job_args))})
-                qthread.update_status(stage_info)
-            analyzer = PositionAnalyzer(*args_, **kw_)
+
+            analyzer = PositionAnalyzer(
+                self.plate, pos, datafile, self.settings, self.frames,
+                self.sample_reader, self.sample_positions, None,
+                self._imagecontainer, layout, AppPreferences().write_logs)
+
             try:
-                nimages = analyzer()
-                if self.settings.get('Output', 'hdf5_create_file') and \
-                    self.settings.get('Output', 'hdf5_merge_positions'):
-                    hdf5_links.append(analyzer.hdf5_filename)
+                analyzer()
+
+                fp = open(datafile.replace(".ch5", ".tmp"), "a")
+                fp.close()
+
+            except StopProcessing:
+                if analyzer.isAborted():
+                    os.remove(datafile)
             except Exception as e:
-                import traceback, sys
+                os.remove(datafile)
+                self.logger.error("Removed file %s" %datafile)
                 traceback.print_exc()
                 raise
             finally:
                 analyzer.clear()
-        return hdf5_links
 
 
-class AnalyzerBrowser(AnalyzerCore):
-    def __init__(self, plate, settings, imagecontainer):
-        super(AnalyzerBrowser, self).__init__(plate, settings, imagecontainer)
 
-    def processPositions(self):
-        job_args = []
+class AnalyzerBrowser(PlateAnalyzer):
+
+    def __init__(self, plate, settings, imagecontainer, mode="a"):
+        super(AnalyzerBrowser, self).__init__(plate, settings, imagecontainer, mode)
+
+    def __call__(self):
+
         pos = self.positions[0]
         self.logger.info('Browser(): Process positions: %r' % pos)
-        job_args = (self.plate,
-                     pos,
-                     self._out_dir,
-                     self.settings,
-                     self.frames,
-                     self.sample_reader,
-                     self.sample_positions,
-                     None,
-                     self._imagecontainer)
+        analyzer = PositionAnalyzerForBrowser(
+            self.plate, pos, self._outdir, self.settings,
+            self.frames, self.sample_reader, self.sample_positions,
+            None, self._imagecontainer, layout=None, writelogs=False)
 
-        analyzer = PositionAnalyzerForBrowser(*job_args)
         analyzer.add_stream_handler()
-        res = analyzer()
-        return res
+        return analyzer()
 
 
-class Picker(AnalyzerBase):
+class Trainer(Analyzer):
 
     def __init__(self, plate, settings, imagecontainer, learner):
-        super(Picker, self).__init__(plate, settings, imagecontainer)
+        super(Trainer, self).__init__(plate, settings, imagecontainer)
 
         # belongs already to picker
         self.sample_reader = []
         self.sample_positions = {}
         self.learner = learner
 
-        pattern = join(self.learner.annotations_dir, "*%s" %learner.XML)
+        pattern = join(self.learner.annotations_dir, "*.xml")
         anno_re = re.compile(('((.*?_{1,3})?PL(?P<plate>.*?)_{2,3})?P(?P'
                               '<position>.+?)_{2,3}T(?P<time>\d+).*?'))
 
         frames_total = self.meta_data.times
+
         for annofile in glob.glob(pattern):
 
             result = anno_re.match(basename(annofile))
@@ -272,7 +268,7 @@ class Picker(AnalyzerBase):
             if (result.group("plate") != self.plate):
                 continue
             elif self.is_valid_annofile(result):
-                reader = Annotations(result, annofile, frames_total)
+                reader = AnnotationsFile(result, annofile, frames_total)
                 self.sample_reader.append(reader)
 
                 position = result.group('position')
@@ -297,23 +293,14 @@ class Picker(AnalyzerBase):
         return True
 
 
-    def processPositions(self, qthread=None):
-        imax = len(self.sample_positions)
+    def __call__(self):
 
-        for i, (posid, frames) in enumerate(self.sample_positions.iteritems()):
-            self.logger.info('Process positions: %r' %posid)
+        for pos, frames in self.sample_positions.iteritems():
+            self.logger.info('Process positions: %r' %pos)
 
-            if not qthread is None:
-                if qthread.is_aborted():
-                    break
-                qthread.update_status({'stage': 1, 'min': 1,
-                                       "max": imax, 'progress': i+1,
-                                       'text': 'P %s (%d/%d)' \
-                                           %(self.plate, i+1, imax)})
-
-            picker = PositionPicker(self.plate, posid, self._out_dir,
+            postrainer = PosTrainer(self.plate, pos, self._outdir,
                                     self.settings,
                                     frames, self.sample_reader,
                                     self.sample_positions, self.learner,
-                                    self._imagecontainer, qthread)
-            result = picker()
+                                    self._imagecontainer, layout=None)
+            postrainer()

@@ -35,13 +35,12 @@ from PyQt5.Qt import *
 from PyQt5 import QtWidgets
 
 from cecog import version
-from cecog.gui.util import information, warning
 from cecog.gui.analyzer import BaseProcessorFrame
 
 from cecog.gui.imageviewer import ImageViewer, GalleryViewer
 from cecog.gui.modules.module import ModuleManager
-from cecog.analyzer.core import AnalyzerBrowser
 
+from cecog.analyzer.plate import AnalyzerBrowser
 from cecog.io.imagecontainer import Coordinate
 from cecog.gui.modules.navigation import NavigationModule
 from cecog.gui.modules.display import DisplayModule
@@ -51,13 +50,30 @@ from cecog.io.imagecontainer import ImageContainer
 from cecog.gui.config import GuiConfigSettings
 from cecog.plugin.metamanager import MetaPluginManager
 
+
 class TSlider(QSlider):
 
     newValue = pyqtSignal()
 
+    def __init__(self, *args, **kw):
+        super(TSlider, self).__init__(*args, **kw)
+        self.offset = QPoint(0, -40)
+        self.style = QApplication.style()
+        self.opt = QStyleOptionSlider()
+
     def mouseReleaseEvent(self, event):
         self.newValue.emit()
         super(TSlider, self).mouseReleaseEvent(event)
+
+    def showTooltip(self, message):
+        self.initStyleOption(self.opt)
+        rectHandle = self.style.subControlRect(
+            self.style.CC_Slider, self.opt, self.style.SC_SliderHandle)
+
+        pos_local = rectHandle.topLeft() + self.offset
+        pos_global = self.mapToGlobal(pos_local)
+        QToolTip.showText(pos_global, message, self)
+
 
 
 class Browser(QMainWindow):
@@ -66,7 +82,6 @@ class Browser(QMainWindow):
 
     show_objects_toggled = pyqtSignal('bool')
     show_contours_toggled = pyqtSignal('bool')
-    #coordinates_changed = pyqtSignal(Coordinate)
     update_regions = pyqtSignal(dict)
 
     def __init__(self, settings, imagecontainer, parent=None):
@@ -273,7 +288,7 @@ class Browser(QMainWindow):
             CellH5EventModule(self._module_manager,
                               self, self._settings, self._imagecontainer)
         except Exception as e:
-            warning(self, str(e))
+            QMessageBox.warning(self, "Warning", str(e))
 
         # set the Navigation module activated
         self._module_manager.activate_tab(NavigationModule.NAME)
@@ -418,7 +433,7 @@ class Browser(QMainWindow):
         settings.set_section('General')
         settings.set2('constrain_positions', True)
         settings.set2('positions', self.coordinate.position)
-        settings.set2('redofailedonly', False)
+        settings.set2('skip_finished', False)
         settings.set2('framerange', True)
         settings.set2('framerange_begin', self.coordinate.time)
         settings.set2('framerange_end', self.coordinate.time)
@@ -432,29 +447,12 @@ class Browser(QMainWindow):
         settings.set2('merged_classification', _classify_objects)
         settings.set2('primary_featureextraction', _classify_objects)
         settings.set2('secondary_featureextraction', _classify_objects)
-
         settings.set2('objectdetection', self._detect_objects)
         settings.set2('tracking', False)
-        settings.set_section('Output')
-        settings.set2('rendering_contours_discwrite', False)
-        settings.set2('rendering_class_discwrite', False)
-        settings.set2('export_object_counts', False)
-        settings.set2('export_object_details', False)
-        settings.set2('export_track_data', False)
-        settings.set2('hdf5_create_file', False)
-        settings.set_section('Classification')
-        settings.set2('collectsamples', False)
+
+        settings.set('Output', 'hdf5_create_file', False)
         settings.set('General', 'rendering', {})
         settings.set('General', 'rendering_class', {})
-        settings.set('Output', 'events_export_gallery_images', False)
-
-        # turn of output:
-        settings.set('Output', 'export_object_counts', False)
-        settings.set('Output', 'export_object_details', False)
-        settings.set('Output', 'export_file_names', False)
-        settings.set('Output', 'events_export_gallery_images', False)
-        settings.set('Output', 'export_track_data', False)
-        settings.set('Output', 'export_tracking_as_dot', False)
 
         nchannels = len(self._imagecontainer.channels)
         # XXX channel mapping unclear
@@ -467,20 +465,18 @@ class Browser(QMainWindow):
             settings.set('General', 'process_tertiary', True)
 
         settings.set('General', 'rendering', {})
-        analyzer = AnalyzerBrowser(self.coordinate.plate,
-                                   settings,
-                                   self._imagecontainer)
+
+        analyzer = AnalyzerBrowser(self.coordinate.plate, settings, self._imagecontainer)
 
         res = None
         try:
             QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-            res = analyzer.processPositions()
+            res = analyzer()
             self.render_browser(res)
         except Exception, e:
             import traceback
-            from cecog.gui.util import exception
             traceback.print_exc()
-            exception(self, str(e))
+            QMessageBox.critical(self, "Error", str(e))
             raise
         finally:
             QApplication.restoreOverrideCursor()
@@ -520,7 +516,11 @@ class Browser(QMainWindow):
         self.update_statusbar()
 
     def timeToolTip(self, value):
-        QToolTip.showText(QCursor.pos(), str(value), self._t_slider)
+        self._t_slider.showTooltip(str(value))
+
+        # pos = self._t_slider.pos()
+        # print pos
+        # QToolTip.showText(pos, str(value), self._t_slider)
 
     def on_time_changed_by_slider(self):
         frame = self._t_slider.value()
@@ -624,7 +624,11 @@ class Browser(QMainWindow):
     def detect_objects_toggled(self, state):
         if state:
             if self._settings.get('Output', 'hdf5_reuse'):
-                information(self, 'HDF5 reuse is enabled. Raw data and segmentation will be loaded from HDF5 files. Changes of normalization and segmentation parameters will have no effect in browser!')
+                QMessageBox.information(self, 'Information',
+                                        ('HDF5 reuse is enabled. Raw data and segmentation '
+                                         'will be loaded from HDF5 files. Changes of'
+                                         ' normalization and segmentation parameters will'
+                                         ' have no effect in browser!'))
             self.on_refresh()
 
     def on_toggle_show_contours(self, state):

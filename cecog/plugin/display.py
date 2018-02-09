@@ -21,24 +21,18 @@ from PyQt5.QtWidgets import QMessageBox
 from collections import OrderedDict
 from cecog.gui.display import TraitDisplayMixin
 
+
 class Frame(QFrame):
     pass
 
 
 class PluginParamFrame(TraitDisplayMixin):
 
-    label_clicked = pyqtSignal(str)
-
     def __init__(self, parent, param_manager):
-        super(PluginParamFrame, self).__init__(
-            param_manager._settings,
-            parent, label_click_callback=self._show_help)
+        super(PluginParamFrame, self).__init__(param_manager._settings, parent)
         self.name = param_manager._section
         self.param_manager = param_manager
         QGridLayout(self)
-
-    def _show_help(self, trait_name):
-        self.label_clicked.emit(trait_name)
 
     def _get_frame(self, name=None):
         return self
@@ -87,7 +81,6 @@ class PluginItem(QFrame):
         help_button = QToolButton(self)
         help_button.setIcon(QIcon(':question_mark'))
         help_button.clicked.connect(self.on_label_clicked)
-        frame2.label_clicked.connect(self.on_label_clicked)
         layout.addWidget(help_button)
 
         layout.addWidget(btn)
@@ -111,13 +104,8 @@ class PluginItem(QFrame):
     def _on_remove(self):
         self.remove_item.emit()
 
-    def on_label_clicked(self, trait_name=None):
-
-        if isinstance(trait_name, basestring):
-            keyword = self._plugin.param_manager.get_param_name(str(trait_name))
-        else:
-            keyword = self._plugin.name
-        self.assistant.show(keyword)
+    def on_label_clicked(self):
+        self.assistant.show(self._plugin.name)
 
 
 class PluginBay(QFrame):

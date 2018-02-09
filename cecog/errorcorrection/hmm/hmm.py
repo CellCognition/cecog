@@ -18,6 +18,7 @@ import numpy as np
 from cecog.errorcorrection.hmm import estimator
 
 
+
 class LabelMapper(object):
     """Map class labels to array index.
 
@@ -67,6 +68,17 @@ class HmmCore(object):
         self.channel = channel
         self.classdef = classdef
         self.ecopts = ecopts
+
+    def _filter_tracks(self, tracks, probs):
+        """Remove tracks with unlabeled entries."""
+
+        try:
+            ulabel = np.setdiff1d(tracks, self.classdef.names.keys())[0]
+        except IndexError:
+            return tracks, probs
+        else:
+            idx = np.where(tracks==ulabel)[0]
+            return np.delete(tracks, idx, axis=0), np.delete(probs, idx, axis=0)
 
     def hmmc(self, est, labelmapper):
         """Return either the default constrain for the hidden markov model or

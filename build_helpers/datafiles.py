@@ -15,6 +15,7 @@ __all__ = ['get_data_files', 'find_uifiles',
            'TARGET_BUNDLE', 'TARGET_SYS']
 
 import os
+import sys
 import glob
 import numpy.distutils
 import matplotlib
@@ -43,18 +44,12 @@ INCLUDES = [ 'sip',
              'scipy.special._ufuncs_cxx',
              'sklearn.utils.sparsetools._graph_validation',
              'cellh5',
-             'ontospy',
-             'rdflib',
-             'rdflib.plugins.memory',
-             'rdflib.plugins.parsers.rdfxml',
              'sklearn.utils.lgamma',
              'sklearn.neighbors.typedefs',
              'sklearn.utils.weight_vector' ]
 
-EXCLUDES = [#'PyQt5.QtDesigner', 'PyQt5.QtNetwork',
-            #'PyQt5.QtOpenGL', 'PyQt5.QtScript',
-            #'PyQt5.QtTest', 'PyQt5.QtWebKit', 'PyQt5.QtXml', 'PyQt5.phonon',
-            'PyQt4.QtCore', 'PyQt4.QtGui',  'PyQt4.QtSvg', 'PyQt4',
+
+EXCLUDES = ['PyQt4.QtCore', 'PyQt4.QtGui',  'PyQt4.QtSvg', 'PyQt4',
             '_gtkagg', '_cairo', '_gtkcairo', '_fltkagg',
             '_tkagg',
             'Tkinter',
@@ -108,16 +103,11 @@ def get_data_files(target_dir=TARGET_BUNDLE,
             qt5plugins = (dir_, qt5plugins)
             dfiles.append(qt5plugins)
 
-        # suddenly py2exe decide to not find this dll
-        for dll in ("libEGL.dll", ):
-            dll_ = join(dirname(PyQt5.__file__), dll)
+    if sys.platform.startswith("win"):
+        for f in ("libEGL.dll", ):
+            dfiles.append(('.', [join(dirname(PyQt5.__file__), f)]))
 
-            if not isfile(dll_):
-                raise RunTimeError("Could not find file %s" %dll)
-            dfiles.append(dll_)
-
-
-    # qt help files
+    # # qt help files
     dfiles.append((join(target_dir, 'doc'),
                    glob.glob(join(RESOURCE_DIR, 'doc', "*.qhc"))))
     dfiles.append((join(target_dir, 'doc'),

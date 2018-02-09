@@ -66,7 +66,7 @@ from cecog.logging import LogWindow
 from cecog.gui.progressdialog import ProgressDialog
 from cecog.gui.progressdialog import ProgressObject
 from cecog.gui.helpbrowser import AtAssistant
-from cecog.css import loadStyle
+
 
 def fix_path(path):
     "Windows sucks!"
@@ -74,6 +74,7 @@ def fix_path(path):
         return path.strip("/")
     else:
         return path
+
 
 class FrameStack(QtWidgets.QStackedWidget):
 
@@ -108,13 +109,14 @@ class FrameStack(QtWidgets.QStackedWidget):
     def close(self):
         self.assistant.close()
 
+
 class CecogAnalyzer(QtWidgets.QMainWindow):
 
-    NAME_FILTERS = ['Settings files (*.conf)', 'All files (*.*)']
+    NAME_FILTERS = 'Settings files (*.conf);;All files (*.*)'
     modified = QtCore.pyqtSignal('bool')
 
     def __init__(self, appname, version, redirect, settings=None,
-                 debug=False, *args, **kw):
+                 *args, **kw):
         super(CecogAnalyzer, self).__init__(*args, **kw)
         self.setWindowTitle("%s-%s" %(appname, version) + '[*]')
         self.setAcceptDrops(True)
@@ -123,13 +125,8 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
 
         self.version = version
         self.appname = appname
-        self.debug = debug
 
-        self.environ = CecogEnvironment(version=version, redirect=redirect,
-                                        debug=debug)
-
-        if debug:
-            self.environ.pprint()
+        self.environ = CecogEnvironment(version=version, redirect=redirect)
 
         self._is_initialized = False
         self._imagecontainer = None
@@ -158,20 +155,20 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                                      None, action_quit))
 
         action_log = self.create_action('&Log window',
-                                        shortcut=QtGui.QKeySequence(Qt.CTRL+Qt.Key_L),
-                                        slot=self._on_show_log_window)
+            shortcut=QtGui.QKeySequence(Qt.CTRL+Qt.Key_L),
+            slot=self._on_show_log_window)
 
         action_open = self.create_action('&Browser',
-                                         shortcut=QtGui.QKeySequence('CTRL+B'),
-                                         slot=self._on_browser_open)
+            shortcut=QtGui.QKeySequence('CTRL+B'),
+            slot=self._on_browser_open)
 
         menu_view = self.menuBar().addMenu('&View')
         self.add_actions(menu_view, (action_log,))
         self.add_actions(menu_view, (action_open,))
 
         action_assistant = self.create_action('&Help',
-                                              shortcut=QtGui.QKeySequence.HelpContents,
-                                              slot=self.show_assistant)
+            shortcut=QtGui.QKeySequence.HelpContents,
+            slot=self.showHelpBrowser)
         action_about = self.create_action('&About', slot=self.on_about)
         action_aboutQt = self.create_action('&About Qt', slot=self.about_qt)
 
@@ -221,7 +218,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self._tabs.append(clusterframe)
 
         try:
-            self.updateStyleSheet(loadStyle(app.stylesheet))
+            self.updateStyleSheet(":cecog_style")
         except Exception as e:
             # proceed with no stylesheet
             traceback.print_exc()
@@ -250,7 +247,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         self.setMinimumSize(QtCore.QSize(700, 600))
         self._is_initialized = True
 
-        self._restore_geometry()
+        self._restoreGeometry()
         self.show()
 
         # finally load (demo) - settings
@@ -279,7 +276,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
     def dragLeaveEvent(self, event):
         event.accept()
 
-    def _save_geometry(self):
+    def _saveGeometry(self):
         settings = QtCore.QSettings(version.organisation, version.appname)
         settings.beginGroup('Gui')
         settings.setValue('state', self.saveState())
@@ -294,7 +291,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
 
         settings.endGroup()
 
-    def _restore_geometry(self):
+    def _restoreGeometry(self):
         settings = QtCore.QSettings(version.organisation, version.appname)
         settings.beginGroup('Gui')
 
@@ -314,9 +311,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         self._pages.close()
         # Quit dialog only if not debuging flag is not set
-        self._save_geometry()
-        if self.debug:
-            QtWidgets.QApplication.exit()
+        self._saveGeometry()
         ret = QMessageBox.question(self, "Quit %s" %self.appname,
                                    "Do you really want to quit?",
                                    QMessageBox.Yes|QMessageBox.No)
@@ -327,7 +322,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             self._check_settings_saved(QMessageBox.Yes|QMessageBox.No)
             QtWidgets.QApplication.exit()
 
-    def settings_changed(self, changed):
+    def settingsChanged(self, changed):
         if self._is_initialized:
             self.setWindowModified(changed)
             self.action_save.setEnabled(changed)
@@ -446,13 +441,14 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
 
             else:
                 # set settings to not-changed (assume no changed since loaded from file)
-                self.settings_changed(False)
+                self.settingsChanged(False)
                 # notify tabs about new settings loaded
                 for tab in self._tabs:
                     tab.settings_loaded()
                 self.statusBar().showMessage('Settings successfully loaded.')
 
     def _write_settings(self, filename):
+
         try:
             f = file(filename, 'w')
             # create a new version (copy) of the current
@@ -464,11 +460,11 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         except Exception as e:
             msg = "Could not save settings\n%s" %str(e)
             QMessageBox.critical(self, "Error", msg)
-            self.statusBar().showMessage('Settings not successfully saved.')
+            self.statusBar().showMessage(msg)
         else:
             self._settings_filename = filename
             self.setWindowTitle('%s - %s[*]' % (self.appname, filename))
-            self.settings_changed(False)
+            self.settingsChanged(False)
             self.statusBar().showMessage('Settings successfully saved.')
 
     def on_about(self):
@@ -483,15 +479,19 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
         pref.exec_()
 
     def updateStyleSheet(self, stylesheet):
+
+        f = QFile(stylesheet)
+        f.open(QFile.ReadOnly | QFile.Text)
+        ts = QTextStream(f).readAll()
+
         self.setStyleSheet("")
-        self.setStyleSheet(stylesheet)
+        self.setStyleSheet(ts)
 
         self._pages.assistant.setStyleSheet("")
-        self._pages.assistant.setStyleSheet(stylesheet)
+        self._pages.assistant.setStyleSheet(ts)
 
         if self._browser is not None:
-            self._browser.setStyleSheet("")
-            self._browser.setStyleSheet(stylesheet)
+            self._browser.setStyleSheet(ts)
 
     def _on_browser_open(self):
         if self._imagecontainer is None:
@@ -505,7 +505,12 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                 browser.raise_()
                 browser.setFocus()
                 app = AppPreferences()
-                browser.setStyleSheet(loadStyle(app.stylesheet))
+
+                f = QFile(":cecog_style")
+                f.open(QFile.ReadOnly|QFile.Text)
+                ts = QTextStream(f).readAll()
+
+                browser.setStyleSheet(ts)
                 self._browser = browser
             except Exception as e:
                 traceback.print_exc()
@@ -669,7 +674,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             # and specified by the user
             if len(problems) > 0:
                 # a mismatch between settings and data will cause changed settings
-                self.settings_changed(True)
+                self.settingsChanged(True)
 
             trait = self._settings.get_trait(SECTION_NAME_EVENT_SELECTION,
                                              'duration_unit')
@@ -686,7 +691,7 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
                                      ("The tracking duration units selected to match the "
                                       "load data. Please check your settings."))
                 # a mismatch between settings and data will cause changed settings
-                self.settings_changed(True)
+                self.settingsChanged(True)
 
             # activate change notification again
             self._settings.set_notify_change(True)
@@ -753,14 +758,14 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             dir_ = os.path.dirname(self._settings_filename)
         else:
             dir_ = os.path.dirname(self.environ.demo_settings)
-             
+
         if self._check_settings_saved() != QMessageBox.Cancel:
             if self._settings_filename is not None:
                 settings_filename = self.environ.demo_settings
                 if os.path.isfile(settings_filename):
                     home = settings_filename
             filename = QtWidgets.QFileDialog.getOpenFileName( \
-               self, 'Open config file', dir_, ';;'.join(self.NAME_FILTERS))[0]
+               self, 'Open config file', dir_, self.NAME_FILTERS)[0]
             if not bool(filename):
                 return
 
@@ -798,9 +803,9 @@ class CecogAnalyzer(QtWidgets.QMainWindow):
             if os.path.isfile(settings_filename):
                 dir = settings_filename
         filename = QtWidgets.QFileDialog.getSaveFileName(
-            self, 'Save config file as', dir, ';;'.join(self.NAME_FILTERS))[0]
+            self, 'Save config file as', dir, self.NAME_FILTERS)[0]
         return filename or None
 
-    def show_assistant(self):
+    def showHelpBrowser(self):
         self._pages.assistant.show()
         self._pages.assistant.openKeyword('index')

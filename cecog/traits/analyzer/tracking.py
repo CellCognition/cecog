@@ -17,12 +17,11 @@ __source__ = '$URL$'
 __all__ = ['SectionTracking']
 
 from cecog.traits.analyzer.section_core import SectionCore
-from cecog.gui.guitraits import IntTrait, BooleanTrait, SelectionTrait, \
-    SelectionTrait2
+from cecog.gui.guitraits import IntTrait, BooleanTrait, SelectionTrait2
 
-from cecog.analyzer import COMPRESSION_FORMATS
 
 SECTION_NAME_TRACKING = 'Tracking'
+
 
 class SectionTracking(SectionCore):
 
@@ -38,19 +37,5 @@ class SectionTracking(SectionCore):
            IntTrait(0, 0, 4000, label='Max time-point gap')),
           ('tracking_maxsplitobjects',
            IntTrait(0, 0, 4000, label='Max split events')),
-          ('tracking_exporttrackfeatures',
-           BooleanTrait(True, label='Export tracks')),
-          ('tracking_compressiontrackfeatures',
-           SelectionTrait(COMPRESSION_FORMATS[0], COMPRESSION_FORMATS,
-                          label='Compression')),
-          ]),
-
-        ('visualization',
-         [('tracking_visualization',
-           BooleanTrait(False, label='Visualization')),
-          ('tracking_visualize_track_length',
-           IntTrait(5, -1, 10000, label='Max. time-points')),
-          ('tracking_centroid_radius',
-           IntTrait(3, -1, 50, label='Centroid radius')),
           ]),
         ]

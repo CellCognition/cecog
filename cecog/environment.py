@@ -45,7 +45,7 @@ def find_resource_dir():
     """
 
     rdirs = []
-            
+
     rdirs.extend([join(dirname(sys.executable), 'resources'),
                   join(dirname(abspath(sys.argv[0])).replace('bin', 'share'),
                        'cellcognition', 'resources'),
@@ -53,20 +53,6 @@ def find_resource_dir():
                   'resources',
                   join(dirname(__file__), os.pardir, 'resources')])
 
-    if 'PYTHONPATH' in os.environ:
-        environment_paths = filter(lambda x: os.path.basename(os.path.abspath(x)) == 'site-packages',
-                                   os.environ['PYTHONPATH'].split(os.pathsep))
-    else:
-        environment_paths = []
-    
-    if len(environment_paths) > 0:
-        env_path_candidates = [join(x, os.pardir, os.pardir, os.pardir, 'share', 'cellcognition', 'resources')
-                               for x in environment_paths]
-        rdirs.extend(filter(lambda x: isdir(normpath(abspath(x))), env_path_candidates))
-
-#    for rdir in rdirs:
-#        print '%s\t%s\t%s' % (rdir, normpath(abspath(rdir)), isdir(normpath(abspath(rdir))))
-            
     for rdir in rdirs:
         if isdir(rdir):
             break
@@ -75,6 +61,7 @@ def find_resource_dir():
     if not isdir(rdir):
         raise IOError("Resource path '%s' not found." % rdir)
     return rdir
+
 
 class ConfigParser(RawConfigParser):
     """Custom config parser with sanity check."""
@@ -102,7 +89,7 @@ class BatteryPackage(object):
 
     @property
     def demo_settings(self):
-        return join(self.package_path, "Settings", "demo_settings.conf")
+        return join(self.package_path, "settings", "demo_settings.conf")
 
     def copy_demodata(self, dest_path):
         self._path = dest_path
@@ -113,6 +100,7 @@ class BatteryPackage(object):
     @package_path.deleter
     def package_path(self):
         del self._path
+
 
 class CecogEnvironment(object):
 
@@ -132,8 +120,9 @@ class CecogEnvironment(object):
     # XXX want this away from class level
     naming_schema = ConfigParser(NAMING_SCHEMA, 'naming_schemas')
 
-    def __init__(self, version=version.version, redirect=False, debug=False):
+    def __init__(self, version=version.version, redirect=False, *args, **kw):
         super(CecogEnvironment, self).__init__()
+
         self._user_config_dir = None
         self.version = version
         self._copy_config(self)
@@ -147,8 +136,6 @@ class CecogEnvironment(object):
 
         fontfile = join(self.user_config_dir, self.FONT12)
         ccore.Config.strFontFilepath = realpath(fontfile)
-        if debug:
-            print 'ccore.Config.strFontFilepath(%s) called' %self.FONT12
 
     @property
     def demo_settings(self):

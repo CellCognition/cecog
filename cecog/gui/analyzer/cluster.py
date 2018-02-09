@@ -14,12 +14,15 @@ __date__ = '$Date$'
 __revision__ = '$Rev$'
 __source__ = '$URL$'
 
-__all__ = ['ClusterFrame']
+__all__ = ('ClusterFrame', )
+
 
 import types
 import socket
 import urlparse
-from os.path import isdir
+import os
+from os.path import isdir, join
+import shutil
 
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -165,6 +168,21 @@ class ClusterDisplay(QGroupBox):
     def _on_jobid_entered(self, txt):
         self._jobid = str(txt)
 
+    def clear_output_directory(self, directory):
+        """Remove the content of the output directory except the structure file."""
+        for root, dirs, files in os.walk(directory, topdown=False):
+            for name in files:
+                if not name.endswith(".xml"):
+                    try:
+                        os.remove(os.path.join(root, name))
+                    except OSError:
+                        pass
+            for name in dirs:
+                try:
+                    os.rmdir(os.path.join(root, name))
+                except OSError:
+                    pass
+
     @pyqtSlot()
     def _on_submit_job(self):
 
@@ -187,6 +205,9 @@ class ClusterDisplay(QGroupBox):
         apc = AppPreferences()
         batch_size = apc.batch_size
         pathout = self._submit_settings.get2('pathout')
+
+        if not self._submit_settings('General', 'skip_finished'):
+            self.clear_output_directory(self._settings("General", "pathout"))
 
         try:
             self.dlg = ProgressDialog("Submitting Jobs...", None, 0, 0, self)
@@ -286,7 +307,6 @@ class ClusterDisplay(QGroupBox):
             msg = "Connection failed (%s)" %self._host_url
             raise ConnectionError(msg)
 
-
     def _check_api_version(self):
         try:
             api_version = self._service.api_version()
@@ -348,12 +368,11 @@ class ClusterDisplay(QGroupBox):
         values/switches, e.g. if classification is not needed there is no need
         to map the paths.
         """
-        #FIXME: should be done in a better way.
+        # FIXME: should be done in a better way.
         results = []
         targets = [(('General', 'pathin'), []),
                    (('General', 'pathout'),[]),
-                   (('General', 'structure_file_extra_path_name'),
-                    [('General', 'structure_file_extra_path')]),
+                   (('General', 'plate_layout'),[]),
                    (('Classification', 'primary_classification_envpath'),
                     [('Processing', 'primary_classification')]),
                    (('Classification', 'secondary_classification_envpath'),
@@ -366,18 +385,18 @@ class ClusterDisplay(QGroupBox):
                     [('General', 'process_merged'),
                      ('Processing', 'merged_classification')]),
                    ]
-        targets.extend([(('ObjectDetection', '%s_flat_field_correction_image_dir' % prefix),
-                          [('ObjectDetection', '%s_flat_field_correction' % prefix)]) for prefix in ['primary',
-                                                                                        'secondary',
-                                                                                        'tertiary']]
+        targets.extend(
+            [(('ObjectDetection', '%s_flat_field_correction_image_dir' % prefix),
+              [('ObjectDetection', '%s_flat_field_correction' % prefix)])
+             for prefix in ['primary', 'secondary', 'tertiary']])
 
-                       )
         for info, const in targets:
             passed = reduce(lambda x,y: x and y,
                             map(lambda z: self._settings.get(*z), const),
                             True)
             if passed:
                 results.append(info)
+
         return results
 
     def check_directories(self):
@@ -438,6 +457,7 @@ class ClusterDisplay(QGroupBox):
         else:
             self._btn_submit.setEnabled(False)
 
+
 class ClusterFrame(BaseFrame, ExportSettings):
 
     ICON = ":network-server.png"
@@ -452,7 +472,6 @@ class ClusterFrame(BaseFrame, ExportSettings):
 
         # update display first time when tab is enable
         self._display_update = False
-
 
     def page_changed(self):
         self._cluster_display.update_display(self._is_active)

@@ -13,22 +13,26 @@ __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
 __all__ = ['Colors', 'rgb2hex', 'DCMAP', 'hex2rgb', 'BINARY_CMAP',
-           'DiscreteColormap', 'unsupervised_cmap']
+           'DiscreteColormap']
 
 import numpy as np
 
 from matplotlib.colors import ListedColormap
 from matplotlib.colors import hex2color
 from matplotlib.colors import rgb2hex as mpl_rgb2hex
+from matplotlib.colors import is_color_like
 from matplotlib import cm
 
 
-def unsupervised_cmap(n):
-    return ListedColormap([cm.Accent(i) for i in np.linspace(0, 1, n)])
-
-# DCMAP is a fallback
-DCMAP = unsupervised_cmap(10)
 BINARY_CMAP = ListedColormap(["#DEDEDE","#FA1D2F"], name='binary_cmap')
+
+def grey2rgb(image, color="#FFFFFF"):
+
+    if is_color_like(color):
+        color = hex2color(color)
+    # be aware that color contains floats ranging from 0 to 1
+    return np.dstack((image, image, image))*np.array(color)
+
 
 def rgb2hex(color, mpl=True):
     """Converts an rgb-tuple into the corresponding hexcolor. if mpl is True,

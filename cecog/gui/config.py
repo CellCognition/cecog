@@ -51,4 +51,4 @@ class GuiConfigSettings(ConfigSettings):
     def set(self, section_name, trait_name, value):
         ConfigSettings.set(self, section_name, trait_name, value)
         if not self._parent is None and self._notify_change:
-            self._parent.settings_changed(True)
+            self._parent.settingsChanged(True)

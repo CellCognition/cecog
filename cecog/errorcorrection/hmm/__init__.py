@@ -13,6 +13,4 @@ __url__ = 'www.cellcognition.org'
 
 from hmm import *
 from estimator import *
-
-from hmmskl import *
 from hmmtde import *

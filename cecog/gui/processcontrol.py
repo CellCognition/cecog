@@ -27,23 +27,14 @@ class ProcessControl(QtWidgets.QFrame):
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self._label = QtWidgets.QLabel('', self)
-
         self._progressbar = QtWidgets.QProgressBar(self)
         self._progressbar.setTextVisible(False)
 
         self._show_image = QtWidgets.QCheckBox('Show images', self)
         self._show_image.setChecked(True)
 
-        button = QtWidgets.QToolButton(self)
-        button.setIcon(QtGui.QIcon(':question_mark'))
-        button.clicked.connect(
-            lambda: self.parent()._on_show_help('controlpanel'))
-
-        layout.addWidget(self._label)
         layout.addWidget(self._progressbar)
         layout.addWidget(self._show_image)
-        layout.addWidget(button)
 
     def __del__(self):
         for key in self._buttons.keys():
@@ -52,19 +43,31 @@ class ProcessControl(QtWidgets.QFrame):
     def clearText(self):
         self._label.clear()
 
+    def reset(self):
+        self.setRange(0, 1)
+        self.setProgress(0)
+
     def showImages(self):
         return self._show_image.isChecked()
 
     def setProgress(self, value):
         self._progressbar.setValue(value)
-        maximum = self._progressbar.maximum()
-        try:
-            self._label.setText('%3.1f%%' %(value*100.0/maximum))
-        except ZeroDivisionError:
-            pass
 
-    def setRange(self, min, max):
-        self._progressbar.setRange(min, max)
+    def progress(self):
+        return self._progressbar.value()
+
+    def maximum(self):
+        return self._progressbar.maximum()
+
+    def increment(self):
+        self._progressbar.setValue(self._progressbar.value()+1)
+
+    def setRange(self, min, max=None):
+
+        if max is None:
+            self._progressbar.setMinimum(min)
+        else:
+            self._progressbar.setRange(min, max)
 
     def showImageCheckBox(self):
         self._show_image.show()

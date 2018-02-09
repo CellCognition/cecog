@@ -2,7 +2,6 @@
 ;Start Menu Folder Selection Example Script
 ;Written by Joost Verburg
 
-;--------------------------------
 ;Include Modern UI
 
   !include "MUI2.nsh"
@@ -14,8 +13,6 @@
   SetCompressorDictSize 32
   SetDatablockOptimize On
 
-
-;--------------------------------
 ;General
 
   ;Name and file
@@ -46,27 +43,13 @@
       !insertmacro MULTIUSER_UNINIT
     FunctionEnd
 
-
-  ; !define MUI_WELCOMEFINISHPAGE_BITMAP ""
-  ; !define MUI_WELCOMEFINISHPAGE_BITMAP_NOSTRETCH
-  ; !define MUI_HEADERIMAGE
-  ; !define MUI_HEADERIMAGE_BITMAP_NOSTRETCH
-  ;!define MUI_HEADERIMAGE_RIGHT
-  ; !define MUI_HEADERIMAGE_BITMAP "" ; optional
-
-;--------------------------------
 ;Variables
-
   Var StartMenuFolder
 
-;--------------------------------
 ;Interface Settings
-
   !define MUI_ABORTWARNING
 
-;--------------------------------
 ;Pages
-
   !insertmacro MULTIUSER_PAGE_INSTALLMODE
   !insertmacro MUI_PAGE_COMPONENTS
   !insertmacro MUI_PAGE_DIRECTORY
@@ -91,11 +74,8 @@
     ;!define MUI_FINISHPAGE_SHOWREADME $INSTDIR\readme.txt
   !insertmacro MUI_PAGE_FINISH
 
-;--------------------------------
 ;Languages
-
   !insertmacro MUI_LANGUAGE "English"
-
 
  Function LaunchLink
   SetShellVarContext all
@@ -106,21 +86,7 @@
   ExecShell "" "$SMPROGRAMS\$StartMenuFolder\CecogAnalyzer-${mver}.lnk"
 FunctionEnd
 
-; Function .onInit
-  ; SetOutPath $TEMP
-  ; File /oname=spltmp.bmp "logo\ilastik-splash.bmp"
-
-  ; advsplash::show 2000 600 400 0xFF00FF $TEMP\spltmp
-
-  ; Pop $0 ; $0 has '1' if the user closed the splash screen early,
-         ; '0' if everything closed normally, and '-1' if some error occurred.
-
-  ; Delete $TEMP\spltmp.bmp
-
-; FunctionEnd
-;--------------------------------
 ;Installer Sections
-
 Section "CecogAnalyzer" SecDummy
 
   SectionIn RO
@@ -128,7 +94,7 @@ Section "CecogAnalyzer" SecDummy
   SetShellVarContext all
   RMDir /r "$%APPDATA%\CellCognition${mver}"
 
-  File /r /x battery_package /x cmdtool.exe dist\*.*
+  File /r dist\*.*
 
   ;Store installation folder
   WriteRegStr HKCU "Software\CecogAnalyzer-${mver}" "" $INSTDIR
@@ -138,7 +104,7 @@ Section "CecogAnalyzer" SecDummy
 
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
 
-    ;Create shortcutsdist\resources\battery_package\Settings\demo_settings.conf
+    ;Create shortcutsdist\resources\battery_package\settings\demo_settings.conf
     SetShellVarContext all
     CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
 
@@ -151,22 +117,11 @@ Section "CecogAnalyzer" SecDummy
 
 SectionEnd
 
-Section /o "cmdtool" SecBatch
-  SetOutPath "$INSTDIR"
-  FILE dist\cmdtool.exe
-SectionEnd
-
 Section /o "Battery package" SecDemo
   SetOutPath "$INSTDIR\resources\battery_package"
   FILE /r dist\resources\battery_package\*.*
 SectionEnd
 
-; Section "Demo Files" SecDemo
-  ; SetOutPath "$INSTDIR"
-  ; FILE /r demo
-; SectionEnd
-
-;--------------------------------
 ;Descriptions
 
   ;Language strings
@@ -175,16 +130,12 @@ SectionEnd
   ;Assign language strings to sections
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${SecDummy} $(DESC_SecDummy)
-    !insertmacro MUI_DESCRIPTION_TEXT ${SecDemo} "Battery package - Example data"
-    !insertmacro MUI_DESCRIPTION_TEXT ${SecBatch} "Console application"
-    ; !insertmacro MUI_DESCRIPTION_TEXT ${SecDemo} "Demo Files will be copied into the installation folder."
+    ; !insertmacro MUI_DESCRIPTION_TEXT ${SecDemo} "Battery package - Demo data"
   !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
-;--------------------------------
 ;Uninstaller Section
 
 Section "Uninstall"
-
   ;ADD YOUR OWN FILES HERE...
 
   Delete "$INSTDIR\Uninstall.exe"

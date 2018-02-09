@@ -1,7 +1,5 @@
 """
 __init__.py
-
-Module for various image galleries
 """
 
 __author__ = 'rudolf.hoefler@gmail.com'
@@ -12,6 +10,7 @@ __copyright__ = ('The CellCognition Project'
 __licence__ = 'LGPL'
 __url__ = 'www.cellcognition.org'
 
-from images import *
-from channelgallery import *
-from trackgallery import *
+
+from .svc import *
+from .classdefinition import *
+from .annotationsfile import *

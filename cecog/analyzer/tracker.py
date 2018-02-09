@@ -104,7 +104,7 @@ class Tracker(LoggerObject):
 
         return ngraph
 
-    def render_tracks(self, frame, size, n=5, thick=True, radius=3):
+    def render_tracks(self, frame, size, n=5, radius=3, thick=True):
         img_conn = ccore.Image(*size)
         img_split = ccore.Image(*size)
 

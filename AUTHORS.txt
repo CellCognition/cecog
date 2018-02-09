@@ -10,25 +10,21 @@
 Authors, contributions and affiliation:
 --------------------------------------------------------------------------------
 
-Daniel Gerlich - group leader, project coordinator
+Daniel Gerlich - group leader
 IMBA Vienna, Austria
 
-Rudolf Höfler - project coordinator, main developer
+Rudolf Höfler - main developer
 IMBA Vienna, Austria
 
-Christoph Sommer - project coordinator, main developer
-IMBA Vienna, Austria
-
-Thomas Walter - main developer (mainly segmentation and features)
-Mines ParisTech / Institut Curie, France
-
+Thomas Walter - developer
+Institut Curie – Centre de Recherche Paris, France
 
 former contributers:
 
-Alice Schoenauer Sebag
-Mines ParisTech / Institut Curie, France
+Christoph Sommer - developer
+IMBA Vienna, Austria
 
-Michael Held - project initiator, main developer
+Michael Held - project initiator, developer
 ETH Zurich, Switzerland
 
 Bernd Fischer - developer of the R-implementation of the HMM

@@ -41,6 +41,7 @@ class LoggerObject(object):
 
     def __init__(self, *args, **kw):
         super(LoggerObject, self).__init__(*args, **kw)
+        self._file_handler = None
 
         # FIXME - special casing to get it running for
         # multiprocessing
@@ -50,16 +51,16 @@ class LoggerObject(object):
             name = "%s_pid.%d" %(self.__class__.__name__, os.getpid())
 
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.NOTSET)
+        self.logger.setLevel(logging.INFO)
 
-    def add_stream_handler(self, level=logging.DEBUG):
+    def add_stream_handler(self, level=logging.INFO):
         self._stream_handler = logging.StreamHandler(sys.stdout)
         self._stream_handler.setLevel(level)
         fmt = logging.Formatter(self._fmt)
         self._stream_handler.setFormatter(fmt)
         self.logger.addHandler(self._stream_handler)
 
-    def add_file_handler(self, logfile, level=logging.DEBUG):
+    def add_file_handler(self, logfile, level=logging.INFO):
         assert isinstance(logfile, basestring)
         self.logger.setLevel(level)
         fmt = logging.Formatter(self._fmt)
@@ -69,5 +70,6 @@ class LoggerObject(object):
         self.logger.addHandler(self._file_handler)
 
     def close(self):
-        self._file_handler.close()
+        if self._file_handler is not None:
+            self._file_handler.close()
         self.logger.removeHandler(self._file_handler)

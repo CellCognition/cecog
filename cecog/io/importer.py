@@ -387,7 +387,8 @@ class IniFileImporter(AbstractImporter):
             self.allow_subfolder = None
 
         if config_parser.has_option(section_name, 'use_frame_indices'):
-            self.use_frame_indices = config_parser.get(section_name, 'use_frame_indices').lower() == 'true'
+            self.use_frame_indices = config_parser.get(
+                section_name, 'use_frame_indices').lower() == 'true'
         else:
             self.use_frame_indices = False
 
@@ -412,7 +413,7 @@ class IniFileImporter(AbstractImporter):
 
         re_well_str3 = r"(?P<letter>[a-zA-Z])\D*(?P<number>\d{1,5})"
         re_well3 = re.compile(re_well_str3)
-        
+
         for dirpath, dirnames, filenames in os.walk(path):
             # prune filenames by file extension
             if len(self.extensions) > 0:
@@ -465,10 +466,10 @@ class IniFileImporter(AbstractImporter):
                                             raise MetaDataError("Well data '%s' not "
                                                                 "valid.\nValid are '%s' or '%s' or '%s'"
                                                                 % (well, re_well_str, re_well_str2, re_well_str3))
-                                        else:                                            
+                                        else:
                                             letter = res3.groupdict()['letter']
                                             number = res3.groupdict()['number']
-                                            result[MetaInfo.Well] = "%s%02d" % (letter.upper(), int(number))                                            
+                                            result[MetaInfo.Well] = "%s%02d" % (letter.upper(), int(number))
                                             #result[MetaInfo.Well] = "%s%02d" % (well[0].upper(), int(well[1:]))
                                     else:
                                         result[MetaInfo.Well] = "%05d" % int(well)

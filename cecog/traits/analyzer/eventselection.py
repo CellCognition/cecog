@@ -65,16 +65,4 @@ class SectionEventSelection(SectionCore):
           ('forwardcheck',
            FloatTrait(2, 0, 4000, label='Filter duration [post]')),
           ]),
-
-        ('unsupervised_event_selection',
-         [('unsupervised_event_selection',
-           BooleanTrait(False, label='Unsupervised',
-                        widget_info=BooleanTrait.RADIOBUTTON)),
-          ('min_event_duration',
-           IntTrait(3, 1, 100, label='Min. event duration')),
-          ('num_clusters',
-           IntTrait(6, 2, 15, label='Number of clusters',)),
-          ('min_cluster_size',
-           IntTrait(2, 1, 10, label='Min. cluster size',)),
-          ])
         ]

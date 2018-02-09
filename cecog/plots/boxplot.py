@@ -23,11 +23,11 @@ import textwrap
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Polygon
-from cecog.colors import DCMAP
+
 
 def dwell_boxplot(data, title=None, xlabel='class label',
                   ylabel='dwell time (frames)', exclude_labels=None,
-                  cmap=DCMAP, ymax=None, axes=None):
+                  cmap=None, ymax=None, axes=None):
 
     # remove keys only in this scope
     data = data.copy()
@@ -47,8 +47,17 @@ def dwell_boxplot(data, title=None, xlabel='class label',
     bp = axes.boxplot(data.values())#, notch=0, sym='+', vert=1, whis=1.5)
     plt.setp(bp['boxes'], color='black')
     plt.setp(bp['whiskers'], color='black')
-    plt.setp(bp['fliers'],  markeredgecolor='black', marker='o',
-             fillstyle='none')
+    # plt.setp(bp['fliers'],  markeredgecolor='black', marker='o',
+    #          fillstyle='none', markerfacecolor=colors[i])
+
+    if len(data) == len(bp["fliers"]):
+        colors = [cmap(l) for l in data.keys()]
+    else:
+        colors = list()
+        [colors.extend([cmap(l), cmap(l)]) for l in data.keys()]
+
+    for i, flier in enumerate(bp['fliers']):
+        flier.set(marker='o', color=colors[i], markerfacecolor=colors[i])
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
@@ -97,7 +106,7 @@ def dwell_boxplot2(data, title=None, xlabel='', ylabel='dwell time (frames)',
     plt.setp(bp['boxes'], color='black')
     plt.setp(bp['whiskers'], color='black')
     plt.setp(bp['fliers'],  markeredgecolor='black', marker='o',
-             fillstyle='none')
+             fillstyle='none', markerfacecolor=color)
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
@@ -130,7 +139,7 @@ def dwell_boxplot2(data, title=None, xlabel='', ylabel='dwell time (frames)',
 
 def barplot(data,
             title=None, xlabel='class label', ylabel='dwell time (frames)',
-            exclude_labels=None, cmap=DCMAP, ymax=None, axes=None):
+            exclude_labels=None, cmap=None, ymax=None, axes=None):
 
     # remove keys only in this scop
     data = data.copy()
@@ -152,8 +161,7 @@ def barplot(data,
     colors = [cmap(k) for k in data.keys()]
     width = 2/3
     ind = np.arange(len(data))
-    bp = axes.bar(ind-width/2, values, width=width, color=colors)
-    axes.set_xlim((ind.min()-0.5, ind.max()+0.5))
+    bp = axes.bar(ind, values, width=width, color=colors)
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()
@@ -194,8 +202,7 @@ def barplot2(data,
 
     width = 2/3
     ind = np.arange(len(data))
-    bp = axes.bar(ind-width/2, values, width=width, color=colors)
-    axes.set_xlim((ind.min()-0.5, ind.max()+0.5))
+    bp = axes.bar(ind, values, width=width, color=colors)
 
     yr = np.array(axes.get_ylim())
     yr = yr+np.array((-1, 1))*0.05*yr.ptp()

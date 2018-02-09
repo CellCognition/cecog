@@ -20,6 +20,7 @@ import copy
 import numpy as np
 from collections import OrderedDict
 
+
 class Region(object):
 
     def __init__(self, oRoi=None, tplCoords=None):
@@ -33,11 +34,13 @@ class Region(object):
             self.upperLeft = None
             self.lowerRight = None
 
+
 class Orientation(object):
 
     def __init__(self, angle=np.nan, eccentricity=np.nan):
         self.angle=angle
         self.eccentricity=eccentricity
+
 
 class ImageObject(object):
 
