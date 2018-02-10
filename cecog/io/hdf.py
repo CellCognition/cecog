@@ -96,7 +96,7 @@ class FileLock(filelock.FileLock):
 
 class Ch5File(CH5FileWriter):
 
-    # this class is a workaround of the broken cellh5 implemation.
+    # this class is a workaround of the broken cellh5 implemntation.
 
     def __init__(self, filename, timeout=60, mode='a', cached=False):
 
@@ -201,19 +201,6 @@ class Ch5File(CH5FileWriter):
 
         return rec
 
-    # def createSite(self, filename):
-    #     """Create an empty group for a Site."""
-
-    #     sf = h5py.File(filename, "r")
-    #     plate = sf[Plate].keys()[0]
-    #     well = sf[Well %plate].keys()[0]
-    #     site = sf[Site[:-2] %(plate, well)].keys()[0]
-    #     path = Site %(plate, well, site)
-    #     sf.close()
-
-    #     if not path in self._file_handle:
-    #         self._file_handle.create_group(path)
-
     def existingSites(self, plate):
 
         wsites = dict()
@@ -223,7 +210,7 @@ class Ch5File(CH5FileWriter):
             for well in wells:
                 sites = self[Site[:-2] %(plate, well)]
                 # remove empty sites from list
-                sites = [k for k, s in sites.items() if len(s.keys()) > 0]
+                sites = [k for k, s in sites.items()]
                 wsites[well] = sites
         except (KeyError, AttributeError):
             pass
@@ -232,16 +219,3 @@ class Ch5File(CH5FileWriter):
 
     def numberSites(self, plate):
         return sum([len(site) for site in self.existingSites(plate).values()])
-
-    def numberSitesEmpty(self, plate):
-        """Number of hdf groups created in the file. The groups might be still
-        empty.
-        """
-
-        nsites = 0
-        wells = self[Well %plate].keys()
-        for well in wells:
-            sites = self[Site[:-2] %(plate, well)]
-            nsites += len(sites)
-
-        return nsites

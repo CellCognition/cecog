@@ -49,6 +49,7 @@ Plate = '/sample/0/plate/'
 Well = Plate + '%s/experiment/'
 Site = Well + '%s/position/%s'
 
+
 def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
 
     hdffiles = glob.glob(os.path.join(source_dir, '*.ch5'))
@@ -199,7 +200,7 @@ if __name__ ==  "__main__":
         # redefine the positions
         settings.set('General', 'constrain_positions', True)
         settings.set('General', 'positions', ','.join(positions))
-        logger.info("Processing site %s - %s" % (plate, ", ".join(positions)))
+        print "Processing site %s - %s" % (plate, ", ".join(positions))
 
         analyzer = PlateAnalyzer(plate, settings, imagecontainer, mode="a")
         analyzer()
