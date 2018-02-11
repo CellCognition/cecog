@@ -109,7 +109,7 @@ class HmmDataTable(object):
             if k is None: # no rich comparision here...
                 i = np.array([v is None for v in self._pos[key]])
             else:
-                i = (k == np.array(self._pos[key]))
+                i = (np.array(self._pos[key]) == k)
 
             # return only the key, no tracks available
             if k not in self._pos[key] and include_empty_positions:

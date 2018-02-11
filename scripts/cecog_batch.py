@@ -38,16 +38,12 @@ from cecog.analyzer.plate import PlateAnalyzer
 from cecog.environment import CecogEnvironment
 from cecog.io.imagecontainer import ImageContainer
 from cecog.io.hdf import Ch5File
+from cecog.io.hdf import Plate, Well, Site
 
 
 ENV_INDEX_SGE = 'SGE_TASK_ID'
 PLATESEP = "___"
 POSSEP = ","
-
-
-Plate = '/sample/0/plate/'
-Well = Plate + '%s/experiment/'
-Site = Well + '%s/position/%s'
 
 
 def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
@@ -65,10 +61,13 @@ def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
 
         first_item = lambda view: next(iter(view))
         plate = first_item(source[Plate].keys())
-        well = first_item(source[Well % plate].keys())
-        position = first_item(source[Site %(plate, well, "")].keys())
+        well = first_item(source[Well.format(plate)].keys())
+        position = first_item(source[Site.format(plate, well, "")].keys())
 
-        path1 = str(Site %(plate, well, position))
+        # cluster uses hdf v2.1 --> need to create a group first before
+        # I copy the data sets,
+
+        path1 = str(Site.format(plate, well, position))
         path2 = Site %(plate, well, "")
 
         if not path2 in target._f:
