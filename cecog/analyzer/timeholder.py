@@ -108,11 +108,16 @@ class TimeHolder(OrderedDict):
 
     def __init__(self, P, channel_regions, filename_hdf5, meta_data, settings,
                  analysis_frames, plate_id, well, site,
-                 hdf5_create=True, hdf5_reuse=True, hdf5_compression='gzip',
+                 hdf5_create=True,
+                 hdf5_reuse=False,
+                 hdf5_compression='gzip',
                  hdf5_include_raw_images=True,
-                 hdf5_include_label_images=True, hdf5_include_features=True,
-                 hdf5_include_classification=True, hdf5_include_crack=True,
-                 hdf5_include_tracking=True, hdf5_include_events=True,
+                 hdf5_include_label_images=True,
+                 hdf5_include_features=True,
+                 hdf5_include_classification=True,
+                 hdf5_include_crack=True,
+                 hdf5_include_tracking=True,
+                 hdf5_include_events=True,
                  hdf5_include_annotation=True):
         super(TimeHolder, self).__init__()
 
@@ -142,14 +147,6 @@ class TimeHolder(OrderedDict):
         self._hdf5_features_complete = False
         self.hdf5_filename = filename_hdf5
 
-        self.minimal_effort = False
-        try:
-            # minimal_effort is read from the settings
-            self.minimal_effort = self._settings.get(
-                'Output', 'minimal_effort') and self._hdf5_reuse
-        except:
-            # for backwards compatibility
-            self.minimal_effort = False
 
         self._logger = logging.getLogger(self.__class__.__name__)
         frames = sorted(analysis_frames)
@@ -301,11 +298,6 @@ class TimeHolder(OrderedDict):
             # we check if the label image and raw image are in the cellh5 file
             if label_image_str in f and raw_image_str in f:
                 return True
-            else:
-                # if this is not the case, we would return False unless
-                # minimal_effort is set to True (in which case we might not need the segmentation)
-                return self.minimal_effort
-                #return False
         except:
             return False
         finally:
@@ -605,54 +597,49 @@ class TimeHolder(OrderedDict):
 
             # in this case, we do not necessarily calculate a segmentation
             # this is not ideal if the data is to be browsed.
-            if self.minimal_effort:
-                self._logger.info('No segmentation calculated or loaded for %s (overhead: %s)'
-                                  % (desc, stop_watch.interim()))
-                for region_name in self.reginfo.names[channel_name]:
-                    channel.containers[region_name] = None
-            else:
+
                 # compute segmentation (not loading from file)
-                channel.apply_segmentation(*args)
+            channel.apply_segmentation(*args)
 
-                self._logger.info('Label images %s computed in %s.'
-                              %(desc, stop_watch.interim()))
-                # write segmentation back to file
-                if self._hdf5_create and self._hdf5_include_label_images:
-                    meta = self._meta_data
-                    w = meta.real_image_width
-                    h = meta.real_image_height
+            self._logger.info('Label images %s computed in %s.'
+                          %(desc, stop_watch.interim()))
+            # write segmentation back to file
+            if self._hdf5_create and self._hdf5_include_label_images:
+                meta = self._meta_data
+                w = meta.real_image_width
+                h = meta.real_image_height
 
-                    # CellCognition is always working on one z-slice for know and thus saves only one
-                    z = 1
+                # CellCognition is always working on one z-slice for know and thus saves only one
+                z = 1
 
-                    t = len(self._frames_to_idx)
-                    var_name = 'region'
-                    grp = self._grp_site[self.HDF5_GRP_IMAGE]
-                    # create new group if it does not exist yet!
-                    if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx2):
-                        var_labels = grp[var_name]
-                    else:
-                        nr_labels = len(self._regions_to_idx2)
-                        var_labels = \
-                            grp.create_dataset(var_name,
-                                               (nr_labels, t, z, h, w),
-                                               'uint16',
-                                               chunks=chunk_size((nr_labels, t, z, h, w)),
-                                               compression=self._hdf5_compression)
-                        var_labels.attrs['valid'] = numpy.zeros(t)
+                t = len(self._frames_to_idx)
+                var_name = 'region'
+                grp = self._grp_site[self.HDF5_GRP_IMAGE]
+                # create new group if it does not exist yet!
+                if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx2):
+                    var_labels = grp[var_name]
+                else:
+                    nr_labels = len(self._regions_to_idx2)
+                    var_labels = \
+                        grp.create_dataset(var_name,
+                                           (nr_labels, t, z, h, w),
+                                           'uint16',
+                                           chunks=chunk_size((nr_labels, t, z, h, w)),
+                                           compression=self._hdf5_compression)
+                    var_labels.attrs['valid'] = numpy.zeros(t)
 
-                    frame_idx = self._frames_to_idx[self._iCurrentT]
-                    for region_name in self.reginfo.names[channel_name]:
-                        if channel.is_virtual():
-                            continue
-                        idx = self._regions_to_idx2[(channel.NAME, region_name)]
-                        container = channel.containers[region_name]
-                        array = container.img_labels.toArray(copy=False)
-                        var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
-                        ### Workaround... h5py attributes do not support transparent list types...
-                        tmp = var_labels.attrs['valid']
-                        tmp[frame_idx] = 1
-                        var_labels.attrs['valid'] = tmp
+                frame_idx = self._frames_to_idx[self._iCurrentT]
+                for region_name in self.reginfo.names[channel_name]:
+                    if channel.is_virtual():
+                        continue
+                    idx = self._regions_to_idx2[(channel.NAME, region_name)]
+                    container = channel.containers[region_name]
+                    array = container.img_labels.toArray(copy=False)
+                    var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
+                    ### Workaround... h5py attributes do not support transparent list types...
+                    tmp = var_labels.attrs['valid']
+                    tmp[frame_idx] = 1
+                    var_labels.attrs['valid'] = tmp
         return
 
     def prepare_raw_image(self, channel):
@@ -866,7 +853,7 @@ class TimeHolder(OrderedDict):
     def apply_features(self, channel):
         stop_watch = StopWatch(start=True)
         channel_name = channel.NAME.lower()
-        if self._hdf5_found and self._hdf5_reuse and (self.hdf_channel_frame_valid() or self.minimal_effort):
+        if self._hdf5_found and self._hdf5_reuse and self.hdf_channel_frame_valid():
 
             self._apply_features_from_hdf5(channel)
             how = "loaded"

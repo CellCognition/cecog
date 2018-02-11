@@ -28,10 +28,6 @@ class SectionOutput(SectionCore):
     OPTIONS = [
         ('hdf5',
          [('hdf5_create_file', BooleanTrait(True, label='Create Hdf file')),
-          ('hdf5_reuse',
-           BooleanTrait(False, label='Reuse CellH5')),
-          ('minimal_effort',
-           BooleanTrait(False, label='Only necessary steps')),
           ('hdf5_include_raw_images',
            BooleanTrait(False, label='Include 8-bit image data')),
           ('hdf5_include_label_images',
@@ -46,7 +42,5 @@ class SectionOutput(SectionCore):
            BooleanTrait(False, label='Include tracking')),
           ('hdf5_include_events',
            BooleanTrait(False, label='Include events')),
-          ('hdf5_compression',
-           BooleanTrait(True, label='Enable gzip compression (recommended!)')),
       ]),
      ]

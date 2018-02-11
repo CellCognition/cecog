@@ -239,9 +239,7 @@ class PositionCore(LoggerObject):
         self.settings.set_section('Output')
         h5opts = {"hdf5_include_tracking": self.settings.get2('hdf5_include_tracking'),
                   "hdf5_include_events": self.settings.get2('hdf5_include_events'),
-                  "hdf5_compression": "gzip" if self.settings.get2("hdf5_compression") else None,
                   "hdf5_create": self.settings.get2('hdf5_create_file'),
-                  "hdf5_reuse": self.settings.get2('hdf5_reuse'),
                   "hdf5_include_raw_images": self.settings.get2('hdf5_include_raw_images'),
                   "hdf5_include_label_images": self.settings.get2('hdf5_include_label_images'),
                   "hdf5_include_features": self.settings.get2('hdf5_include_features'),
