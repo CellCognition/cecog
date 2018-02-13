@@ -40,7 +40,6 @@ class PositionAnalyzerForBrowser(PositionCore):
                   "hdf5_include_events": False,
                   "hdf5_compression": False,
                   "hdf5_create": False,
-                  "hdf5_reuse": self.settings.get2('hdf5_reuse'),
                   "hdf5_include_raw_images": False,
                   "hdf5_include_label_images": False,
                   "hdf5_include_features": False,

@@ -68,10 +68,10 @@ def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
         # I copy the data sets,
 
         path1 = str(Site.format(plate, well, position))
-        path2 = Site %(plate, well, "")
+        path2 = Site.format(plate, well, "")
 
-        if not path2 in target._f:
-            group = target._f.create_group(path2)
+        if not path2 in target:
+            group = target.create_group(path2)
 
         group.copy(source[path1], position)
         source.close()
