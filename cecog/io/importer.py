@@ -143,7 +143,6 @@ class AbstractImporter(XmlSerializer):
         zslices = []
 
         dimension_items = self._get_dimension_items()
-        print("Get dimensions: %s" %s.interim())
         s.reset(start=True)
 
         # if use_frame_indices is set in the ini file,
@@ -276,7 +275,6 @@ class AbstractImporter(XmlSerializer):
         self.meta_data.zslices = sorted(zslices)
         self.meta_data.image_files = len(dimension_items)
 
-        print('Build time: %s' %s.stop())
         return lookup
 
     def _get_dimension_items(self):
