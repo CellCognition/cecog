@@ -30,9 +30,9 @@ Site = "/data/{}/{}/{}"
 
 
 LayoutDtype = np.dtype(
-    [('File', 'S10'), ('Well', 'S3'), ('Site', '<i8'),
-     ('Row', 'S1'), ('Column', '<i8'), ('GeneSymbol', 'S6'),
-     ('siRNA', 'S8'), ('Group', 'S10')])
+    [('File', 'S64'), ('Well', 'S3'), ('Site', '<i8'),
+     ('Row', 'S1'), ('Column', '<i8'), ('GeneSymbol', 'S64'),
+     ('siRNA', 'S64'), ('Group', 'S64')])
 
 
 def mergeHdfFiles(target, source_dir, remove_source=True, mode="a"):
