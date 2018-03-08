@@ -33,9 +33,5 @@ class OutputFrame(BaseFrame):
                         ('hdf5_include_classification', (5,0,1,1)),
                         ('hdf5_include_tracking', (6,0,1,1)),
                         ('hdf5_include_events', (7,0,1,1)),
-                        (None, (8,0,1,3)),
-                        ('hdf5_compression', (9,0,1,1)),
                        ], label="CellH5 options")
-        self.add_group('hdf5_reuse', [])
-        self.add_group('minimal_effort', [])
         self.add_expanding_spacer()

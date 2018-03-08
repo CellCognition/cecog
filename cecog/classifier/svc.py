@@ -72,7 +72,7 @@ class SupportVectorClassifier(object):
             self.annotations_dir = join(file_, "annotations")
             self._file = join(file_, basename(file_)+'.hdf')
             file_ = join(file_, ClassDefinition.Definition)
-            self.classdef = ClassDefinition(np.recfromtxt(file_, comments=None))
+            self.classdef = ClassDefinition.from_txt(file_)
 
     def _from_hdf(self, file_, mode, load):
 

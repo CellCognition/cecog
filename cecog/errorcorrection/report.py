@@ -331,31 +331,25 @@ class HmmReport(object):
         finally:
             pdf.close()
 
-    # XXX perhaps this method should be part of the cellh5 module
-    def _load_gallery(self, pos, objidx, region, size):
+    def _load_gallery(self, ch5, objidx, site, size):
         """Load a gallery image color coded  i.e. grey for
         single channels, rgb colors for merged channels"""
 
-        path = 'definition/object/%s' %region
-        rtype = [t for t in pos.definitions.get_file_handle()[path].value[0]]
+        path = 'definition/object/{}'.format(site.mask)
+        rtype = [t for t in ch5[path].value[0]]
 
-        if rtype[1] == CH5Const.REGION:
-            img = grey2rgb(pos.get_gallery_image(objidx, region, size))
+        if rtype[1] == ch5.Region:
+            img = grey2rgb(ch5.galleryImage(objidx, site, site.mask, size))
         else:
-            # for merged channels we merged singe region to rgb
             for reg in rtype[2:]:
-                color = pos.channel_color_by_region(reg)
+                color = ch5.maskColor(reg)
                 try:
-                    img += grey2rgb(pos.get_gallery_image(objidx, reg, size),
-                                    color)
+                    img += grey2rgb(ch5.galleryImage(objidx, site, reg, size), color)
                 except NameError:
-                    img = grey2rgb(pos.get_gallery_image(objidx, reg, size),
-                                   color)
+                    img = grey2rgb(ch5.galleryImage(objidx, site, reg, size), color)
         return img
 
-
-    def image_gallery_png(self, ch5, ofile, n_galleries=50, rsfactor=0.4,
-                          gsize=100):
+    def image_gallery_png(self, ch5, ofile, n_galleries=50, rsfactor=0.4, gsize=100):
         """Resolution of png gallerie can be adjusted by the resampling factor
         (default=0.4). File size is large"""
 
@@ -364,9 +358,8 @@ class HmmReport(object):
             if data is None:
                 continue
             image = np.array([])
-            for objidx, track, coords in data.itertracks(n_galleries):
-                pos = ch5.get_position(coords.well, coords.position)
-                img = self._load_gallery(pos, objidx, coords.region, gsize)
+            for objidx, track, site in data.itertracks(n_galleries):
+                img = self._load_gallery(ch5, objidx, site, gsize)
                 img = self._draw_labels(img, track)
                 try:
                     image = np.vstack((image, img))
@@ -375,7 +368,7 @@ class HmmReport(object):
 
             fn = ofile.replace('_gallery.png', '-%s_gallery.png' %name)
             vimage = rescale(image, rsfactor)
-            imsave(fn, img_as_float(vimage))
+            imsave(fn, img_as_float(vimage/255.))
 
     def _draw_labels(self, image, track, markersize=0.20):
         nframes = len(track)

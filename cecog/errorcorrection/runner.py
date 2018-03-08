@@ -103,10 +103,10 @@ class PositionRunner(QtCore.QObject):
             else:
                 setattr(self, "_%s_dir" %basename(odir.lower()).strip("_"), odir)
 
-    def _load_classdef(self, region):
+    def _load_classdef(self, mask):
 
         with Ch5File(self.ch5file, mode="r") as ch5:
-            cld = ch5.class_definition(region)
+            cld = ch5.classDefinition(mask)
             classdef = ClassDefinition(cld)
         return classdef
 
@@ -115,9 +115,8 @@ class PositionRunner(QtCore.QObject):
         dtable = HmmDataTable()
 
         # XXX read region names from hdf not from settings
-        chreg = "%s__%s" %(channel, self.ecopts.regionnames[channel])
+        mask = "%s__%s" %(channel, self.ecopts.regionnames[channel])
 
-        # setup the progressbar correctly
         c = 2
         if self.ecopts.write_gallery:
             c += 1
@@ -129,44 +128,41 @@ class PositionRunner(QtCore.QObject):
             mappings = PlateMapping(layout)
             thread.statusUpdate(min=0, max=ch5.numberSites(self.plate) + c)
 
-            for pos in ch5.iter_positions():
-                ws = "%s_%02d" %(pos.well, int(pos.pos))
+            for site in ch5.iterSites():
+
+                ws = "%s_%02d" %(site.well, int(site.site))
                 thread.statusUpdate(
-                    text="loading plate: %s, file: %s" %(self.plate, ws))
+                    text="loading plate: %s, file: %s" %(site.plate, ws))
                 thread.increment.emit()
                 thread.interruption_point()
                 QtCore.QCoreApplication.processEvents()
 
-                # only segmentation
-                if not pos.has_classification(chreg):
+                if not ch5.hasClassifier(mask):
                     continue
 
                 # make dtable aware of all positions, sometime they contain
                 # no tracks and I don't want to ignore them
                 dtable.add_position(ws, mappings[ws])
-                if not pos.has_events():
+                if not ch5.hasEvents(site):
                     continue
 
-                objidx = np.array( \
-                    pos.get_events(not self.ecopts.ignore_tracking_branches),
-                    dtype=int)
-                tracks = pos.get_class_label(objidx, chreg)
+                objidx = ch5.events(site, self.ecopts.ignore_tracking_branches)
+                tracks = np.asarray(ch5.predictions(site, mask))[objidx]
+
                 try:
-                    probs = pos.get_prediction_probabilities(objidx, chreg)
+                    probs = ch5.probabilities(site, mask)[objidx, :]
                 except KeyError as e:
                     probs = None
 
-                grp_coord = cellh5.CH5GroupCoordinate( \
-                    chreg, pos.pos, pos.well, pos.plate)
+                site.mask = mask
                 dtable.add_tracks(tracks, ws, mappings[ws],
-                                  objidx, grp_coord, probs)
-
+                                  objidx, site, probs)
 
         if dtable.is_empty():
             raise RuntimeError(
                 "No data found for plate '%s' and channel '%s' "
                 %(self.plate, channel))
-        return dtable, self._load_classdef(chreg)
+        return dtable, self._load_classdef(mask)
 
     def interruption_point(self, message=None, increment=False):
         thread = QThread.currentThread()
@@ -199,11 +195,6 @@ class PositionRunner(QtCore.QObject):
                                        %(prefix, sby)))
             report.close_figures()
 
-            # self.interruption_point("plotting hmm model", True)
-            # report.hmm_model(join(self._hmm_dir, "%s-%s_model.pdf")
-            #                  %(prefix, sby))
-
-
             if self.ecopts.write_gallery:
                 self.interruption_point("plotting image gallery", True)
                 try:
@@ -226,15 +217,3 @@ class PositionRunner(QtCore.QObject):
             report.export_hmm(join(self._hmm_dir, "%s-%s_hmm.csv"
                                    %(prefix, sby)),
                               self.ecopts.sortby)
-
-
-if __name__ == "__main__":
-
-    path_in = '/Users/hoefler/demo_data/ibb/mappings/input.txt'
-    path_out = '/Users/hoefler/demo_data/ibb/mappings/output.txt'
-
-    positons = ["018", "028", "051", "067"]
-    pm = PlateMapping(positons)
-    pm.read(path_in)
-    pm['018']['OligoID'] = "just made up"
-    pm.save(path_out)

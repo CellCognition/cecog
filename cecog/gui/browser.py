@@ -623,12 +623,6 @@ class Browser(QMainWindow):
 
     def detect_objects_toggled(self, state):
         if state:
-            if self._settings.get('Output', 'hdf5_reuse'):
-                QMessageBox.information(self, 'Information',
-                                        ('HDF5 reuse is enabled. Raw data and segmentation '
-                                         'will be loaded from HDF5 files. Changes of'
-                                         ' normalization and segmentation parameters will'
-                                         ' have no effect in browser!'))
             self.on_refresh()
 
     def on_toggle_show_contours(self, state):

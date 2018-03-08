@@ -108,11 +108,16 @@ class TimeHolder(OrderedDict):
 
     def __init__(self, P, channel_regions, filename_hdf5, meta_data, settings,
                  analysis_frames, plate_id, well, site,
-                 hdf5_create=True, hdf5_reuse=True, hdf5_compression='gzip',
+                 hdf5_create=True,
+                 hdf5_reuse=False,
+                 hdf5_compression='gzip',
                  hdf5_include_raw_images=True,
-                 hdf5_include_label_images=True, hdf5_include_features=True,
-                 hdf5_include_classification=True, hdf5_include_crack=True,
-                 hdf5_include_tracking=True, hdf5_include_events=True,
+                 hdf5_include_label_images=True,
+                 hdf5_include_features=True,
+                 hdf5_include_classification=True,
+                 hdf5_include_crack=True,
+                 hdf5_include_tracking=True,
+                 hdf5_include_events=True,
                  hdf5_include_annotation=True):
         super(TimeHolder, self).__init__()
 
@@ -142,14 +147,6 @@ class TimeHolder(OrderedDict):
         self._hdf5_features_complete = False
         self.hdf5_filename = filename_hdf5
 
-        self.minimal_effort = False
-        try:
-            # minimal_effort is read from the settings
-            self.minimal_effort = self._settings.get(
-                'Output', 'minimal_effort') and self._hdf5_reuse
-        except:
-            # for backwards compatibility
-            self.minimal_effort = False
 
         self._logger = logging.getLogger(self.__class__.__name__)
         frames = sorted(analysis_frames)
@@ -219,21 +216,21 @@ class TimeHolder(OrderedDict):
                 try:
                     feature_dict = {}
                     object_dict = {}
-                    self._grp_cur_position[self.HDF5_GRP_IMAGE]
+                    self._grp_site[self.HDF5_GRP_IMAGE]
                     # check if label images are there and if reuse is enabled
-                    if 'region' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
-                        label_image_cpy = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region'].value
-                        label_image_valid = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region'].attrs['valid']
-                        label_image_str = self._grp_cur_position[self.HDF5_GRP_IMAGE].name + '/region'
+                    if 'region' in self._grp_site[self.HDF5_GRP_IMAGE]:
+                        label_image_cpy = self._grp_site[self.HDF5_GRP_IMAGE]['region'].value
+                        label_image_valid = self._grp_site[self.HDF5_GRP_IMAGE]['region'].attrs['valid']
+                        label_image_str = self._grp_site[self.HDF5_GRP_IMAGE].name + '/region'
 
-                    if 'channel' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
-                        raw_image_cpy = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].value
-                        raw_image_valid = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].attrs['valid']
-                        raw_image_str = self._grp_cur_position[self.HDF5_GRP_IMAGE].name + '/channel'
+                    if 'channel' in self._grp_site[self.HDF5_GRP_IMAGE]:
+                        raw_image_cpy = self._grp_site[self.HDF5_GRP_IMAGE]['channel'].value
+                        raw_image_valid = self._grp_site[self.HDF5_GRP_IMAGE]['channel'].attrs['valid']
+                        raw_image_str = self._grp_site[self.HDF5_GRP_IMAGE].name + '/channel'
 
-                    for region in self._grp_cur_position[self.HDF5_GRP_FEATURE]:
-                        region_grp = self._grp_cur_position[self.HDF5_GRP_FEATURE][region]
-                        object_grp = self._grp_cur_position[self.HDF5_OTYPE_OBJECT][region]
+                    for region in self._grp_site[self.HDF5_GRP_FEATURE]:
+                        region_grp = self._grp_site[self.HDF5_GRP_FEATURE][region]
+                        object_grp = self._grp_site[self.HDF5_OTYPE_OBJECT][region]
                         for obj_feat in ["object_features", "crack_contour",
                                          "center", "bounding_box", "orientation"]:
                             if obj_feat in region_grp:
@@ -280,9 +277,7 @@ class TimeHolder(OrderedDict):
         self.cellh5_file = CH5File(self.hdf5_filename, 'r')
         self._hdf5_file = self.cellh5_file.get_file_handle()
         try:
-            self._grp_cur_position = self._hdf5_file['/sample/0/plate/%s/experiment/%s/position/%s' % (self.plate_id,
-                                                                                                       self.well,
-                                                                                                       self.site)]
+            self._grp_site = self._hdf5_file['/plates/%s/%s/%s' % (self.plate_id, self.well, self.site)]
             self._grp_def = self._hdf5_file[self.HDF5_GRP_DEFINITION]
             return 0
         except:
@@ -297,23 +292,12 @@ class TimeHolder(OrderedDict):
 
         try:
 
-            label_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/region' % (self.plate_id,
-                                                                                      self.well,
-                                                                                      self.site,
-                                                                                      self.HDF5_GRP_IMAGE)
+            label_image_str = '/plates/%s/%s/%s/%s/region' %(self.plate_id, self.well, self.site, self.HDF5_GRP_IMAGE)
 
-            raw_image_str = '/sample/0/plate/%s/experiment/%s/position/%s/%s/channel' % (self.plate_id,
-                                                                                      self.well,
-                                                                                      self.site,
-                                                                                      self.HDF5_GRP_IMAGE)
+            raw_image_str = '/plates/%s/%s/%s/%s/channel' % (self.plate_id, self.well, self.site, self.HDF5_GRP_IMAGE)
             # we check if the label image and raw image are in the cellh5 file
             if label_image_str in f and raw_image_str in f:
                 return True
-            else:
-                # if this is not the case, we would return False unless
-                # minimal_effort is set to True (in which case we might not need the segmentation)
-                return self.minimal_effort
-                #return False
         except:
             return False
         finally:
@@ -362,7 +346,7 @@ class TimeHolder(OrderedDict):
             frames = sorted(self._analysis_frames)
             all_frames = sorted(self._meta_data.get_frames_of_position(self.P))
             nr_frames = len(all_frames)
-            var = self._grp_cur_position[self.HDF5_GRP_IMAGE].create_dataset(self.HDF5_GRP_TIME,
+            var = self._grp_site[self.HDF5_GRP_IMAGE].create_dataset(self.HDF5_GRP_TIME,
                                         (nr_frames,), dtype,
                                         chunks=(nr_frames,),
                                         compression=self._hdf5_compression)
@@ -453,23 +437,19 @@ class TimeHolder(OrderedDict):
         f = h5py.File(filename, 'w')
         self._hdf5_file = f
 
-        grp_sample = f.create_group('sample')
-        grp_cur_sample = grp_sample.create_group('0')
-        grp_plate = grp_cur_sample.create_group('plate')
-        grp_cur_plate = grp_plate.create_group(self.plate_id)
+        grp_data = f.create_group('data')
+        grp_plate = grp_data.create_group(self.plate_id)
 
         meta_data = self._meta_data
 
-        grp_experiment = grp_cur_plate.create_group('experiment')
-        grp_cur_experiment = grp_experiment.create_group(self.well)
-        grp_position = grp_cur_experiment.create_group('position')
-        grp_cur_position = grp_position.create_group(self.site)
+        grp_well = grp_plate.create_group(self.well)
+        grp_site = grp_well.create_group(self.site)
 
-        self._grp_cur_position = grp_cur_position
+        self._grp_site = grp_site
 
-        self._grp_cur_position.create_group(self.HDF5_GRP_IMAGE)
-        self._grp_cur_position.create_group(self.HDF5_GRP_FEATURE)
-        self._grp_cur_position.create_group(self.HDF5_GRP_OBJECT)
+        self._grp_site.create_group(self.HDF5_GRP_IMAGE)
+        self._grp_site.create_group(self.HDF5_GRP_FEATURE)
+        self._grp_site.create_group(self.HDF5_GRP_OBJECT)
 
         self._grp_def = f.create_group(self.HDF5_GRP_DEFINITION)
 
@@ -569,7 +549,7 @@ class TimeHolder(OrderedDict):
     def hdf_channel_frame_valid(self):
         try:
             frame_idx = self._frames_to_idx[self._iCurrentT]
-            if self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel'].attrs['valid'][frame_idx]:
+            if self._grp_site[self.HDF5_GRP_IMAGE]['channel'].attrs['valid'][frame_idx]:
                 return True
         except:
             pass
@@ -587,8 +567,8 @@ class TimeHolder(OrderedDict):
             ### Try to load them
             frame_idx = self._frames_to_idx[self._iCurrentT]
             for region_name in self.reginfo.names[channel_name]:
-                if 'region' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
-                    dset_label_image = self._grp_cur_position[self.HDF5_GRP_IMAGE]['region']
+                if 'region' in self._grp_site[self.HDF5_GRP_IMAGE]:
+                    dset_label_image = self._grp_site[self.HDF5_GRP_IMAGE]['region']
                     frame_valid = dset_label_image.attrs['valid'][frame_idx]
                     if frame_valid:
                         region_idx = self._regions_to_idx2[(channel.NAME, region_name)]
@@ -617,55 +597,49 @@ class TimeHolder(OrderedDict):
 
             # in this case, we do not necessarily calculate a segmentation
             # this is not ideal if the data is to be browsed.
-            if self.minimal_effort:
-                self._logger.info('No segmentation calculated or loaded for %s (overhead: %s)'
-                                  % (desc, stop_watch.interim()))
-                for region_name in self.reginfo.names[channel_name]:
-                    channel.containers[region_name] = None
-            else:
+
                 # compute segmentation (not loading from file)
-                channel.apply_segmentation(*args)
+            channel.apply_segmentation(*args)
 
-                self._logger.info('Label images %s computed in %s.'
-                              %(desc, stop_watch.interim()))
-                # write segmentation back to file
-                if self._hdf5_create and self._hdf5_include_label_images:
-                    meta = self._meta_data
-                    w = meta.real_image_width
-                    h = meta.real_image_height
+            self._logger.info('Label images %s computed in %s.'
+                          %(desc, stop_watch.interim()))
+            # write segmentation back to file
+            if self._hdf5_create and self._hdf5_include_label_images:
+                meta = self._meta_data
+                w = meta.real_image_width
+                h = meta.real_image_height
 
-                    # CellCognition is always working on one z-slice for know and thus saves only one
-                    #z = meta.dim_z
-                    z = 1
+                # CellCognition is always working on one z-slice for know and thus saves only one
+                z = 1
 
-                    t = len(self._frames_to_idx)
-                    var_name = 'region'
-                    grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
-                    # create new group if it does not exist yet!
-                    if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx2):
-                        var_labels = grp[var_name]
-                    else:
-                        nr_labels = len(self._regions_to_idx2)
-                        var_labels = \
-                            grp.create_dataset(var_name,
-                                               (nr_labels, t, z, h, w),
-                                               'uint16',
-                                               chunks=chunk_size((nr_labels, t, z, h, w)),
-                                               compression=self._hdf5_compression)
-                        var_labels.attrs['valid'] = numpy.zeros(t)
+                t = len(self._frames_to_idx)
+                var_name = 'region'
+                grp = self._grp_site[self.HDF5_GRP_IMAGE]
+                # create new group if it does not exist yet!
+                if var_name in grp and grp[var_name].shape[0] == len(self._regions_to_idx2):
+                    var_labels = grp[var_name]
+                else:
+                    nr_labels = len(self._regions_to_idx2)
+                    var_labels = \
+                        grp.create_dataset(var_name,
+                                           (nr_labels, t, z, h, w),
+                                           'uint16',
+                                           chunks=chunk_size((nr_labels, t, z, h, w)),
+                                           compression=self._hdf5_compression)
+                    var_labels.attrs['valid'] = numpy.zeros(t)
 
-                    frame_idx = self._frames_to_idx[self._iCurrentT]
-                    for region_name in self.reginfo.names[channel_name]:
-                        if channel.is_virtual():
-                            continue
-                        idx = self._regions_to_idx2[(channel.NAME, region_name)]
-                        container = channel.containers[region_name]
-                        array = container.img_labels.toArray(copy=False)
-                        var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
-                        ### Workaround... h5py attributes do not support transparent list types...
-                        tmp = var_labels.attrs['valid']
-                        tmp[frame_idx] = 1
-                        var_labels.attrs['valid'] = tmp
+                frame_idx = self._frames_to_idx[self._iCurrentT]
+                for region_name in self.reginfo.names[channel_name]:
+                    if channel.is_virtual():
+                        continue
+                    idx = self._regions_to_idx2[(channel.NAME, region_name)]
+                    container = channel.containers[region_name]
+                    array = container.img_labels.toArray(copy=False)
+                    var_labels[idx, frame_idx, 0] = numpy.require(array, 'uint16')
+                    ### Workaround... h5py attributes do not support transparent list types...
+                    tmp = var_labels.attrs['valid']
+                    tmp[frame_idx] = 1
+                    var_labels.attrs['valid'] = tmp
         return
 
     def prepare_raw_image(self, channel):
@@ -678,9 +652,9 @@ class TimeHolder(OrderedDict):
                                          channel.strChannelId)
         frame_valid = False
         if self._hdf5_found and self._hdf5_reuse:
-            if 'channel' in self._grp_cur_position[self.HDF5_GRP_IMAGE]:
+            if 'channel' in self._grp_site[self.HDF5_GRP_IMAGE]:
                 frame_idx = self._frames_to_idx[self._iCurrentT]
-                dset_raw_image = self._grp_cur_position[self.HDF5_GRP_IMAGE]['channel']
+                dset_raw_image = self._grp_site[self.HDF5_GRP_IMAGE]['channel']
                 frame_valid = dset_raw_image.attrs['valid'][frame_idx]
                 if frame_valid:
                     # Double check if image_data contains data
@@ -721,7 +695,7 @@ class TimeHolder(OrderedDict):
                 t = len(self._frames_to_idx)
                 ncolors = len(set(self._channels_to_idx.values()))
                 var_name = 'channel'
-                grp = self._grp_cur_position[self.HDF5_GRP_IMAGE]
+                grp = self._grp_site[self.HDF5_GRP_IMAGE]
                 if var_name in grp:
                     var_images = grp[var_name]
                 else:
@@ -744,7 +718,7 @@ class TimeHolder(OrderedDict):
                 self._logger.info('Raw image %s written to hdf5 file.' % desc)
 
     def _get_feature_group(self):
-        grp_object_features = self._grp_cur_position.require_group(self.HDF5_GRP_FEATURE)
+        grp_object_features = self._grp_site.require_group(self.HDF5_GRP_FEATURE)
         return grp_object_features
 
     def _apply_features_from_hdf5(self, channel):
@@ -821,8 +795,8 @@ class TimeHolder(OrderedDict):
                     obj_id = cur_pos.get_obj_label_id(index)
 
                     bb = bounding_box[j]
-                    #ul = (bb[0], bb[1])
-                    #lr = (bb[0] + bb[2], bb[1] + bb[3])
+                    # ul = (bb[0], bb[1])
+                    # lr = (bb[0] + bb[2], bb[1] + bb[3])
                     c = center[j]
 
                     # region
@@ -879,7 +853,7 @@ class TimeHolder(OrderedDict):
     def apply_features(self, channel):
         stop_watch = StopWatch(start=True)
         channel_name = channel.NAME.lower()
-        if self._hdf5_found and self._hdf5_reuse and (self.hdf_channel_frame_valid() or self.minimal_effort):
+        if self._hdf5_found and self._hdf5_reuse and self.hdf_channel_frame_valid():
 
             self._apply_features_from_hdf5(channel)
             how = "loaded"
@@ -893,7 +867,7 @@ class TimeHolder(OrderedDict):
 
 
         if self._hdf5_create:
-            grp_cur_pos = self._grp_cur_position
+            grp_cur_pos = self._grp_site
             grp_feature = self._get_feature_group()
             for region_name in channel.region_names():
                 combined_region_name = self._convert_region_name(channel_name, region_name, '')
@@ -1094,7 +1068,7 @@ class TimeHolder(OrderedDict):
 
         # export full graph structure to .dot file
         if self._hdf5_create and self._hdf5_include_tracking:
-            grp = self._grp_cur_position[self.HDF5_GRP_OBJECT]
+            grp = self._grp_site[self.HDF5_GRP_OBJECT]
 
             head_nodes = [node_id for node_id in graph.node_list()
                           if graph.in_degree(node_id) == 0 and graph.out_degree(node_id) > 0]
@@ -1147,7 +1121,7 @@ class TimeHolder(OrderedDict):
                 else:
                     raise ValueError("More than two daughter cell are not supported.")
 
-            object_group = self._grp_cur_position[self.HDF5_GRP_OBJECT]
+            object_group = self._grp_site[self.HDF5_GRP_OBJECT]
 
             if nr_events > 0:
                 var_event = object_group.create_dataset('event', (nr_edges,), self.HDF5_DTYPE_EDGE, maxshape=(None,))
@@ -1234,7 +1208,7 @@ class TimeHolder(OrderedDict):
 
         # 2) write to /sample  prediction and probablilities
         current_classification_grp =  \
-            self._grp_cur_position[self.HDF5_GRP_FEATURE].require_group(channel_region)
+            self._grp_site[self.HDF5_GRP_FEATURE].require_group(channel_region)
         current_classification_grp = current_classification_grp.require_group('object_classification')
 
         if 'prediction' not in current_classification_grp:
