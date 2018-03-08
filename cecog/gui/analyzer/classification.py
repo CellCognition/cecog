@@ -169,6 +169,7 @@ class ClassifierResultFrame(QGroupBox):
                             ('%SE', 'class sensitivity in %')]
 
         names_vertical = [str(k) for k in classdef.labels.values()] + ['', '#']
+
         self._table_info.setColumnCount(len(names_horizontal))
         self._table_info.setRowCount(len(names_vertical))
         self._table_info.setVerticalHeaderLabels(names_vertical)

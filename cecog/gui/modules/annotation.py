@@ -945,12 +945,11 @@ class AnnotationModule(Module):
     def _load_classifier(self, path):
         try:
             file_ = os.path.join(path, ClassDefinition.Definition)
-            self.classdef = ClassDefinition(
-                np.recfromcsv(file_, delimiter="\t", comments="##"))
-
+            self.classdef = ClassDefinition.from_txt(file_)
 
         except Exception as e:
-            QMessageBox.critical(self, 'Error', str(e))
+            import traceback
+            QMessageBox.critical(self, 'Error', traceback.fmt_exc())
             raise RuntimeError(str(e))
         else:
             self._lastdir = path
