@@ -27,7 +27,7 @@ class ClassDefinition(object):
     Definition = 'class_definition.txt'
     Annotations = 'annotations'
 
-    def __init__(self, classes):
+    def __init__(self, classes=None):
         super(ClassDefinition, self).__init__()
         self.colors = OrderedDict()
         self.labels = OrderedDict()
