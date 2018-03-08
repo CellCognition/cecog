@@ -112,7 +112,7 @@ class ClassifierResultFrame(QGroupBox):
     def hdffile(self):
         path = self._settings.get("Classification",
                                   "%s_classification_envpath" %self._channel)
-        return join(path, basename(path)+".hdf")
+        return join(path, basename(path.rstrip(os.path.sep)+".hdf"))
 
     def clear(self):
         self._table_conf.clear()
