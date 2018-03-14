@@ -949,7 +949,7 @@ class AnnotationModule(Module):
 
         except Exception as e:
             import traceback
-            QMessageBox.critical(self, 'Error', traceback.fmt_exc())
+            QMessageBox.critical(self, 'Error', traceback.format_exc())
             raise RuntimeError(str(e))
         else:
             self._lastdir = path

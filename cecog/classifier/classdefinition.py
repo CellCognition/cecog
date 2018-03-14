@@ -95,14 +95,7 @@ class ClassDefinition(object):
 
         dtypes = classes.dtype.names
 
-        if dtypes is None:
-            for (name, label_, color) in classes[1:, :]:
-                label = int(label_)
-                self.labels[name] = label
-                self.names[label] = name
-                self.colors[name] = str(color)
-
-        elif dtypes[0].startswith("name"):
+        if dtypes[0].startswith("name"):
             for (name, label, color) in classes:
                 self.labels[name] = label
                 self.names[label] = name
@@ -113,8 +106,15 @@ class ClassDefinition(object):
                 self.labels[name] = label
                 self.names[label] = name
                 self.colors[name] = str(color)
+        elif isinstance(dtypes, tuple):
+            dtypes = (dtypes[0], dtypes[1], '#'+dtypes[2])
+            for (label_, name, color) in [dtypes] + classes.tolist():
+                label = int(label_)
+                self.labels[name] = label
+                self.names[label] = name
+                self.colors[name] = str(color)
         else:
-            for (label, name, color) in classes:
+            for (label_, name, color) in classes:
                 self.labels[name] = label
                 self.names[label] = name
                 self.colors[name] = str(color)
