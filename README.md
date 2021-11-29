@@ -5,6 +5,8 @@
 
  [www.cellcognition-project.org](www.cellcognition-project.org)  
  [doc.cellcognition-project.org](http://doc.cellcognition-project.org)
+ 
+ :warning: **This project is orphaned and not actively developed anymore**. Windows binaries might not work on Win10
 
 ## Development build
 
